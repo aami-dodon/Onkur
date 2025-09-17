@@ -1,114 +1,92 @@
-# 🚀 PERN Project Template
+# 🌿 Onkur – Phase 1 Foundation
 
-A batteries-included starter for building apps with **Postgres**, **Express**, **React**, and **Node.js**. The backend is pre-wired to talk to external PostgreSQL and MinIO services, and the frontend is a Vite-powered React app ready for customization.
+Onkur is a mobile-first volunteering platform rooted in sustainability and community. Phase 1 lays the technical backbone: secure authentication, role-aware access, and a responsive shell that welcomes every stakeholder.
 
-## 📂 Project Structure
-```
-Pern-Template/
-├── backend/
-│   ├── src/
-│   │   ├── app.js                # Express app configuration
-│   │   ├── server.js             # Server bootstrapper
-│   │   ├── config/               # Environment + runtime configuration
-│   │   ├── routes/               # Automatic feature router loader
-│   │   ├── utils/                # Logger + connection test scripts
-│   │   └── features/             # Feature modules (health, shared connectors, …)
-│   ├── .env.example              # Backend environment template
-│   └── package.json
-└── frontend/
-    ├── src/                      # Vite React application
-    ├── .env.example              # Frontend environment template
-    └── package.json
-```
+## ✨ Phase 1 highlights
+- Email + password signup/login backed by JWTs and server-side token revocation.
+- Role-based dashboards for Volunteers, Event Managers, Sponsors, and Admins.
+- Admin console to assign roles and browse the community directory.
+- Earthy, mobile-first UI with a sticky bottom nav, verdant header, and warm onboarding copy.
+- Automated Jest tests for the auth service and a CI workflow that runs backend tests + frontend builds on every push.
 
-## 📚 Template Wiki
-For a step-by-step walkthrough of the development workflow—including an end-to-end example that adds a new backend API and stitches it into the React frontend—check out the [template wiki](docs/wiki/README.md).
-
-
-## ✅ Prerequisites
-- [Node.js 18+](https://nodejs.org/) (includes npm)
-- Running PostgreSQL and MinIO instances (local or remote)
+Dive into the [product wiki](docs/wiki/README.md) for full design notes, API details, and future milestones.
 
 ---
 
-## 🛠️ Backend Setup
-1. **Install dependencies**
+## 🚀 Getting started
+
+### Backend (Express + Postgres)
+1. Install dependencies
    ```bash
    cd backend
    npm install
    ```
-2. **Configure environment variables**
+2. Configure environment variables
    ```bash
    cp .env.example .env
-   # edit .env to match your infrastructure
+   # edit .env with your secrets (DATABASE_URL, JWT_SECRET, etc.)
    ```
    Key variables:
-   - `DATABASE_URL`: PostgreSQL connection string.
-   - `MINIO_*`: MinIO connection credentials.
-   - `CORS_ORIGIN`: URL allowed to talk to the backend (defaults to the Vite dev server).
-   - `PORT`: Port the API listens on (defaults to `5000`).
-   - `LOG_LEVEL`: Winston logger level (e.g. `error`, `warn`, `info`, `debug`).
-   - `LOG_FILE`: Optional file path for persisted logs (leave empty to log to console only).
-3. **Run connection diagnostics** (optional but recommended):
+   - `DATABASE_URL` – Postgres connection string.
+   - `JWT_SECRET`, `JWT_EXPIRY`, `JWT_ISSUER` – JWT signing + expiry configuration.
+   - `BCRYPT_SALT_ROUNDS` – bcrypt cost factor (defaults to 12).
+   - `CORS_ORIGIN`, `PORT`, `LOG_LEVEL`, `LOG_FILE` – server + logging controls.
+   - `MINIO_*` – optional object storage wiring from the base template.
+3. (Optional) verify connectivity
    ```bash
-   npm run test:db         # Verifies PostgreSQL connectivity
-   npm run test:minio      # Verifies MinIO connectivity
    npm run test:connections
    ```
-4. **Start the backend**
+4. Start the API
    ```bash
-   npm run dev             # Nodemon + hot reload
+   npm run dev   # hot reload via nodemon
    # or
-   npm start               # Plain Node.js
+   npm start
    ```
 
-### 🔁 Adding new backend features
-- Create a directory inside `src/features/<feature-name>`.
-- Add one or more Express routers ending with the `.route.js` suffix (e.g. `users.route.js`).
-  These files are auto-discovered and mounted, so you never have to touch `app.js` or `server.js` again.
-- Import the shared Winston logger when you need structured logs:
-  ```js
-  const logger = require("../../utils/logger");
-  logger.info("Users endpoint hit", { userId });
-  ```
-
-### 🧠 Health Check Endpoint
-`GET /api/health` confirms connectivity to both Postgres and MinIO and responds with:
-```json
-{
-  "status": "ok",
-  "dbTime": "2025-09-17T14:23:45.123Z",
-  "minioBucket": true
-}
-```
----
-
-## 🎨 Frontend Setup
-1. ```bash
+### Frontend (Vite + React)
+1. Install dependencies and configure the API origin
+   ```bash
    cd frontend
    npm install
    cp .env.example .env
    ```
-2. Update `VITE_API_BASE_URL` in `.env` to point at your backend (`http://localhost:5000` in development).
-3. Start the Vite dev server:
+   Set `VITE_API_BASE_URL` to your backend origin (e.g. `http://localhost:5000`).
+2. Launch the dev server
    ```bash
    npm run dev
    ```
-   The app will be available at `http://localhost:5173` by default.
+   Visit `http://localhost:5173` to explore the mobile-first shell.
+
+### Docker (optional)
+Spin up both apps with shared hot reload:
+```bash
+docker compose up --build
+```
+- Backend: http://localhost:5000
+- Frontend: http://localhost:3000 (proxying Vite on 5173)
 
 ---
 
-## 📝 Logging Overview
-- Log configuration is centralized in `src/utils/logger.js`.
-- `LOG_LEVEL` controls verbosity (`info` by default).
-- Provide `LOG_FILE` in `.env` to persist logs (e.g. `logs/backend.log`). The path is resolved relative to the backend directory.
-- Use structured metadata (`logger.info("message", { key: value })`) to keep logs queryable.
+## ✅ Testing & quality
+Run the test suite and production build locally before pushing:
+
+```bash
+# backend
+cd backend
+npm test
+
+# frontend
+cd ../frontend
+npm run build
+```
+
+The GitHub Actions pipeline (`.github/workflows/ci.yml`) mirrors these steps to keep the main branch healthy.
 
 ---
 
-## 🚧 Next Steps
-- Scaffold new feature modules under `backend/src/features/` using the auto-loader.
-- Extend the React frontend to call your new endpoints.
-- Add automated tests (e.g. Jest, Vitest) as your application grows.
+## 🧭 Architecture quick reference
+- **Backend features** live under `backend/src/features/<feature-name>/`. Auth endpoints are defined in `auth.route.js` and associated service/repository files.
+- **Frontend features** live under `frontend/src/features/<feature-name>/`. The `AuthProvider` manages session state and the dashboard components render role-specific shells.
+- **Shared documentation**: the wiki captures stakeholder goals, color palette, data models, API descriptions, and future roadmap items.
 
-Happy building! 🎉
+Stay grounded, build sustainably, and keep the forest thriving. 🌱
