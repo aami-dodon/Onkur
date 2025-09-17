@@ -9,6 +9,14 @@ const config = {
   logLevel: process.env.LOG_LEVEL || "info",
   logFile: process.env.LOG_FILE || "",
   databaseUrl: process.env.DATABASE_URL,
+  jwt: {
+    secret: process.env.JWT_SECRET,
+    expiry: process.env.JWT_EXPIRY || "1h",
+    issuer: process.env.JWT_ISSUER || "onk ur-api",
+  },
+  bcrypt: {
+    saltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || "12", 10),
+  },
   minio: {
     endPoint: process.env.MINIO_ENDPOINT,
     port: process.env.MINIO_PORT ? parseInt(process.env.MINIO_PORT, 10) : 9000,

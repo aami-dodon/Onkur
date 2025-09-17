@@ -99,12 +99,70 @@ Onkur is a mobile-first volunteering platform built to inspire environmental and
 - Breathing space in UI.
 
 ## Contents
+- [Phase 1 – Foundation](#phase-1--foundation)
+  - [Highlights](#highlights)
+  - [Backend services](#backend-services)
+  - [Frontend experience](#frontend-experience)
+  - [Metrics & auditing](#metrics--auditing)
+  - [Environment keys](#environment-keys)
 - [Project conventions](#project-conventions)
 - [Environment setup](#environment-setup)
 - [Local development workflow](#local-development-workflow)
 - [End-to-end example: Notes feature](#end-to-end-example-notes-feature)
 - [Docker usage](#docker-usage)
 - [Troubleshooting checklist](#troubleshooting-checklist)
+
+## Phase 1 – Foundation
+
+### Highlights
+- Email + password authentication with JWT session tokens and secure logout revocation.
+- Role-based access controls for **Volunteer**, **Event Manager**, **Sponsor**, and **Admin** with dedicated dashboard shells.
+- Mobile-first layout with the earthy green palette, sticky bottom navigation, and welcoming auth flows.
+- Admin operations center to assign roles and review the active community directory.
+
+### Backend services
+- **Data models**
+  - `users`: `id (UUID)`, `name`, `email`, `email_normalized`, `password_hash`, `role`, `created_at`.
+  - `audit_logs`: `id`, `actor_id`, `action`, `metadata (JSONB)`, `created_at`.
+  - `revoked_tokens`: `id`, `jti`, `expires_at` (used to invalidate JWTs during logout).
+- **Authentication pipeline**
+  - Passwords hashed with bcrypt (`BCRYPT_SALT_ROUNDS` configurable).
+  - JWTs signed with `JWT_SECRET`, include `sub`, `role`, and `jti` claims, and expire per `JWT_EXPIRY`.
+  - Logout revokes the token `jti` server-side to prevent reuse.
+- **API surface** (all routes prefixed with `/api`)
+  - `POST /auth/signup` – create a volunteer account and return `{ token, jti, expiresAt, user }`.
+  - `POST /auth/login` – authenticate existing users and return the same payload shape as signup.
+  - `POST /auth/logout` – revoke the active token (Authorization bearer required).
+  - `GET /me` – fetch the profile for the authenticated caller.
+  - `GET /users` – admin-only directory of all accounts.
+  - `PATCH /users/:id/role` – admin-only role reassignment.
+  - `GET /auth/roles` – public list of supported roles for UI pickers.
+- **Audit logging** records `auth.signup`, `auth.login.success`, `auth.login.failure`, `auth.logout`, and `auth.role.change` events for traceability.
+
+### Frontend experience
+- Global **AuthProvider** wraps the app, persists JWT metadata in `localStorage`, and refreshes the profile via `/api/me` on load.
+- **Auth screens** mirror the warm Onkur tone with stacked fields, clear copy, and cross-links between login and signup.
+- **Dashboards**
+  - Volunteer: impact tracker placeholders, upcoming commitments, and storytelling guidance.
+  - Event Manager: pipeline, volunteer coordination, and gallery management stubs.
+  - Sponsor: sponsorship visibility, recognition toolkit, and impact report shells.
+  - Admin: authentication metrics snapshot, role assignment form, and community directory table.
+- **Layout**
+  - Sticky bottom navigation (Home, Events, Gallery, Profile) optimized for touch devices.
+  - Verdant header featuring the Onkur brand, user badge, and quick logout.
+
+### Metrics & auditing
+- The admin dashboard surfaces day-zero placeholders for signups, login success, and error rates—future phases will wire real analytics to these cards.
+- Audit logs capture every auth transition so we can derive signups/day, login success vs. failure, and auth error rates downstream.
+
+### Environment keys
+- Backend (`backend/.env.example`)
+  - `DATABASE_URL` – Postgres connection string.
+  - `JWT_SECRET`, `JWT_EXPIRY`, `JWT_ISSUER` – JWT configuration.
+  - `BCRYPT_SALT_ROUNDS` – hashing cost factor.
+  - `CORS_ORIGIN`, `PORT`, logging, and MinIO fields remain from the template.
+- Frontend (`frontend/.env.example`)
+  - `VITE_API_BASE_URL` – origin for API requests (defaults to `http://localhost:5000`).
 
 ## Project conventions
 - **Backend features** live in `backend/src/features/<feature-name>/`. Each HTTP surface area exports an Express router from a file that ends with `.route.js`. The auto-loader in `backend/src/routes/index.js` mounts routers automatically using the optional `basePath` export.
