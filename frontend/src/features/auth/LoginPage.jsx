@@ -33,50 +33,52 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="auth-card" role="form">
-      <div>
-        <h2>Welcome back to Onkur</h2>
+    <div className="auth-page">
+      <div className="auth-card" role="form">
+        <div>
+          <h2>Welcome back to Onkur</h2>
+          <p style={{ margin: 0, color: 'var(--muted-text)' }}>
+            Reconnect with the community and track the impact you are creating.
+          </p>
+        </div>
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-field">
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={values.email}
+              onChange={handleChange}
+              placeholder="you@example.org"
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={values.password}
+              onChange={handleChange}
+              placeholder="••••••••"
+            />
+          </div>
+          <div className="form-actions">
+            {error ? <p className="form-error">{error}</p> : null}
+            <button type="submit" className="btn-primary" disabled={submitting}>
+              {submitting ? 'Signing you in…' : 'Log in'}
+            </button>
+          </div>
+        </form>
         <p style={{ margin: 0, color: 'var(--muted-text)' }}>
-          Reconnect with the community and track the impact you are creating.
+          New to Onkur? <Link to="/signup">Create an account</Link>
         </p>
       </div>
-      <form onSubmit={handleSubmit} className="auth-form">
-        <div className="form-field">
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            value={values.email}
-            onChange={handleChange}
-            placeholder="you@example.org"
-          />
-        </div>
-        <div className="form-field">
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={values.password}
-            onChange={handleChange}
-            placeholder="••••••••"
-          />
-        </div>
-        <div className="form-actions">
-          {error ? <p className="form-error">{error}</p> : null}
-          <button type="submit" className="btn-primary" disabled={submitting}>
-            {submitting ? 'Signing you in…' : 'Log in'}
-          </button>
-        </div>
-      </form>
-      <p style={{ margin: 0, color: 'var(--muted-text)' }}>
-        New to Onkur? <Link to="/signup">Create an account</Link>
-      </p>
     </div>
   );
 }

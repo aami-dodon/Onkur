@@ -221,6 +221,16 @@ button {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  width: min(100%, 440px);
+  margin: 2.5rem auto 3rem;
+}
+
+.auth-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 0.75rem;
 }
 
 .auth-card h2 {
@@ -416,7 +426,12 @@ button {
   }
 
   .auth-card {
-    padding: 2.5rem 2.25rem;
+    padding: 2.75rem 2.5rem;
+    margin: 4rem auto 5rem;
+  }
+
+  .auth-page {
+    padding: 0 1.5rem;
   }
 
   .dashboard-grid {
