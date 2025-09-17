@@ -42,8 +42,14 @@ describe('auth.service', () => {
       email: 'user@example.com',
       role: 'VOLUNTEER',
     });
-    expect(signupResult.token).toBeTruthy();
-    expect(signupResult.jti).toBeTruthy();
+    expect(signupResult.requiresEmailVerification).toBe(true);
+
+    const tokenRow = await pool.query('SELECT token FROM email_verification_tokens WHERE user_id = $1', [
+      signupResult.user.id,
+    ]);
+    expect(tokenRow.rows[0]?.token).toBeTruthy();
+
+    await authService.verifyEmail({ token: tokenRow.rows[0].token });
 
     const loginResult = await authService.login({
       email: 'user@example.com',
@@ -81,8 +87,18 @@ describe('auth.service', () => {
   });
 
   test('logout revokes token so it cannot be reused', async () => {
-    const { token, jti } = await authService.signup({
+    const signupResult = await authService.signup({
       name: 'Another User',
+      email: 'another@example.com',
+      password: 'password123',
+    });
+
+    const tokenRow = await pool.query('SELECT token FROM email_verification_tokens WHERE user_id = $1', [
+      signupResult.user.id,
+    ]);
+    await authService.verifyEmail({ token: tokenRow.rows[0].token });
+
+    const { token, jti, user } = await authService.login({
       email: 'another@example.com',
       password: 'password123',
     });
@@ -96,7 +112,7 @@ describe('auth.service', () => {
     const decoded = JSON.parse(payloadBuffer.toString());
     const expiresAt = new Date(decoded.exp * 1000).toISOString();
 
-    await authService.logout({ jti, expiresAt, actorId: verified.user.id });
+    await authService.logout({ jti, expiresAt, actorId: user.id });
 
     await expect(authService.verifyToken(token)).rejects.toMatchObject({
       statusCode: 401,

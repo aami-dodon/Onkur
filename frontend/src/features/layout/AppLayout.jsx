@@ -34,6 +34,8 @@ export default function AppLayout({ children }) {
       title = 'Sign in | Onkur';
     } else if (path.startsWith('/signup')) {
       title = 'Join Onkur | Mobile-first volunteering';
+    } else if (path.startsWith('/verify-email')) {
+      title = 'Verify email | Onkur';
     } else if (path.startsWith('/app')) {
       if (user?.role) {
         title = `${formatRole(user.role)} Dashboard | Onkur`;

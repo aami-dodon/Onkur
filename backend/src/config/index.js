@@ -9,6 +9,9 @@ const config = {
   logLevel: process.env.LOG_LEVEL || "info",
   logFile: process.env.LOG_FILE || "",
   databaseUrl: process.env.DATABASE_URL,
+  app: {
+    baseUrl: process.env.APP_BASE_URL || process.env.CORS_ORIGIN || "http://localhost:3000",
+  },
   jwt: {
     secret: process.env.JWT_SECRET,
     expiry: process.env.JWT_EXPIRY || "1h",
@@ -16,6 +19,14 @@ const config = {
   },
   bcrypt: {
     saltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || "12", 10),
+  },
+  email: {
+    from: process.env.EMAIL_FROM || "Onkur <no-reply@onkur.org>",
+    smtpHost: process.env.EMAIL_SMTP_HOST,
+    smtpPort: process.env.EMAIL_SMTP_PORT ? parseInt(process.env.EMAIL_SMTP_PORT, 10) : 587,
+    smtpSecure: process.env.EMAIL_SMTP_SECURE === "true",
+    smtpUser: process.env.EMAIL_SMTP_USER,
+    smtpPass: process.env.EMAIL_SMTP_PASS,
   },
   minio: {
     endPoint: process.env.MINIO_ENDPOINT,
