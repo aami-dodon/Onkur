@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import useDocumentTitle from '../../lib/useDocumentTitle';
 import { useAuth } from './AuthContext';
 
 const initialState = {
@@ -15,6 +16,7 @@ export default function SignupPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  useDocumentTitle('Onkur | Join the Onkur movement');
 
   const handleChange = (event) => {
     const { name, value } = event.target;

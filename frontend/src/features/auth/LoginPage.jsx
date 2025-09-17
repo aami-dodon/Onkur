@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import useDocumentTitle from '../../lib/useDocumentTitle';
 import { useAuth } from './AuthContext';
 
 const initialState = {
@@ -12,6 +13,7 @@ export default function LoginPage() {
   const [values, setValues] = useState(initialState);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  useDocumentTitle('Onkur | Welcome back to Onkur');
 
   const handleChange = (event) => {
     const { name, value } = event.target;

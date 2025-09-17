@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import DashboardCard from './DashboardCard';
 import { useAuth } from '../auth/AuthContext';
+import useDocumentTitle from '../../lib/useDocumentTitle';
 
 function formatRole(role) {
   return role
@@ -17,6 +18,7 @@ export default function AdminDashboard() {
   const [form, setForm] = useState({ userId: '', role: '' });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  useDocumentTitle('Onkur | Operations center 🌿');
 
   useEffect(() => {
     let active = true;

@@ -1,14 +1,17 @@
 import DashboardCard from './DashboardCard';
 import { useAuth } from '../auth/AuthContext';
+import useDocumentTitle from '../../lib/useDocumentTitle';
 
 export default function EventManagerDashboard() {
   const { user } = useAuth();
+  const firstName = user?.name?.split(' ')[0] || 'manager';
+  useDocumentTitle(`Onkur | Welcome back, ${firstName} 🌱`);
 
   return (
     <div className="grid gap-5 md:[grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
       <header className="flex flex-col gap-2 md:col-span-full">
         <h2 className="m-0 font-display text-2xl font-semibold text-brand-forest">
-          Welcome back, {user?.name?.split(' ')[0] || 'manager'} 🌱
+          Welcome back, {firstName} 🌱
         </h2>
         <p className="m-0 text-sm text-brand-muted sm:text-base">
           Plan meaningful experiences, assign volunteer crews, and showcase impact with visual storytelling.

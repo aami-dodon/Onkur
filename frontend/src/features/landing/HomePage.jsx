@@ -1,4 +1,5 @@
 import { Link, Navigate } from 'react-router-dom';
+import useDocumentTitle from '../../lib/useDocumentTitle';
 import { useAuth } from '../auth/AuthContext';
 
 const HIGHLIGHTS = [
@@ -57,6 +58,7 @@ const IMPACT_STATS = [
 
 export default function HomePage() {
   const { isAuthenticated } = useAuth();
+  useDocumentTitle('Onkur | Nature · Sustainability · Community');
 
   if (isAuthenticated) {
     return <Navigate to="/app" replace />;
