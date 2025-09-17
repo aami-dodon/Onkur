@@ -78,6 +78,24 @@ button {
   letter-spacing: 0.02em;
 }
 
+.app-header__brand-link {
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  text-decoration: none;
+}
+
+.app-header__brand-link:hover {
+  text-decoration: none;
+}
+
+.app-header__brand-link:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+
 .app-header__brand p {
   margin: 0.25rem 0 0;
   font-size: 0.95rem;
@@ -96,6 +114,7 @@ button {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  padding-top: 0.5rem;
   margin-left: auto;
 }
 
