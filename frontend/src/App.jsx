@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import AppLayout from './features/layout/AppLayout';
 import LoginPage from './features/auth/LoginPage';
 import SignupPage from './features/auth/SignupPage';
+import VerifyEmailPage from './features/auth/VerifyEmailPage';
 import ProtectedRoute from './features/auth/ProtectedRoute';
 import PublicOnlyRoute from './features/auth/PublicOnlyRoute';
 import DashboardRouter from './features/dashboard/DashboardRouter';
@@ -36,6 +37,7 @@ function App() {
             </PublicOnlyRoute>
           }
         />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppLayout>

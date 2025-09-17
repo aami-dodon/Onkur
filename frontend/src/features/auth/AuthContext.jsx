@@ -111,17 +111,13 @@ export function AuthProvider({ children }) {
     [setAuthenticated]
   );
 
-  const signup = useCallback(
-    async ({ name, email, password }) => {
-      const result = await apiRequest('/api/auth/signup', {
-        method: 'POST',
-        body: { name, email, password },
-      });
-      setAuthenticated(result);
-      return result.user;
-    },
-    [setAuthenticated]
-  );
+  const signup = useCallback(async ({ name, email, password }) => {
+    const result = await apiRequest('/api/auth/signup', {
+      method: 'POST',
+      body: { name, email, password },
+    });
+    return result;
+  }, []);
 
   const logout = useCallback(async () => {
     if (auth.token) {

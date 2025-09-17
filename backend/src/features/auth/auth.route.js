@@ -1,5 +1,14 @@
 const express = require('express');
-const { signup, login, logout, getProfile, listAllUsers, assignRole, ROLES } = require('./auth.service');
+const {
+  signup,
+  login,
+  logout,
+  getProfile,
+  listAllUsers,
+  assignRole,
+  verifyEmail,
+  ROLES,
+} = require('./auth.service');
 const { authenticate, authorizeRoles } = require('./auth.middleware');
 
 const router = express.Router();
@@ -20,7 +29,18 @@ router.post('/api/auth/signup', async (req, res) => {
   try {
     const { name, email, password } = req.body || {};
     const result = await signup({ name, email, password });
-    res.status(201).json(sanitizeAuthResponse(result));
+    res.status(201).json(result);
+  } catch (error) {
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message });
+  }
+});
+
+router.post('/api/auth/verify-email', async (req, res) => {
+  try {
+    const { token } = req.body || {};
+    const result = await verifyEmail({ token });
+    res.status(200).json(result);
   } catch (error) {
     const status = error.statusCode || 500;
     res.status(status).json({ error: error.message });

@@ -115,24 +115,27 @@ Onkur is a mobile-first volunteering platform built to inspire environmental and
 ## Phase 1 – Foundation
 
 ### Highlights
-- Email + password authentication with JWT session tokens and secure logout revocation.
+- Email + password authentication with mandatory email verification, JWT session tokens, and secure logout revocation.
 - Role-based access controls for **Volunteer**, **Event Manager**, **Sponsor**, and **Admin** with dedicated dashboard shells.
 - Mobile-first layout with the earthy green palette, sticky bottom navigation, and welcoming auth flows.
 - Admin operations center to assign roles and review the active community directory.
 
 ### Backend services
 - **Data models**
-  - `users`: `id (UUID)`, `name`, `email`, `email_normalized`, `password_hash`, `role`, `created_at`.
+  - `users`: `id (UUID)`, `name`, `email`, `email_normalized`, `password_hash`, `role`, `created_at`, `email_verified_at`.
   - `audit_logs`: `id`, `actor_id`, `action`, `metadata (JSONB)`, `created_at`.
   - `revoked_tokens`: `id`, `jti`, `expires_at` (used to invalidate JWTs during logout).
+  - `email_verification_tokens`: `id`, `user_id`, `token`, `expires_at`, `used_at`, `created_at`.
 - **Authentication pipeline**
   - Passwords hashed with bcrypt (`BCRYPT_SALT_ROUNDS` configurable).
+  - Signup queues an email verification token and requires confirmation before login succeeds.
   - JWTs signed with `JWT_SECRET`, include `sub`, `role`, and `jti` claims, and expire per `JWT_EXPIRY`.
   - Logout revokes the token `jti` server-side to prevent reuse.
 - **API surface** (all routes prefixed with `/api`)
-  - `POST /auth/signup` – create a volunteer account and return `{ token, jti, expiresAt, user }`.
-  - `POST /auth/login` – authenticate existing users and return the same payload shape as signup.
+  - `POST /auth/signup` – create a volunteer account, send the verification email, and return `{ user, requiresEmailVerification, message }`.
+  - `POST /auth/login` – authenticate existing users and return the same payload shape as signup once verified.
   - `POST /auth/logout` – revoke the active token (Authorization bearer required).
+  - `POST /auth/verify-email` – confirm a verification token and unlock login.
   - `GET /me` – fetch the profile for the authenticated caller.
   - `GET /users` – admin-only directory of all accounts.
   - `PATCH /users/:id/role` – admin-only role reassignment.
@@ -160,6 +163,8 @@ Onkur is a mobile-first volunteering platform built to inspire environmental and
   - `DATABASE_URL` – Postgres connection string.
   - `JWT_SECRET`, `JWT_EXPIRY`, `JWT_ISSUER` – JWT configuration.
   - `BCRYPT_SALT_ROUNDS` – hashing cost factor.
+  - `APP_BASE_URL` – canonical frontend URL used in transactional emails.
+  - `EMAIL_FROM`, `EMAIL_SMTP_HOST`, `EMAIL_SMTP_PORT`, `EMAIL_SMTP_SECURE`, `EMAIL_SMTP_USER`, `EMAIL_SMTP_PASS` – SMTP credentials for transactional email.
   - `CORS_ORIGIN`, `PORT`, logging, and MinIO fields remain from the template.
 - Frontend (`frontend/.env.example`)
   - `VITE_API_BASE_URL` – origin for API requests (defaults to `http://localhost:5000`).

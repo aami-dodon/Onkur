@@ -6,12 +6,14 @@ const initialState = {
   name: '',
   email: '',
   password: '',
+  confirmPassword: '',
 };
 
 export default function SignupPage() {
   const { signup } = useAuth();
   const [values, setValues] = useState(initialState);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (event) => {
@@ -23,9 +25,22 @@ export default function SignupPage() {
     event.preventDefault();
     setSubmitting(true);
     setError('');
+    setSuccess('');
+
+    if (values.password !== values.confirmPassword) {
+      setError('Passwords do not match.');
+      setSubmitting(false);
+      return;
+    }
 
     try {
-      await signup(values);
+      const { message } = await signup({
+        name: values.name,
+        email: values.email,
+        password: values.password,
+      });
+      setValues(initialState);
+      setSuccess(message || 'Account created. Check your inbox to verify your email.');
     } catch (err) {
       setError(err.message || 'We could not create your account.');
     } finally {
@@ -95,8 +110,26 @@ export default function SignupPage() {
               className="w-full rounded-md border border-brand-green/40 bg-white/90 px-3 py-3 text-base shadow-sm transition focus:border-brand-green focus:outline-none focus:ring-2 focus:ring-brand-green/40"
             />
           </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-brand-muted" htmlFor="confirmPassword">
+              Re-enter password
+            </label>
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              autoComplete="new-password"
+              required
+              value={values.confirmPassword}
+              onChange={handleChange}
+              placeholder="Confirm your password"
+              minLength={8}
+              className="w-full rounded-md border border-brand-green/40 bg-white/90 px-3 py-3 text-base shadow-sm transition focus:border-brand-green focus:outline-none focus:ring-2 focus:ring-brand-green/40"
+            />
+          </div>
           <div className="space-y-3 pt-2">
             {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
+            {success ? <p className="text-sm font-medium text-brand-green">{success}</p> : null}
             <button
               type="submit"
               className="inline-flex w-full items-center justify-center rounded-md bg-brand-yellow px-4 py-2.5 text-base font-semibold text-brand-brown shadow-[0_6px_12px_rgba(236,201,75,0.3)] transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-green/50 disabled:cursor-not-allowed disabled:opacity-70"

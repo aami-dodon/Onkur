@@ -12,8 +12,13 @@ const {
   revokeToken,
   isTokenRevoked,
   pruneExpiredTokens,
+  createEmailVerificationToken,
+  findEmailVerificationToken,
+  markVerificationTokenUsed,
+  deleteVerificationTokensForUser,
+  markEmailVerified,
 } = require('./auth.repository');
-const { sendWelcomeEmail } = require('./email.service');
+const { sendVerificationEmail, sendWelcomeEmail } = require('./email.service');
 const { ROLES, DEFAULT_ROLE } = require('./constants');
 
 const config = require('../../config');
@@ -22,6 +27,7 @@ const SALT_ROUNDS = config.bcrypt.saltRounds;
 const JWT_SECRET = config.jwt.secret;
 const JWT_EXPIRY = config.jwt.expiry;
 const JWT_ISSUER = config.jwt.issuer;
+const EMAIL_VERIFICATION_TOKEN_TTL_MINUTES = 60 * 24;
 
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET must be configured before using auth.service');
@@ -34,6 +40,11 @@ function toPublicUser(user) {
     name: user.name,
     email: user.email,
     role: user.role,
+    emailVerified: Boolean(user.email_verified_at),
+    emailVerifiedAt:
+      user.email_verified_at instanceof Date
+        ? user.email_verified_at.toISOString()
+        : user.email_verified_at || null,
     createdAt:
       user.created_at instanceof Date ? user.created_at.toISOString() : user.created_at,
   };
@@ -69,14 +80,38 @@ async function signup({ name, email, password }) {
     metadata: { email: user.email, role: user.role },
   });
 
+  let verification;
   try {
-    await sendWelcomeEmail({ to: user.email, name: user.name });
+    verification = await createEmailVerificationToken({
+      userId: user.id,
+      expiresInMinutes: EMAIL_VERIFICATION_TOKEN_TTL_MINUTES,
+    });
+    await sendVerificationEmail({
+      to: user.email,
+      name: user.name,
+      token: verification.token,
+      expiresAt: verification.expires_at,
+    });
   } catch (error) {
-    logger.warn('Failed to enqueue welcome email', { error: error.message, email: user.email });
+    logger.warn('Failed to send verification email', {
+      error: error.message,
+      email: user.email,
+    });
   }
 
-  const tokenBundle = await issueTokenBundle(user);
-  return { user: toPublicUser(user), ...tokenBundle };
+  return {
+    user: toPublicUser(user),
+    requiresEmailVerification: true,
+    verification: verification
+      ? {
+          expiresAt:
+            verification.expires_at instanceof Date
+              ? verification.expires_at.toISOString()
+              : verification.expires_at,
+        }
+      : null,
+    message: 'Check your inbox to verify your email before logging in.',
+  };
 }
 
 async function login({ email, password }) {
@@ -104,6 +139,15 @@ async function login({ email, password }) {
     throw createHttpError(401, 'Invalid credentials');
   }
 
+  if (!user.email_verified_at) {
+    await recordAuditLog({
+      actorId: user.id,
+      action: 'auth.login.failure',
+      metadata: { email, reason: 'email_not_verified' },
+    });
+    throw createHttpError(403, 'Please verify your email before logging in.');
+  }
+
   await recordAuditLog({
     actorId: user.id,
     action: 'auth.login.success',
@@ -112,6 +156,65 @@ async function login({ email, password }) {
 
   const tokenBundle = await issueTokenBundle(user);
   return { user: toPublicUser(user), ...tokenBundle };
+}
+
+async function verifyEmail({ token }) {
+  if (!token) {
+    throw createHttpError(400, 'Verification token is required');
+  }
+
+  const tokenRecord = await findEmailVerificationToken(token);
+  if (!tokenRecord) {
+    throw createHttpError(400, 'Invalid verification token');
+  }
+
+  if (tokenRecord.used_at) {
+    throw createHttpError(400, 'This verification link has already been used');
+  }
+
+  if (tokenRecord.expires_at && new Date(tokenRecord.expires_at) < new Date()) {
+    throw createHttpError(400, 'This verification link has expired');
+  }
+
+  const user = await findUserById(tokenRecord.user_id);
+  if (!user) {
+    await markVerificationTokenUsed({ tokenId: tokenRecord.id });
+    throw createHttpError(404, 'Account no longer exists');
+  }
+
+  if (user.email_verified_at) {
+    await markVerificationTokenUsed({ tokenId: tokenRecord.id });
+    await deleteVerificationTokensForUser({ userId: user.id, exceptTokenId: tokenRecord.id });
+    return {
+      user: toPublicUser(user),
+      alreadyVerified: true,
+      message: 'Email already verified. You can log in now.',
+    };
+  }
+
+  const updatedUser = await markEmailVerified({ userId: user.id });
+  await markVerificationTokenUsed({ tokenId: tokenRecord.id });
+  await deleteVerificationTokensForUser({ userId: user.id, exceptTokenId: tokenRecord.id });
+
+  await recordAuditLog({
+    actorId: updatedUser.id,
+    action: 'auth.email.verify',
+    metadata: { email: updatedUser.email },
+  });
+
+  try {
+    await sendWelcomeEmail({ to: updatedUser.email, name: updatedUser.name });
+  } catch (error) {
+    logger.warn('Failed to send welcome email after verification', {
+      error: error.message,
+      email: updatedUser.email,
+    });
+  }
+
+  return {
+    user: toPublicUser(updatedUser),
+    message: 'Your email has been verified. You can now log in.',
+  };
 }
 
 async function logout({ jti, expiresAt, actorId }) {
@@ -216,5 +319,6 @@ module.exports = {
   getProfile,
   listAllUsers,
   assignRole,
+  verifyEmail,
   ROLES,
 };

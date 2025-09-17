@@ -3,7 +3,7 @@
 Onkur is a mobile-first volunteering platform rooted in sustainability and community. Phase 1 lays the technical backbone: secure authentication, role-aware access, and a responsive shell that welcomes every stakeholder.
 
 ## ✨ Phase 1 highlights
-- Email + password signup/login backed by JWTs and server-side token revocation.
+- Email + password signup/login backed by JWTs, email verification, and server-side token revocation.
 - Role-based dashboards for Volunteers, Event Managers, Sponsors, and Admins.
 - Admin console to assign roles and browse the community directory.
 - Earthy, mobile-first UI with a sticky bottom nav, verdant header, and warm onboarding copy.
@@ -30,6 +30,8 @@ Dive into the [product wiki](docs/wiki/README.md) for full design notes, API det
    - `DATABASE_URL` – Postgres connection string.
    - `JWT_SECRET`, `JWT_EXPIRY`, `JWT_ISSUER` – JWT signing + expiry configuration.
    - `BCRYPT_SALT_ROUNDS` – bcrypt cost factor (defaults to 12).
+   - `APP_BASE_URL` – canonical frontend URL used in transactional emails.
+   - `EMAIL_FROM`, `EMAIL_SMTP_HOST`, `EMAIL_SMTP_PORT`, `EMAIL_SMTP_SECURE`, `EMAIL_SMTP_USER`, `EMAIL_SMTP_PASS` – SMTP settings for outbound email.
    - `CORS_ORIGIN`, `PORT`, `LOG_LEVEL`, `LOG_FILE` – server + logging controls.
    - `MINIO_*` – optional object storage wiring from the base template.
 3. (Optional) verify connectivity
