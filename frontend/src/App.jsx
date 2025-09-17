@@ -5,13 +5,15 @@ import SignupPage from './features/auth/SignupPage';
 import ProtectedRoute from './features/auth/ProtectedRoute';
 import PublicOnlyRoute from './features/auth/PublicOnlyRoute';
 import DashboardRouter from './features/dashboard/DashboardRouter';
+import HomePage from './features/landing/HomePage';
 
 function App() {
   return (
     <AppLayout>
       <Routes>
+        <Route path="/" element={<HomePage />} />
         <Route
-          path="/"
+          path="/app/*"
           element={
             <ProtectedRoute>
               <DashboardRouter />
