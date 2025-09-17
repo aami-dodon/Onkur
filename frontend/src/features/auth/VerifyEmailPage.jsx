@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../../lib/apiClient';
+import useDocumentTitle from '../../lib/useDocumentTitle';
 
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
@@ -46,6 +47,8 @@ export default function VerifyEmailPage() {
     if (status === 'missing') return 'Verification link missing';
     return 'Verifying your email…';
   }, [status]);
+
+  useDocumentTitle(`Onkur | ${heading}`);
 
   return (
     <div className="flex w-full justify-center px-4 pb-16 pt-10 sm:pt-14">

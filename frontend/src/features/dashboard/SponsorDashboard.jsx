@@ -1,14 +1,17 @@
 import DashboardCard from './DashboardCard';
 import { useAuth } from '../auth/AuthContext';
+import useDocumentTitle from '../../lib/useDocumentTitle';
 
 export default function SponsorDashboard() {
   const { user } = useAuth();
+  const firstName = user?.name?.split(' ')[0] || 'sponsor';
+  useDocumentTitle(`Onkur | Thank you, ${firstName} 🌍`);
 
   return (
     <div className="grid gap-5 md:[grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
       <header className="flex flex-col gap-2 md:col-span-full">
         <h2 className="m-0 font-display text-2xl font-semibold text-brand-forest">
-          Thank you, {user?.name?.split(' ')[0] || 'sponsor'} 🌍
+          Thank you, {firstName} 🌍
         </h2>
         <p className="m-0 text-sm text-brand-muted sm:text-base">
           Track the visibility of your contributions and stay close to the stories your support makes possible.
