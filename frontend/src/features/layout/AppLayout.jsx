@@ -56,10 +56,14 @@ export default function AppLayout({ children }) {
     <div className="app-shell">
       <header className="app-header">
         <div className="app-header__top">
-          <div className="app-header__brand">
-            <h1>Onkur</h1>
-            <p>{headerSubtitle}</p>
-          </div>
+        <div className="app-header__brand">
+          <h1>
+            <Link to="/" className="app-header__brand-link" aria-label="Go to the Onkur home page">
+              Onkur
+            </Link>
+          </h1>
+          <p>{headerSubtitle}</p>
+        </div>
           {user ? (
             <div className="app-header__meta">
               <span>{user.name}</span>
