@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useEffect, useMemo } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import BottomNav from './BottomNav';
 
@@ -22,6 +22,27 @@ export default function AppLayout({ children }) {
     }
     return 'Cultivate impact through every event, pledge, and story.';
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    const path = location.pathname;
+    let title = 'Onkur';
+
+    if (path === '/') {
+      title = 'Onkur | Nature · Sustainability · Community';
+    } else if (path.startsWith('/login')) {
+      title = 'Sign in | Onkur';
+    } else if (path.startsWith('/signup')) {
+      title = 'Join Onkur | Mobile-first volunteering';
+    } else if (path.startsWith('/app')) {
+      if (user?.role) {
+        title = `${formatRole(user.role)} Dashboard | Onkur`;
+      } else {
+        title = 'Onkur Dashboard';
+      }
+    }
+
+    document.title = title;
+  }, [location.pathname, user]);
 
   const activeNav = useMemo(() => {
     if (location.pathname.startsWith('/gallery')) return 'gallery';
@@ -46,7 +67,16 @@ export default function AppLayout({ children }) {
                 Log out
               </button>
             </div>
-          ) : null}
+          ) : (
+            <nav className="app-header__actions">
+              <Link to="/login" className="header-link">
+                Sign in
+              </Link>
+              <Link to="/signup" className="header-link header-link--primary">
+                Join Onkur
+              </Link>
+            </nav>
+          )}
         </div>
       </header>
       <main className="app-main">
