@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import BottomNav from './BottomNav';
 
@@ -46,7 +46,16 @@ export default function AppLayout({ children }) {
                 Log out
               </button>
             </div>
-          ) : null}
+          ) : (
+            <nav className="app-header__actions">
+              <Link to="/login" className="header-link">
+                Sign in
+              </Link>
+              <Link to="/signup" className="header-link header-link--primary">
+                Join Onkur
+              </Link>
+            </nav>
+          )}
         </div>
       </header>
       <main className="app-main">
