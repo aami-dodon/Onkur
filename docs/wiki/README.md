@@ -1,6 +1,102 @@
 # 📘 PERN Template Wiki
 
-Use this wiki as a hands-on companion to the main README. It walks through the project layout, recommended workflows, and a full-stack example so you can quickly adapt the template to your own features.
+Use this wiki as a hands-on companion to the main README. It now also serves as the product brief for **Onkur**, the mobile-first volunteering platform we are building on top of the template.
+
+## Onkur Product Overview
+
+### Theme: Nature · Sustainability · Community
+
+Onkur is a mobile-first volunteering platform built to inspire environmental and social action. Rooted in the values of nature, sustainability, and community, it connects volunteers, event managers, sponsors, and administrators in one ecosystem. The platform emphasizes visual storytelling through event galleries, transparent tracking of impact, and meaningful recognition for all stakeholders.
+
+### Stakeholders & Roles
+
+#### Volunteers
+- Build profiles (skills, interests, availability).
+- Discover and register for events.
+- Track logged hours, eco-badges, and certificates.
+- Share photos/testimonials from events.
+
+#### Admins
+- Oversee platform operations and user roles.
+- Approve or reject event proposals and sponsorships.
+- Moderate event galleries and user-generated content.
+- Generate detailed reports (volunteer hours, sponsor visibility, impact).
+
+#### Event Managers
+- Create, edit, and publish events.
+- Assign volunteer tasks and track attendance.
+- Upload and curate event galleries with pictures.
+- Submit outcome reports to admins and sponsors.
+
+#### Sponsors
+- Provide financial or in-kind support.
+- Gain visibility (logos, mentions in galleries, featured in reports).
+- Access detailed sponsor impact reports.
+
+#### Beneficiaries / Communities (Optional)
+- Represent groups or organizations receiving support.
+- Stories/testimonials highlighted in event galleries and reports.
+
+### Functional Requirements
+- **User Management:** Registration, login, profiles, role-based dashboards.
+- **Event Management:** Creation, volunteer sign-up, attendance tracking.
+- **Event Gallery:** Upload photos with captions, mobile-first gallery, tagging.
+- **Volunteer Tracking:** Hours logged, eco-badges, certificates.
+- **Sponsorship Visibility:** Logos, recognition in galleries, sponsor reports.
+- **Communication:** Email notifications only (no SMS).
+- **Reports & Analytics:** Volunteer stats, gallery engagement, sponsor ROI, event outcomes.
+
+### Non-Functional Requirements
+- **Mobile-First:** Optimized for phones first, responsive for desktop.
+- **Design Aesthetic:** Earthy green palette, intuitive UI.
+- **Scalability:** Support for growth in users/events/galleries.
+- **Security:** Encrypted, GDPR-compliant data.
+
+### Success Metrics
+- Active volunteers & completed events.
+- Gallery engagement (views, uploads, shares).
+- Hours logged & certificates issued.
+- Sponsor retention & satisfaction.
+- Positive measurable community/environmental impact.
+
+### User Flows
+- **Volunteer:** Register → Create profile → Browse events → Sign up (email confirmation) → Attend → Participation tracked → Optionally upload testimonials → Track hours/badges/certificates.
+- **Admin:** Log in → Review registrations → Approve/reject events → Moderate galleries → Approve/review sponsorships → Generate reports.
+- **Event Manager:** Apply/register (admin approval) → Create event → Publish → Volunteers sign up → Track attendance → Upload gallery → Submit summary report.
+- **Sponsor:** Register (admin approval) → Browse events → Sponsor with funds/in-kind → Gain visibility → Access impact reports.
+- **Beneficiary (Optional):** Request support → Manager organizes event → Event delivered → Beneficiary story/testimonial → Impact showcased.
+
+### Design Elements
+
+**Color Palette**
+- Primary Green: `#2F855A` (earthy green).
+- Secondary Green: `#68D391` (leaf green).
+- Earth Brown: `#8B5E3C`.
+- Sky Blue: `#38B2AC`.
+- Neutral Beige: `#F7FAF5`.
+- Accent Yellow: `#ECC94B`.
+
+**Typography**
+- Headings: Poppins / Nunito.
+- Body: Open Sans / Inter.
+
+**Imagery**
+- Real community/nature photos, natural light.
+- Flat minimal line icons with eco motifs.
+
+**Components**
+- Rounded buttons, green primary, white text.
+- Cards: white, rounded corners, soft shadows.
+- Eco badges/icons: leaf, sun, sprout.
+- Event Gallery: grid layout, captions in beige overlay.
+
+**Mobile First**
+- Sticky bottom navigation (Home · Events · Gallery · Profile).
+- Large tap targets, accessible contrast.
+
+**Tone**
+- Warm, approachable, community-driven.
+- Breathing space in UI.
 
 ## Contents
 - [Project conventions](#project-conventions)
