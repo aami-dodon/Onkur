@@ -127,6 +127,40 @@ button {
   background: rgba(255, 255, 255, 0.92);
 }
 
+.app-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-link {
+  padding: 0.55rem 1.1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 24px rgba(15, 63, 37, 0.15);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.header-link:hover {
+  background: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+
+.header-link--primary {
+  background: #fff;
+  color: var(--green-primary);
+  border-color: #fff;
+  box-shadow: 0 14px 30px rgba(12, 58, 33, 0.28);
+}
+
+.header-link--primary:hover {
+  background: rgba(255, 255, 255, 0.92);
+}
+
 .role-badge {
   background: rgba(255, 255, 255, 0.18);
   color: #fff;
