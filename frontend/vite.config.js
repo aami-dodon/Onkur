@@ -7,5 +7,6 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:5000', // Proxy API requests to backend
     },
+    allowedHosts: ['onkur.dodon.in']
   },
 });
