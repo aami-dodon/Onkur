@@ -43,7 +43,7 @@ function parseFilters(query = {}) {
   return filters;
 }
 
-router.get('/api/me/profile', authOnly, async (req, res) => {
+router.get('/me/profile', authOnly, async (req, res) => {
   try {
     const profile = await getProfile(req.user.id);
     res.json(profile);
@@ -53,7 +53,7 @@ router.get('/api/me/profile', authOnly, async (req, res) => {
   }
 });
 
-router.put('/api/me/profile', authOnly, async (req, res) => {
+router.put('/me/profile', authOnly, async (req, res) => {
   try {
     const { skills, interests, availability, location, bio } = req.body || {};
     const updated = await updateProfile({
@@ -71,7 +71,7 @@ router.put('/api/me/profile', authOnly, async (req, res) => {
   }
 });
 
-router.get('/api/events', authOnly, async (req, res) => {
+router.get('/events', authOnly, async (req, res) => {
   try {
     const filters = parseFilters(req.query || {});
     const events = await browseEvents(filters, { userId: req.user.id });
@@ -82,7 +82,7 @@ router.get('/api/events', authOnly, async (req, res) => {
   }
 });
 
-router.post('/api/events/:eventId/signup', authOnly, async (req, res) => {
+router.post('/events/:eventId/signup', authOnly, async (req, res) => {
   try {
     const { eventId } = req.params;
     if (!uuidPattern.test(eventId)) {
@@ -96,7 +96,7 @@ router.post('/api/events/:eventId/signup', authOnly, async (req, res) => {
   }
 });
 
-router.get('/api/me/signups', authOnly, async (req, res) => {
+router.get('/me/signups', authOnly, async (req, res) => {
   try {
     const signups = await listMySignups(req.user.id);
     res.json({ signups });
@@ -106,7 +106,7 @@ router.get('/api/me/signups', authOnly, async (req, res) => {
   }
 });
 
-router.post('/api/events/:eventId/hours', authOnly, async (req, res) => {
+router.post('/events/:eventId/hours', authOnly, async (req, res) => {
   try {
     const { eventId } = req.params;
     if (!uuidPattern.test(eventId)) {
@@ -126,7 +126,7 @@ router.post('/api/events/:eventId/hours', authOnly, async (req, res) => {
   }
 });
 
-router.get('/api/me/hours', authOnly, async (req, res) => {
+router.get('/me/hours', authOnly, async (req, res) => {
   try {
     const summary = await getVolunteerHours(req.user.id);
     res.json(summary);
@@ -136,7 +136,7 @@ router.get('/api/me/hours', authOnly, async (req, res) => {
   }
 });
 
-router.get('/api/me/dashboard', authOnly, async (req, res) => {
+router.get('/me/dashboard', authOnly, async (req, res) => {
   try {
     const dashboard = await getVolunteerDashboard(req.user.id);
     res.json(dashboard);
