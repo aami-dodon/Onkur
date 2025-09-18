@@ -2,8 +2,10 @@ const { randomUUID } = require('crypto');
 const pool = require('../common/db');
 const logger = require('../../utils/logger');
 const { ROLES, DEFAULT_ROLE } = require('./constants');
+const { sortRolesByPriority, determinePrimaryRole, buildRolePriorityCase } = require('./role.helpers');
 
 const roleCheckArray = ROLES.map((role) => `'${role}'`).join(', ');
+const roleOrderCase = buildRolePriorityCase('role');
 
 const schemaPromise = (async () => {
   await pool.query(`
@@ -94,14 +96,7 @@ function sanitizeRoles(roles = []) {
   if (!Array.isArray(roles)) {
     return [];
   }
-  const unique = Array.from(
-    new Set(
-      roles
-        .map((role) => (typeof role === 'string' ? role.trim().toUpperCase() : ''))
-        .filter((role) => ROLES.includes(role))
-    )
-  );
-  return unique;
+  return sortRolesByPriority(roles);
 }
 
 async function attachRoles(user) {
@@ -109,7 +104,7 @@ async function attachRoles(user) {
     return null;
   }
   const rolesResult = await pool.query(
-    `SELECT role FROM user_roles WHERE user_id = $1 ORDER BY role ASC`,
+    `SELECT role FROM user_roles WHERE user_id = $1 ORDER BY ${roleOrderCase}, role ASC`,
     [user.id]
   );
   return {
@@ -123,7 +118,7 @@ async function createUser({ name, email, passwordHash, roles }) {
   const id = randomUUID();
   const normalizedEmail = email.toLowerCase();
   const sanitizedRoles = sanitizeRoles(roles);
-  const primaryRole = sanitizedRoles[0] || DEFAULT_ROLE;
+  const primaryRole = determinePrimaryRole(sanitizedRoles, DEFAULT_ROLE);
   const roleSet = sanitizedRoles.length ? sanitizedRoles : [primaryRole];
 
   const client = await pool.connect();
@@ -194,7 +189,7 @@ async function listUsers() {
   }
   const ids = users.map((user) => user.id);
   const rolesResult = await pool.query(
-    `SELECT user_id, role FROM user_roles WHERE user_id = ANY($1::UUID[]) ORDER BY role ASC`,
+    `SELECT user_id, role FROM user_roles WHERE user_id = ANY($1::UUID[]) ORDER BY ${roleOrderCase}, role ASC`,
     [ids]
   );
   const rolesByUser = rolesResult.rows.reduce((acc, row) => {
@@ -230,7 +225,7 @@ async function insertUserRoles(client, userId, roleSet) {
 async function replaceUserRoles({ userId, roles }) {
   await ensureSchema();
   const sanitizedRoles = sanitizeRoles(roles);
-  const primaryRole = sanitizedRoles[0] || DEFAULT_ROLE;
+  const primaryRole = determinePrimaryRole(sanitizedRoles, DEFAULT_ROLE);
   const roleSet = sanitizedRoles.length ? sanitizedRoles : [primaryRole];
 
   const client = await pool.connect();

@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 import EventDiscovery from '../volunteer/EventDiscovery';
 import { fetchEvents, signupForEvent } from '../volunteer/api';
 import DashboardCard from './DashboardCard';
+import { determinePrimaryRole } from './roleUtils';
 
 const DEFAULT_FILTERS = { category: '', location: '', theme: '', date: '' };
 
@@ -37,14 +38,21 @@ function buildIntro(role, firstName) {
   }
 }
 
-export default function EventsPage({ role }) {
+export default function EventsPage({ role, roles = [] }) {
   const { token, user } = useAuth();
   const [events, setEvents] = useState([]);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [status, setStatus] = useState({ phase: 'loading', message: '' });
 
   const firstName = useMemo(() => user?.name?.split(' ')[0] || 'friend', [user?.name]);
-  const intro = useMemo(() => buildIntro(role, firstName), [role, firstName]);
+  const activeRole = useMemo(
+    () => determinePrimaryRole(roles, role),
+    [roles, role]
+  );
+  const intro = useMemo(
+    () => buildIntro(activeRole, firstName),
+    [activeRole, firstName]
+  );
 
   useDocumentTitle('Onkur | Events');
 

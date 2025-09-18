@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 import ProfileEditor from '../volunteer/ProfileEditor';
 import { fetchVolunteerProfile, updateVolunteerProfile } from '../volunteer/api';
 import DashboardCard from './DashboardCard';
+import { determinePrimaryRole } from './roleUtils';
 
 function buildIntro(role, firstName) {
   switch (role) {
@@ -35,13 +36,20 @@ function buildIntro(role, firstName) {
   }
 }
 
-export default function ProfilePage({ role }) {
+export default function ProfilePage({ role, roles = [] }) {
   const { token, user, refreshProfile } = useAuth();
   const [profile, setProfile] = useState(null);
   const [status, setStatus] = useState({ phase: 'loading', message: '' });
 
   const firstName = useMemo(() => user?.name?.split(' ')[0] || 'there', [user?.name]);
-  const intro = useMemo(() => buildIntro(role, firstName), [role, firstName]);
+  const activeRole = useMemo(
+    () => determinePrimaryRole(roles, role),
+    [roles, role]
+  );
+  const intro = useMemo(
+    () => buildIntro(activeRole, firstName),
+    [activeRole, firstName]
+  );
 
   useDocumentTitle('Onkur | Profile');
 
