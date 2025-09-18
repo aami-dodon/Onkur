@@ -1,0 +1,485 @@
+const logger = require('../../utils/logger');
+const { sendTemplatedEmail } = require('../email/email.service');
+const {
+  getVolunteerProfile,
+  upsertVolunteerProfile,
+  listPublishedEvents,
+  findEventById,
+  createEventSignup,
+  hasSignup,
+  listSignupsForUser,
+  logVolunteerHours,
+  listVolunteerHours,
+  getTotalMinutesForUser,
+  findSignupsNeedingReminder,
+  markReminderSent,
+  getUpcomingEventsForUser,
+  getPastEventsForUser,
+} = require('./volunteerJourney.repository');
+
+const BADGES = [
+  {
+    slug: 'seedling',
+    label: 'Seedling',
+    description: 'Logged 10 hours of verified community support.',
+    thresholdMinutes: 10 * 60,
+  },
+  {
+    slug: 'grove-guardian',
+    label: 'Grove Guardian',
+    description: 'Logged 50 hours nurturing sustainable change.',
+    thresholdMinutes: 50 * 60,
+  },
+  {
+    slug: 'forest-champion',
+    label: 'Forest Champion',
+    description: 'Logged 100 hours of environmental stewardship.',
+    thresholdMinutes: 100 * 60,
+  },
+];
+
+let reminderInterval = null;
+
+function normalizeStringArray(value) {
+  if (!value) {
+    return [];
+  }
+  const input = Array.isArray(value)
+    ? value
+    : String(value)
+        .split(',')
+        .map((segment) => segment.trim());
+  const seen = new Set();
+  const result = [];
+  input.forEach((item) => {
+    if (item === null || item === undefined) {
+      return;
+    }
+    const normalized = String(item).trim().toLowerCase();
+    if (!normalized || seen.has(normalized)) {
+      return;
+    }
+    seen.add(normalized);
+    result.push(normalized);
+  });
+  return result;
+}
+
+function sanitizeText(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const text = String(value).trim();
+  return text.length ? text : null;
+}
+
+function toIsoOrNull(value) {
+  if (!value) {
+    return null;
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return date.toISOString();
+}
+
+function mapProfileRow(row, fallbackUserId) {
+  if (!row) {
+    return {
+      userId: fallbackUserId,
+      skills: [],
+      interests: [],
+      availability: '',
+      location: '',
+      bio: '',
+      createdAt: null,
+      updatedAt: null,
+    };
+  }
+  return {
+    userId: row.user_id,
+    skills: Array.isArray(row.skills) ? row.skills : [],
+    interests: Array.isArray(row.interests) ? row.interests : [],
+    availability: row.availability || '',
+    location: row.location || '',
+    bio: row.bio || '',
+    createdAt: toIsoOrNull(row.created_at),
+    updatedAt: toIsoOrNull(row.updated_at),
+  };
+}
+
+function mapEventRow(event) {
+  const signupCount = Number(event.signup_count || 0);
+  const hasAvailable = event.available_slots !== undefined && event.available_slots !== null;
+  const availableSlots = hasAvailable ? Number(event.available_slots) : Math.max(event.capacity - signupCount, 0);
+  return {
+    id: event.id,
+    title: event.title,
+    description: event.description,
+    category: event.category,
+    theme: event.theme,
+    dateStart: toIsoOrNull(event.date_start),
+    dateEnd: toIsoOrNull(event.date_end),
+    location: event.location,
+    capacity: event.capacity,
+    status: event.status,
+    signupCount,
+    availableSlots,
+    isFull: availableSlots <= 0,
+    isRegistered: Boolean(event.is_registered),
+  };
+}
+
+function mapSignupRow(row) {
+  const signupCount = Number(row.signup_count || 0);
+  const hasAvailable = row.available_slots !== undefined && row.available_slots !== null;
+  const availableSlots = hasAvailable ? Number(row.available_slots) : Math.max(row.capacity - signupCount, 0);
+  return {
+    id: row.id,
+    eventId: row.event_id,
+    status: row.status,
+    createdAt: toIsoOrNull(row.created_at),
+    reminderSentAt: toIsoOrNull(row.reminder_sent_at),
+    event: {
+      id: row.event_id,
+      title: row.title,
+      description: row.description,
+      category: row.category,
+      theme: row.theme,
+      dateStart: toIsoOrNull(row.date_start),
+      dateEnd: toIsoOrNull(row.date_end),
+      location: row.location,
+      capacity: row.capacity,
+      signupCount,
+      availableSlots,
+    },
+  };
+}
+
+function mapHourRow(row) {
+  return {
+    id: row.id,
+    eventId: row.event_id,
+    minutes: row.minutes,
+    note: row.note || '',
+    verifiedBy: row.verified_by || null,
+    createdAt: toIsoOrNull(row.created_at),
+    event: row.event_id
+      ? {
+          id: row.event_id,
+          title: row.event_title || null,
+          dateStart: toIsoOrNull(row.event_date_start),
+          dateEnd: toIsoOrNull(row.event_date_end),
+        }
+      : null,
+  };
+}
+
+function formatEventDateRange(event) {
+  const start = event.date_start ? new Date(event.date_start) : null;
+  const end = event.date_end ? new Date(event.date_end) : null;
+  if (!start || Number.isNaN(start.getTime())) {
+    return '';
+  }
+  const dateFormatter = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' });
+  const timeFormatter = new Intl.DateTimeFormat('en-US', { timeStyle: 'short' });
+  if (end && !Number.isNaN(end.getTime()) && start.toDateString() === end.toDateString()) {
+    return `${dateFormatter.format(start)} · ${timeFormatter.format(start)} – ${timeFormatter.format(end)}`;
+  }
+  if (end && !Number.isNaN(end.getTime())) {
+    return `${dateFormatter.format(start)} ${timeFormatter.format(start)} → ${dateFormatter.format(end)} ${timeFormatter.format(end)}`;
+  }
+  return `${dateFormatter.format(start)} ${timeFormatter.format(start)}`;
+}
+
+function computeBadges(entries) {
+  const sorted = [...entries].sort((a, b) => {
+    const aTime = new Date(a.created_at || a.createdAt || 0).getTime();
+    const bTime = new Date(b.created_at || b.createdAt || 0).getTime();
+    return aTime - bTime;
+  });
+  let cumulative = 0;
+  const progress = BADGES.map((badge) => ({
+    ...badge,
+    thresholdHours: badge.thresholdMinutes / 60,
+    earned: false,
+    earnedAt: null,
+  }));
+
+  sorted.forEach((entry) => {
+    cumulative += Number(entry.minutes || 0);
+    progress.forEach((badge) => {
+      if (!badge.earned && cumulative >= badge.thresholdMinutes) {
+        badge.earned = true;
+        badge.earnedAt = toIsoOrNull(entry.created_at || entry.createdAt);
+      }
+    });
+  });
+
+  return { badges: progress, totalMinutes: cumulative };
+}
+
+async function getProfile(userId) {
+  const row = await getVolunteerProfile(userId);
+  return mapProfileRow(row, userId);
+}
+
+async function updateProfile({ userId, skills, interests, availability, location, bio }) {
+  const normalizedSkills = normalizeStringArray(skills);
+  const normalizedInterests = normalizeStringArray(interests);
+  const sanitizedAvailability = sanitizeText(availability);
+  const sanitizedLocation = sanitizeText(location);
+  const sanitizedBio = sanitizeText(bio);
+
+  const updated = await upsertVolunteerProfile({
+    userId,
+    skills: normalizedSkills,
+    interests: normalizedInterests,
+    availability: sanitizedAvailability,
+    location: sanitizedLocation,
+    bio: sanitizedBio,
+  });
+
+  logger.info('Volunteer profile updated', {
+    userId,
+    skillsCount: normalizedSkills.length,
+    interestsCount: normalizedInterests.length,
+  });
+
+  return mapProfileRow(updated, userId);
+}
+
+async function browseEvents(filters = {}, { userId = null } = {}) {
+  const events = await listPublishedEvents(filters, { forUserId: userId });
+  return events.map((event) => {
+    const mapped = mapEventRow(event);
+    if (userId) {
+      mapped.isRegistered = Boolean(event.is_registered || event.is_registered === true);
+    }
+    return mapped;
+  });
+}
+
+async function signupForEvent({ eventId, user }) {
+  if (!eventId) {
+    throw Object.assign(new Error('Event identifier is required'), { statusCode: 400 });
+  }
+  const { event, signup } = await createEventSignup({ eventId, userId: user.id });
+
+  let emailDispatched = false;
+  try {
+    await sendTemplatedEmail({
+      to: user.email,
+      subject: `You\u2019re confirmed for ${event.title}`,
+      heading: 'See you at the event!',
+      bodyLines: [
+        `Hi ${user.name || 'there'},`,
+        `Thank you for signing up for <strong>${event.title}</strong>.`,
+        `When: ${formatEventDateRange(event)}`,
+        `Where: ${event.location}`,
+        'Add the event to your calendar and get ready to make an impact.',
+      ],
+      cta: null,
+      previewText: `Confirmed for ${event.title}`,
+    });
+    emailDispatched = true;
+  } catch (error) {
+    logger.error('Failed to send signup confirmation email', {
+      error: error.message,
+      userId: user.id,
+      eventId,
+    });
+  }
+
+  const freshEvent = await findEventById(eventId);
+  logger.info('Volunteer signed up for event', {
+    userId: user.id,
+    eventId,
+    emailDispatched,
+  });
+
+  return {
+    signup: {
+      id: signup.id,
+      eventId: signup.event_id,
+      status: signup.status,
+      createdAt: toIsoOrNull(signup.created_at),
+    },
+    event: mapEventRow({ ...freshEvent, is_registered: true }),
+    emailDispatched,
+  };
+}
+
+async function listMySignups(userId) {
+  const rows = await listSignupsForUser(userId);
+  const now = Date.now();
+  return rows.map((row) => {
+    const mapped = mapSignupRow(row);
+    const eventEnd = row.date_end ? new Date(row.date_end).getTime() : null;
+    mapped.isUpcoming = eventEnd === null || Number.isNaN(eventEnd) ? true : eventEnd >= now;
+    return mapped;
+  });
+}
+
+async function recordVolunteerHours({ userId, eventId, minutes, note }) {
+  const normalizedMinutes = Number(minutes);
+  if (!Number.isFinite(normalizedMinutes) || normalizedMinutes <= 0) {
+    throw Object.assign(new Error('Logged minutes must be greater than zero'), { statusCode: 400 });
+  }
+  if (!eventId) {
+    throw Object.assign(new Error('Event identifier is required to log hours'), { statusCode: 400 });
+  }
+
+  const hasRegistration = await hasSignup({ userId, eventId });
+  if (!hasRegistration) {
+    throw Object.assign(new Error('You must join the event before logging hours'), { statusCode: 400 });
+  }
+
+  const entry = await logVolunteerHours({
+    userId,
+    eventId,
+    minutes: Math.round(normalizedMinutes),
+    note: sanitizeText(note),
+  });
+
+  logger.info('Volunteer hours recorded', {
+    userId,
+    eventId,
+    minutes: Math.round(normalizedMinutes),
+  });
+
+  return mapHourRow(entry);
+}
+
+async function getVolunteerHours(userId) {
+  const entries = await listVolunteerHours(userId);
+  const mappedEntries = entries.map(mapHourRow);
+  const totals = computeBadges(entries);
+  const dbTotalMinutes = await getTotalMinutesForUser(userId);
+  const totalMinutes = Math.max(totals.totalMinutes, dbTotalMinutes);
+  const totalHours = totalMinutes / 60;
+
+  return {
+    totalMinutes,
+    totalHours,
+    badges: totals.badges.map((badge) => ({
+      slug: badge.slug,
+      label: badge.label,
+      description: badge.description,
+      thresholdHours: badge.thresholdHours,
+      earned: badge.earned,
+      earnedAt: badge.earnedAt,
+    })),
+    entries: mappedEntries,
+  };
+}
+
+async function getVolunteerDashboard(userId) {
+  const [profile, upcoming, past, hours] = await Promise.all([
+    getProfile(userId),
+    getUpcomingEventsForUser(userId),
+    getPastEventsForUser(userId),
+    getVolunteerHours(userId),
+  ]);
+
+  const mapSimpleEvent = (row) => ({
+    id: row.id,
+    title: row.title,
+    dateStart: toIsoOrNull(row.date_start),
+    dateEnd: toIsoOrNull(row.date_end),
+    location: row.location,
+    theme: row.theme,
+    category: row.category,
+    joinedAt: toIsoOrNull(row.signup_created_at),
+  });
+
+  const upcomingEvents = upcoming.map(mapSimpleEvent);
+  const pastEvents = past.map(mapSimpleEvent);
+
+  return {
+    profile,
+    upcomingEvents,
+    pastEvents,
+    stats: {
+      totalMinutes: hours.totalMinutes,
+      totalHours: hours.totalHours,
+      upcomingCount: upcomingEvents.length,
+      pastCount: pastEvents.length,
+    },
+    achievements: hours.badges,
+    recentHours: hours.entries.slice(0, 5),
+  };
+}
+
+async function dispatchEventReminders() {
+  try {
+    const pending = await findSignupsNeedingReminder();
+    if (!pending.length) {
+      return { processed: 0 };
+    }
+    let processed = 0;
+    for (const signup of pending) {
+      try {
+        await sendTemplatedEmail({
+          to: signup.email,
+          subject: `Reminder: ${signup.title} starts soon`,
+          heading: 'Your event is almost here',
+          bodyLines: [
+            `Hi ${signup.name || 'there'},`,
+            `Just a friendly nudge that <strong>${signup.title}</strong> kicks off soon.`,
+            `When: ${formatEventDateRange(signup)}`,
+            `Where: ${signup.location}`,
+            'Reply to this email if you have questions. We are excited to see you there!',
+          ],
+          previewText: `${signup.title} starts soon`,
+        });
+        await markReminderSent(signup.id);
+        processed += 1;
+      } catch (error) {
+        logger.error('Failed to dispatch event reminder', {
+          error: error.message,
+          signupId: signup.id,
+          eventId: signup.event_id,
+        });
+      }
+    }
+    logger.info('Event reminders processed', { processed });
+    return { processed };
+  } catch (error) {
+    logger.error('Reminder scheduler failed', { error: error.message });
+    return { processed: 0, error: error.message };
+  }
+}
+
+function startReminderScheduler({ intervalMs = 15 * 60 * 1000 } = {}) {
+  if (process.env.NODE_ENV === 'test') {
+    return null;
+  }
+  if (reminderInterval) {
+    return reminderInterval;
+  }
+  reminderInterval = setInterval(() => {
+    dispatchEventReminders();
+  }, intervalMs);
+  if (typeof reminderInterval.unref === 'function') {
+    reminderInterval.unref();
+  }
+  dispatchEventReminders();
+  return reminderInterval;
+}
+
+module.exports = {
+  BADGES,
+  normalizeStringArray,
+  getProfile,
+  updateProfile,
+  browseEvents,
+  signupForEvent,
+  listMySignups,
+  recordVolunteerHours,
+  getVolunteerHours,
+  getVolunteerDashboard,
+  dispatchEventReminders,
+  startReminderScheduler,
+};

@@ -105,6 +105,13 @@ Onkur is a mobile-first volunteering platform built to inspire environmental and
   - [Frontend experience](#frontend-experience)
   - [Metrics & auditing](#metrics--auditing)
   - [Environment keys](#environment-keys)
+- [Phase 2 – Volunteer Journey](#phase-2--volunteer-journey)
+  - [Highlights](#phase-2-highlights)
+  - [Backend APIs](#backend-apis)
+  - [Data model updates](#data-model-updates)
+  - [Email flows](#email-flows)
+  - [Frontend experience](#phase-2-frontend-experience)
+  - [Testing & observability](#testing--observability)
 - [Project conventions](#project-conventions)
 - [Environment setup](#environment-setup)
 - [Local development workflow](#local-development-workflow)
@@ -320,6 +327,45 @@ VALUES
 ### 4. Production readiness checks
 - Run `npm run build` inside `frontend/` to ensure the new UI compiles.
 - Consider adding automated tests (e.g. Jest for backend, Vitest/React Testing Library for frontend) once the feature grows.
+
+## Phase 2 – Volunteer Journey
+
+### Phase 2 Highlights
+- Volunteers can create and update skill, interest, availability, and location details from the in-app profile editor.
+- Published events can be browsed with filters for category, location, theme, and date while respecting capacity and duplicate signup rules.
+- Signups trigger templated confirmation emails and schedule a 24-hour reminder as events approach.
+- Volunteers log minutes per event, unlocking Seedling (10h), Grove Guardian (50h), and Forest Champion (100h) eco badges.
+- The refreshed dashboard surfaces upcoming activities, recent participation, and impact metrics in a mobile-first layout.
+
+### Backend APIs
+- `GET /api/me/profile` and `PUT /api/me/profile` manage volunteer profile data.
+- `GET /api/events` lists published events with filter support and registration status.
+- `POST /api/events/:id/signup` enforces capacity, prevents duplicates, and records participation.
+- `GET /api/me/signups` returns the volunteer’s event commitments.
+- `POST /api/events/:id/hours` logs minutes against an event signup.
+- `GET /api/me/hours` aggregates totals, entries, and badge progress.
+- `GET /api/me/dashboard` combines profile, activity, and achievement data for the volunteer home view.
+
+### Data model updates
+- `volunteer_profiles` stores normalized arrays for skills and interests plus availability, location, and bio metadata.
+- `events` gains support for themes, status management, and timestamp columns to drive discovery and reminders.
+- `event_signups` tracks reminder delivery times alongside capacity-safe registration rows.
+- `volunteer_hours` records minutes, notes, and optional verification metadata per volunteer/event pairing.
+
+### Email flows
+- Signup confirmations use the shared Nodemailer transport; the scheduler (15-minute interval) sends reminders exactly 24 hours before event start.
+- Reminder dispatch respects `NODE_ENV=test` to remain inert inside Jest.
+
+### Phase 2 Frontend Experience
+- The volunteer dashboard now loads profile, signups, hours, badges, and events in one pass with optimistic refresh helpers.
+- Profile editing, event discovery, and hours logging components surface inline success/error states and mobile-first forms.
+- Badges and recent hour entries visualize progress using the earthy Onkur palette.
+
+### Testing & observability
+- Added `volunteerJourney.service.test.js` powered by `pg-mem` to cover profile updates, event signup constraints, and badge unlock logic.
+- Reminder scheduling and email dispatch leverage shared logger hooks for auditing outcomes.
+- Run `npm test` inside `backend/` and `npm run build` inside `frontend/` to confirm volunteer flows and UI bundles stay health
+  y after changes.
 
 ## Docker usage
 You can spin up both servers with Docker once your `.env` files are configured:
