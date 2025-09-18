@@ -27,8 +27,8 @@ function sanitizeAuthResponse(result) {
 
 router.post('/api/auth/signup', async (req, res) => {
   try {
-    const { name, email, password } = req.body || {};
-    const result = await signup({ name, email, password });
+    const { name, email, password, roles } = req.body || {};
+    const result = await signup({ name, email, password, roles });
     res.status(201).json(result);
   } catch (error) {
     const status = error.statusCode || 500;
@@ -92,9 +92,14 @@ router.get('/api/users', adminOnly, async (req, res) => {
 
 router.patch('/api/users/:id/role', adminOnly, async (req, res) => {
   try {
-    const { role } = req.body || {};
+    const { role, roles } = req.body || {};
     const userId = req.params.id;
-    const updated = await assignRole({ actorId: req.user.id, userId, role });
+    const desiredRoles = Array.isArray(roles)
+      ? roles
+      : role
+      ? [role]
+      : [];
+    const updated = await assignRole({ actorId: req.user.id, userId, roles: desiredRoles });
     res.json({ user: updated });
   } catch (error) {
     const status = error.statusCode || 500;

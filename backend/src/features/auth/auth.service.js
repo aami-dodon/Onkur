@@ -7,7 +7,7 @@ const {
   findUserByEmail,
   findUserById,
   listUsers,
-  updateUserRole,
+  replaceUserRoles,
   recordAuditLog,
   revokeToken,
   isTokenRevoked,
@@ -35,11 +35,17 @@ if (!JWT_SECRET) {
 
 function toPublicUser(user) {
   if (!user) return null;
+  const roles = Array.isArray(user.roles) && user.roles.length
+    ? user.roles
+    : user.role
+    ? [user.role]
+    : [];
   return {
     id: user.id,
     name: user.name,
     email: user.email,
-    role: user.role,
+    role: roles[0] || null,
+    roles,
     emailVerified: Boolean(user.email_verified_at),
     emailVerifiedAt:
       user.email_verified_at instanceof Date
@@ -56,7 +62,23 @@ function createHttpError(statusCode, message) {
   return error;
 }
 
-async function signup({ name, email, password }) {
+const PUBLIC_SIGNUP_ROLES = ROLES.filter((role) => role !== 'ADMIN');
+
+function normalizeSignupRoles(roles) {
+  if (!Array.isArray(roles)) {
+    return [];
+  }
+  const unique = Array.from(
+    new Set(
+      roles
+        .map((role) => (typeof role === 'string' ? role.trim().toUpperCase() : ''))
+        .filter((role) => PUBLIC_SIGNUP_ROLES.includes(role))
+    )
+  );
+  return unique;
+}
+
+async function signup({ name, email, password, roles }) {
   if (!name || !email || !password) {
     throw createHttpError(400, 'Name, email, and password are required');
   }
@@ -67,17 +89,18 @@ async function signup({ name, email, password }) {
   }
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+  const normalizedRoles = normalizeSignupRoles(roles);
   const user = await createUser({
     name,
     email,
     passwordHash,
-    role: DEFAULT_ROLE,
+    roles: normalizedRoles.length ? normalizedRoles : [DEFAULT_ROLE],
   });
 
   await recordAuditLog({
     actorId: user.id,
     action: 'auth.signup',
-    metadata: { email: user.email, role: user.role },
+    metadata: { email: user.email, roles: user.roles || [] },
   });
 
   let verification;
@@ -151,7 +174,7 @@ async function login({ email, password }) {
   await recordAuditLog({
     actorId: user.id,
     action: 'auth.login.success',
-    metadata: { email: user.email, role: user.role },
+    metadata: { email: user.email, roles: user.roles || [] },
   });
 
   const tokenBundle = await issueTokenBundle(user);
@@ -237,6 +260,7 @@ async function issueTokenBundle(user) {
   const payload = {
     sub: user.id,
     role: user.role,
+    roles: Array.isArray(user.roles) ? user.roles : user.role ? [user.role] : [],
     name: user.name,
   };
 
@@ -293,11 +317,33 @@ async function listAllUsers() {
   return users.map(toPublicUser);
 }
 
-async function assignRole({ actorId, userId, role }) {
-  if (!ROLES.includes(role)) {
-    throw createHttpError(400, 'Invalid role supplied');
+function normalizeRolesInput(input) {
+  if (!input) {
+    return [];
   }
-  const user = await updateUserRole({ userId, role });
+  if (Array.isArray(input)) {
+    return input;
+  }
+  if (typeof input === 'string') {
+    return [input];
+  }
+  return [];
+}
+
+async function assignRole({ actorId, userId, roles }) {
+  const normalizedRoles = Array.from(
+    new Set(
+      normalizeRolesInput(roles)
+        .map((role) => (typeof role === 'string' ? role.trim().toUpperCase() : ''))
+        .filter((role) => ROLES.includes(role))
+    )
+  );
+
+  if (!normalizedRoles.length) {
+    throw createHttpError(400, 'At least one valid role is required');
+  }
+
+  const user = await replaceUserRoles({ userId, roles: normalizedRoles });
   if (!user) {
     throw createHttpError(404, 'User not found');
   }
@@ -305,7 +351,7 @@ async function assignRole({ actorId, userId, role }) {
   await recordAuditLog({
     actorId,
     action: 'auth.role.change',
-    metadata: { userId: user.id, role },
+    metadata: { userId: user.id, roles: user.roles || [] },
   });
 
   return toPublicUser(user);
