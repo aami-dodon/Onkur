@@ -1,7 +1,7 @@
 const { randomUUID } = require('crypto');
 const pool = require('../common/db');
 const logger = require('../../utils/logger');
-const { ROLES } = require('./constants');
+const { ROLES, DEFAULT_ROLE } = require('./constants');
 
 const roleCheckArray = ROLES.map((role) => `'${role}'`).join(', ');
 
@@ -22,6 +22,22 @@ const schemaPromise = (async () => {
   await pool.query(`
     ALTER TABLE users
     ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ NULL
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_roles (
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      role TEXT NOT NULL CHECK (role = ANY(ARRAY[${roleCheckArray}]::TEXT[])),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (user_id, role)
+    )
+  `);
+
+  await pool.query(`
+    INSERT INTO user_roles (user_id, role)
+    SELECT id, role
+    FROM users
+    ON CONFLICT DO NOTHING
   `);
 
   await pool.query(`
@@ -74,21 +90,70 @@ async function ensureSchema() {
   await schemaPromise;
 }
 
-async function createUser({ name, email, passwordHash, role }) {
+function sanitizeRoles(roles = []) {
+  if (!Array.isArray(roles)) {
+    return [];
+  }
+  const unique = Array.from(
+    new Set(
+      roles
+        .map((role) => (typeof role === 'string' ? role.trim().toUpperCase() : ''))
+        .filter((role) => ROLES.includes(role))
+    )
+  );
+  return unique;
+}
+
+async function attachRoles(user) {
+  if (!user) {
+    return null;
+  }
+  const rolesResult = await pool.query(
+    `SELECT role FROM user_roles WHERE user_id = $1 ORDER BY role ASC`,
+    [user.id]
+  );
+  return {
+    ...user,
+    roles: rolesResult.rows.map((row) => row.role),
+  };
+}
+
+async function createUser({ name, email, passwordHash, roles }) {
   await ensureSchema();
   const id = randomUUID();
   const normalizedEmail = email.toLowerCase();
+  const sanitizedRoles = sanitizeRoles(roles);
+  const primaryRole = sanitizedRoles[0] || DEFAULT_ROLE;
+  const roleSet = sanitizedRoles.length ? sanitizedRoles : [primaryRole];
 
-  const result = await pool.query(
-    `
-      INSERT INTO users (id, name, email, email_normalized, password_hash, role)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, name, email, role, created_at, email_verified_at
-    `,
-    [id, name, email, normalizedEmail, passwordHash, role]
-  );
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query(
+      `
+        INSERT INTO users (id, name, email, email_normalized, password_hash, role)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id, name, email, role, created_at, email_verified_at, email_normalized, password_hash
+      `,
+      [id, name, email, normalizedEmail, passwordHash, primaryRole]
+    );
 
-  return result.rows[0];
+    await client.query(`DELETE FROM user_roles WHERE user_id = $1`, [id]);
+    await insertUserRoles(client, id, roleSet);
+
+    await client.query('COMMIT');
+
+    const user = result.rows[0];
+    return {
+      ...user,
+      roles: roleSet,
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 async function findUserByEmail(email) {
@@ -98,7 +163,11 @@ async function findUserByEmail(email) {
     `SELECT id, name, email, email_normalized, password_hash, role, created_at, email_verified_at FROM users WHERE email_normalized = $1`,
     [normalizedEmail]
   );
-  return result.rows[0] || null;
+  const user = result.rows[0] || null;
+  if (!user) {
+    return null;
+  }
+  return attachRoles(user);
 }
 
 async function findUserById(id) {
@@ -107,7 +176,11 @@ async function findUserById(id) {
     `SELECT id, name, email, email_normalized, password_hash, role, created_at, email_verified_at FROM users WHERE id = $1`,
     [id]
   );
-  return result.rows[0] || null;
+  const user = result.rows[0] || null;
+  if (!user) {
+    return null;
+  }
+  return attachRoles(user);
 }
 
 async function listUsers() {
@@ -115,21 +188,85 @@ async function listUsers() {
   const result = await pool.query(
     `SELECT id, name, email, role, created_at, email_verified_at FROM users ORDER BY created_at DESC`
   );
-  return result.rows;
+  const users = result.rows;
+  if (users.length === 0) {
+    return [];
+  }
+  const ids = users.map((user) => user.id);
+  const rolesResult = await pool.query(
+    `SELECT user_id, role FROM user_roles WHERE user_id = ANY($1::UUID[]) ORDER BY role ASC`,
+    [ids]
+  );
+  const rolesByUser = rolesResult.rows.reduce((acc, row) => {
+    if (!acc[row.user_id]) {
+      acc[row.user_id] = [];
+    }
+    acc[row.user_id].push(row.role);
+    return acc;
+  }, {});
+
+  return users.map((user) => ({
+    ...user,
+    roles: rolesByUser[user.id] || [],
+  }));
 }
 
-async function updateUserRole({ userId, role }) {
-  await ensureSchema();
-  const result = await pool.query(
+async function insertUserRoles(client, userId, roleSet) {
+  if (!roleSet.length) {
+    return;
+  }
+  const placeholders = roleSet.map((_, index) => `($1, $${index + 2})`).join(', ');
+  const values = [userId, ...roleSet];
+  await client.query(
     `
-      UPDATE users
-      SET role = $2
-      WHERE id = $1
-      RETURNING id, name, email, role, created_at, email_verified_at
+      INSERT INTO user_roles (user_id, role)
+      VALUES ${placeholders}
+      ON CONFLICT (user_id, role) DO NOTHING
     `,
-    [userId, role]
+    values
   );
-  return result.rows[0] || null;
+}
+
+async function replaceUserRoles({ userId, roles }) {
+  await ensureSchema();
+  const sanitizedRoles = sanitizeRoles(roles);
+  const primaryRole = sanitizedRoles[0] || DEFAULT_ROLE;
+  const roleSet = sanitizedRoles.length ? sanitizedRoles : [primaryRole];
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const updateResult = await client.query(
+      `
+        UPDATE users
+        SET role = $2
+        WHERE id = $1
+        RETURNING id, name, email, role, created_at, email_verified_at, email_normalized, password_hash
+      `,
+      [userId, primaryRole]
+    );
+
+    const user = updateResult.rows[0];
+    if (!user) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    await client.query(`DELETE FROM user_roles WHERE user_id = $1`, [userId]);
+    await insertUserRoles(client, userId, roleSet);
+
+    await client.query('COMMIT');
+
+    return {
+      ...user,
+      roles: roleSet,
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 async function recordAuditLog({ actorId = null, action, metadata = {} }) {
@@ -258,7 +395,7 @@ module.exports = {
   findUserByEmail,
   findUserById,
   listUsers,
-  updateUserRole,
+  replaceUserRoles,
   recordAuditLog,
   revokeToken,
   isTokenRevoked,
