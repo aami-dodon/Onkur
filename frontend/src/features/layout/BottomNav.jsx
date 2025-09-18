@@ -1,9 +1,6 @@
-const NAV_ITEMS = [
-  { id: 'home', label: 'Home', icon: '🌿' },
-  { id: 'events', label: 'Events', icon: '📅' },
-  { id: 'gallery', label: 'Gallery', icon: '🖼️' },
-  { id: 'profile', label: 'Profile', icon: '😊' },
-];
+import { Link } from 'react-router-dom';
+
+import { NAV_ITEMS } from './navConfig';
 
 export default function BottomNav({ active }) {
   return (
@@ -14,22 +11,21 @@ export default function BottomNav({ active }) {
       {NAV_ITEMS.map((item) => {
         const isActive = item.id === active;
         return (
-          <button
+          <Link
             key={item.id}
-            type="button"
-            className={`flex flex-col items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-green/60 disabled:cursor-not-allowed disabled:opacity-60 ${
+            to={item.to}
+            className={`flex flex-col items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-green/60 ${
               isActive
                 ? 'bg-brand-green/15 text-brand-green'
                 : 'text-brand-muted hover:text-brand-green'
             }`}
             aria-current={isActive ? 'page' : undefined}
-            disabled={item.id !== 'home'}
           >
             <span aria-hidden="true" className="text-base">
               {item.icon}
             </span>
             {item.label}
-          </button>
+          </Link>
         );
       })}
     </nav>
