@@ -1,15 +1,31 @@
-# 🌿 Onkur – Phase 1 Foundation
+# 🌿 Onkur Platform Overview
 
-Onkur is a mobile-first volunteering platform rooted in sustainability and community. Phase 1 lays the technical backbone: secure authentication, role-aware access, and a responsive shell that welcomes every stakeholder.
+Onkur is a mobile-first volunteering platform rooted in sustainability and community stewardship. The product is rolling out in three phases that collectively deliver authentication, volunteer empowerment, and rich event management workflows. Each milestone builds on a green-themed, responsive foundation so that every role—from volunteers to sponsors—has a tailored experience on phones first and desktops second.
 
-## ✨ Phase 1 highlights
-- Email + password signup/login backed by JWTs, email verification, and server-side token revocation.
-- Role-based dashboards for Volunteers, Event Managers, Sponsors, and Admins.
-- Admin console to assign roles and browse the community directory.
-- Earthy, mobile-first UI with a sticky bottom nav, verdant header, and warm onboarding copy.
-- Automated Jest tests for the auth service and a CI workflow that runs backend tests + frontend builds on every push.
+## 🚦 Phase roadmap
 
-Dive into the [product wiki](docs/wiki/README.md) for full design notes, API details, and future milestones.
+### Phase 1 – Foundation (Complete)
+- Email + password signup, login, and logout backed by JWT auth with secure storage and revocation.
+- Role-based dashboards for Volunteers, Event Managers, Sponsors, and Admins, guarded by role-aware routing.
+- Admin tools to assign roles and manage the community directory while blocking unauthorized access.
+- Earthy, mobile-first UI with sticky bottom navigation, a verdant header, and responsive layouts tested on small screens.
+- CI/CD workflow that installs dependencies, runs linting + unit tests for auth, and validates frontend builds.
+
+### Phase 2 – Volunteer Journey (Complete)
+- Rich volunteer profile editor capturing skills, interests, location, and availability.
+- Event discovery with filters for date, location, category, and theme plus duplicate-signup prevention and capacity checks.
+- Event signup flow with confirmation + reminder emails, hours logging, and eco-badge thresholds (10/50/100 hours).
+- Volunteer dashboard surfacing upcoming events, logged contributions, badges, and quick actions.
+- Metrics tracking for conversion (views → signups), average volunteer hours, and retention.
+
+### Phase 3 – Event Manager Workspace (Complete)
+- Event manager dashboard to create, draft, publish, and complete events with full date/time and capacity controls.
+- Task assignment surface so managers can allocate volunteers to event responsibilities and keep dashboards in sync.
+- Attendance tooling for check-in/out that feeds volunteer hour totals automatically.
+- Downloadable event reports summarizing signups, attendance percentage, and total volunteer hours.
+- Notification suite for publish confirmations, assignment notices, reminders, and post-event acknowledgements.
+
+Consult the living [product wiki](docs/Wiki.md) for design rationale, API schemas, and rollout notes for each phase.
 
 ---
 
@@ -87,8 +103,8 @@ The GitHub Actions pipeline (`.github/workflows/ci.yml`) mirrors these steps to 
 ---
 
 ## 🧭 Architecture quick reference
-- **Backend features** live under `backend/src/features/<feature-name>/`. Auth endpoints are defined in `auth.route.js` and associated service/repository files.
-- **Frontend features** live under `frontend/src/features/<feature-name>/`. The `AuthProvider` manages session state and the dashboard components render role-specific shells.
-- **Shared documentation**: the wiki captures stakeholder goals, color palette, data models, API descriptions, and future roadmap items.
+- **Backend features** live under `backend/src/features/<feature-name>/`. Auth endpoints are defined in `auth.route.js`, volunteer flows under `volunteer-journey/`, and event tooling under `event-management/`.
+- **Frontend features** live under `frontend/src/features/<feature-name>/`. Dedicated modules for auth, volunteer, and event manager experiences plug into the router and reuse the shared `AuthProvider` for session state.
+- **Shared documentation**: the wiki captures stakeholder goals, color palette, data models, API reference, and roadmap milestones.
 
 Stay grounded, build sustainably, and keep the forest thriving. 🌱
