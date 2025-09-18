@@ -1,5 +1,10 @@
 # Onkur Change Log
 
+## Desktop navigation parity
+- **Date:** 2025-09-18
+- **Change:** Introduced a desktop header navigation that mirrors the mobile bottom menu, centralized the navigation config, and wired menu items to new `/app/events`, `/app/gallery`, and `/app/profile` routes.
+- **Impact:** Authenticated users can now move between dashboard sections on both mobile and desktop, with dedicated views for events, gallery spotlights, and profile management.
+
 ## Volunteer dashboard API routing fix
 - **Date:** 2025-09-18
 - **Change:** Updated the volunteer journey router to register its endpoints relative to the `/api` base path so that dashboard requests such as `/api/me/dashboard` resolve correctly after login.

@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import BottomNav from './BottomNav';
+import DesktopNav from './DesktopNav';
 
 function formatRole(role) {
   if (!role) return '';
@@ -25,9 +26,11 @@ export default function AppLayout({ children }) {
   }, [isAuthenticated]);
 
   const activeNav = useMemo(() => {
-    if (location.pathname.startsWith('/gallery')) return 'gallery';
-    if (location.pathname.startsWith('/events')) return 'events';
-    if (location.pathname.startsWith('/profile')) return 'profile';
+    const path = location.pathname;
+    if (path.startsWith('/app/gallery') || path.startsWith('/gallery')) return 'gallery';
+    if (path.startsWith('/app/events') || path.startsWith('/events')) return 'events';
+    if (path.startsWith('/app/profile') || path.startsWith('/profile')) return 'profile';
+    if (path.startsWith('/app')) return 'home';
     return 'home';
   }, [location.pathname]);
 
@@ -88,6 +91,7 @@ export default function AppLayout({ children }) {
             </nav>
           )}
         </div>
+        {isAuthenticated ? <DesktopNav active={activeNav} /> : null}
       </header>
       <main className="flex-1 px-5 pb-16 pt-6 sm:px-8">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">{children}</div>
