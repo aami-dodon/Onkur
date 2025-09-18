@@ -70,6 +70,7 @@ Consult the living [product wiki](docs/Wiki.md) for design rationale, API schema
    cp .env.example .env
    ```
    Set `VITE_API_BASE_URL` to your backend origin (e.g. `http://localhost:5000`).
+   Set `VITE_ADMIN_EMAIL` to the support mailbox you want registrants to see after signup (comma-separated addresses are supported).
 2. Launch the dev server
    ```bash
    npm run dev

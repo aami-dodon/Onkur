@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import AppLayout from './features/layout/AppLayout';
 import LoginPage from './features/auth/LoginPage';
 import SignupPage from './features/auth/SignupPage';
+import CheckEmailPage from './features/auth/CheckEmailPage';
 import VerifyEmailPage from './features/auth/VerifyEmailPage';
 import ProtectedRoute from './features/auth/ProtectedRoute';
 import PublicOnlyRoute from './features/auth/PublicOnlyRoute';
@@ -34,6 +35,14 @@ function App() {
           element={
             <PublicOnlyRoute>
               <SignupPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/check-email"
+          element={
+            <PublicOnlyRoute>
+              <CheckEmailPage />
             </PublicOnlyRoute>
           }
         />
