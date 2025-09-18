@@ -26,12 +26,25 @@ const schemaPromise = (async () => {
       date_end TIMESTAMPTZ NOT NULL,
       location TEXT NOT NULL,
       capacity INTEGER NOT NULL CHECK (capacity > 0),
-      status TEXT NOT NULL CHECK (status = ANY(ARRAY['draft','published','cancelled']::TEXT[])),
+      requirements TEXT NULL,
+      status TEXT NOT NULL DEFAULT 'DRAFT',
       created_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
+      published_at TIMESTAMPTZ NULL,
+      completed_at TIMESTAMPTZ NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+
+  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS requirements TEXT NULL`);
+  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ NULL`);
+  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ NULL`);
+  await pool.query(`ALTER TABLE events ALTER COLUMN status SET DEFAULT 'DRAFT'`);
+  await pool.query(`UPDATE events SET status = UPPER(status) WHERE status IS NOT NULL AND status <> UPPER(status)`);
+  await pool.query(`ALTER TABLE events DROP CONSTRAINT IF EXISTS events_status_check`);
+  await pool.query(
+    `ALTER TABLE events ADD CONSTRAINT events_status_check CHECK (status = ANY(ARRAY['DRAFT','PUBLISHED','CANCELLED','COMPLETED']::TEXT[]))`,
+  );
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS event_signups (
@@ -46,6 +59,31 @@ const schemaPromise = (async () => {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS event_tasks (
+      id UUID PRIMARY KEY,
+      event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      description TEXT NULL,
+      required_count INTEGER NOT NULL DEFAULT 1 CHECK (required_count > 0),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS event_assignments (
+      id UUID PRIMARY KEY,
+      event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+      task_id UUID NOT NULL REFERENCES event_tasks(id) ON DELETE CASCADE,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'ASSIGNED' CHECK (status = ANY(ARRAY['ASSIGNED','COMPLETED']::TEXT[])),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(event_id, task_id, user_id)
+    )
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS volunteer_hours (
       id UUID PRIMARY KEY,
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -54,6 +92,31 @@ const schemaPromise = (async () => {
       note TEXT NULL,
       verified_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS event_attendance (
+      id UUID PRIMARY KEY,
+      event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      check_in_at TIMESTAMPTZ NULL,
+      check_out_at TIMESTAMPTZ NULL,
+      minutes INTEGER NULL CHECK (minutes IS NULL OR minutes >= 0),
+      hours_entry_id UUID NULL REFERENCES volunteer_hours(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(event_id, user_id)
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS event_reports (
+      event_id UUID PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE,
+      total_signups INTEGER NOT NULL DEFAULT 0,
+      total_checked_in INTEGER NOT NULL DEFAULT 0,
+      total_hours INTEGER NOT NULL DEFAULT 0,
+      generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
 
@@ -71,6 +134,18 @@ const schemaPromise = (async () => {
 
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_volunteer_hours_user ON volunteer_hours (user_id)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_event_tasks_event ON event_tasks (event_id)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_event_assignments_event_user ON event_assignments (event_id, user_id)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_event_attendance_event_user ON event_attendance (event_id, user_id)
   `);
 })();
 
@@ -114,7 +189,7 @@ async function upsertVolunteerProfile({ userId, skills, interests, availability,
 
 async function listPublishedEvents({ category, location, theme, date }, { forUserId = null } = {}) {
   await ensureSchema();
-  const conditions = ["e.status = 'published'"];
+  const conditions = ["e.status = 'PUBLISHED'"];
   const values = [];
 
   if (category) {
@@ -246,7 +321,7 @@ async function createEventSignup({ eventId, userId }) {
       throw Object.assign(new Error('Event not found'), { statusCode: 404 });
     }
 
-    if (event.status !== 'published') {
+    if (event.status !== 'PUBLISHED') {
       throw Object.assign(new Error('Event is not open for registration'), { statusCode: 400 });
     }
 
@@ -314,7 +389,43 @@ async function listSignupsForUser(userId) {
         e.date_end,
         e.location,
         e.capacity,
-        COALESCE(sc.signup_count, 0) AS signup_count
+        e.requirements,
+        COALESCE(sc.signup_count, 0) AS signup_count,
+        (
+          SELECT COALESCE(
+            json_agg(
+              json_build_object(
+                'assignmentId', ea.id,
+                'taskId', ea.task_id,
+                'taskTitle', et.title,
+                'taskDescription', et.description,
+                'status', ea.status,
+                'createdAt', ea.created_at,
+                'updatedAt', ea.updated_at
+              )
+              ORDER BY et.title
+            ),
+            '[]'::json
+          )
+          FROM event_assignments ea
+          JOIN event_tasks et ON et.id = ea.task_id
+          WHERE ea.event_id = es.event_id AND ea.user_id = es.user_id
+        ) AS assignments,
+        (
+          SELECT row_to_json(att)
+          FROM (
+            SELECT
+              id,
+              check_in_at,
+              check_out_at,
+              minutes,
+              hours_entry_id,
+              created_at,
+              updated_at
+            FROM event_attendance
+            WHERE event_id = es.event_id AND user_id = es.user_id
+          ) att
+        ) AS attendance
       FROM event_signups es
       JOIN events e ON e.id = es.event_id
       LEFT JOIN (
@@ -401,7 +512,7 @@ async function findSignupsNeedingReminder() {
     JOIN events e ON e.id = es.event_id
     JOIN users u ON u.id = es.user_id
     WHERE es.reminder_sent_at IS NULL
-      AND e.status = 'published'
+      AND e.status = 'PUBLISHED'
       AND e.date_start > NOW()
       AND e.date_start <= NOW() + INTERVAL '24 hours'
       AND e.date_start - INTERVAL '24 hours' <= NOW()

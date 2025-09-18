@@ -123,6 +123,7 @@ function mapEventRow(event) {
     dateEnd: toIsoOrNull(event.date_end),
     location: event.location,
     capacity: event.capacity,
+    requirements: event.requirements || '',
     status: event.status,
     signupCount,
     availableSlots,
@@ -135,6 +136,28 @@ function mapSignupRow(row) {
   const signupCount = Number(row.signup_count || 0);
   const hasAvailable = row.available_slots !== undefined && row.available_slots !== null;
   const availableSlots = hasAvailable ? Number(row.available_slots) : Math.max(row.capacity - signupCount, 0);
+  const assignments = Array.isArray(row.assignments)
+    ? row.assignments.map((assignment) => ({
+        assignmentId: assignment.assignmentId,
+        taskId: assignment.taskId,
+        taskTitle: assignment.taskTitle,
+        taskDescription: assignment.taskDescription || '',
+        status: assignment.status,
+        createdAt: toIsoOrNull(assignment.createdAt),
+        updatedAt: toIsoOrNull(assignment.updatedAt),
+      }))
+    : [];
+  const attendance = row.attendance
+    ? {
+        id: row.attendance.id,
+        checkInAt: toIsoOrNull(row.attendance.check_in_at || row.attendance.checkInAt),
+        checkOutAt: toIsoOrNull(row.attendance.check_out_at || row.attendance.checkOutAt),
+        minutes: row.attendance.minutes ?? null,
+        hoursEntryId: row.attendance.hours_entry_id || row.attendance.hoursEntryId || null,
+        createdAt: toIsoOrNull(row.attendance.created_at || row.attendance.createdAt),
+        updatedAt: toIsoOrNull(row.attendance.updated_at || row.attendance.updatedAt),
+      }
+    : null;
   return {
     id: row.id,
     eventId: row.event_id,
@@ -151,9 +174,12 @@ function mapSignupRow(row) {
       dateEnd: toIsoOrNull(row.date_end),
       location: row.location,
       capacity: row.capacity,
+      requirements: row.requirements || '',
       signupCount,
       availableSlots,
     },
+    assignments,
+    attendance,
   };
 }
 
