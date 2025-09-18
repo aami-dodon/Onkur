@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import useDocumentTitle from '../../lib/useDocumentTitle';
 import { useAuth } from '../auth/AuthContext';
 import DashboardCard from './DashboardCard';
+import { determinePrimaryRole } from './roleUtils';
 
 const GALLERY_SPOTLIGHTS = [
   {
@@ -67,10 +68,17 @@ function buildIntro(role, firstName) {
   }
 }
 
-export default function GalleryPage({ role }) {
+export default function GalleryPage({ role, roles = [] }) {
   const { user } = useAuth();
   const firstName = useMemo(() => user?.name?.split(' ')[0] || 'friend', [user?.name]);
-  const intro = useMemo(() => buildIntro(role, firstName), [role, firstName]);
+  const activeRole = useMemo(
+    () => determinePrimaryRole(roles, role),
+    [roles, role]
+  );
+  const intro = useMemo(
+    () => buildIntro(activeRole, firstName),
+    [activeRole, firstName]
+  );
 
   useDocumentTitle('Onkur | Gallery');
 
