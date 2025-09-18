@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import useDocumentTitle from '../../lib/useDocumentTitle';
 import { useAuth } from './AuthContext';
@@ -11,16 +11,62 @@ const initialState = {
 };
 
 export default function SignupPage() {
-  const { signup } = useAuth();
+  const { signup, roles: availableRoles } = useAuth();
   const [values, setValues] = useState(initialState);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [selectedRoles, setSelectedRoles] = useState([]);
   useDocumentTitle('Onkur | Join the Onkur movement');
+
+  const selectableRoles = useMemo(
+    () => availableRoles.filter((role) => role !== 'ADMIN'),
+    [availableRoles]
+  );
+
+  useEffect(() => {
+    if (!selectableRoles.length) {
+      setSelectedRoles([]);
+      return;
+    }
+    setSelectedRoles((prev) => {
+      if (prev.length) {
+        return prev.filter((role) => selectableRoles.includes(role));
+      }
+      return [selectableRoles[0]];
+    });
+  }, [selectableRoles]);
+
+  const ROLE_DETAILS = useMemo(
+    () => ({
+      VOLUNTEER: {
+        label: 'Volunteer',
+        description: 'Join hands-on projects and power community impact on the ground.',
+      },
+      EVENT_MANAGER: {
+        label: 'Event manager',
+        description: 'Plan gatherings, coordinate teams, and keep every eco-moment on track.',
+      },
+      SPONSOR: {
+        label: 'Sponsor',
+        description: 'Fund initiatives, unlock resources, and accelerate regenerative ideas.',
+      },
+    }),
+    []
+  );
 
   const handleChange = (event) => {
     const { name, value } = event.target;
     setValues((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const toggleRole = (role) => {
+    setSelectedRoles((prev) => {
+      if (prev.includes(role)) {
+        return prev.filter((entry) => entry !== role);
+      }
+      return [...prev, role];
+    });
   };
 
   const handleSubmit = async (event) => {
@@ -35,13 +81,21 @@ export default function SignupPage() {
       return;
     }
 
+    if (!selectedRoles.length) {
+      setError('Choose at least one role to tailor your Onkur experience.');
+      setSubmitting(false);
+      return;
+    }
+
     try {
       const { message } = await signup({
         name: values.name,
         email: values.email,
         password: values.password,
+        roles: selectedRoles,
       });
       setValues(initialState);
+      setSelectedRoles(selectableRoles.length ? [selectableRoles[0]] : []);
       setSuccess(message || 'Account created. Check your inbox to verify your email.');
     } catch (err) {
       setError(err.message || 'We could not create your account.');
@@ -129,6 +183,49 @@ export default function SignupPage() {
               className="w-full rounded-md border border-brand-green/40 bg-white/90 px-3 py-3 text-base shadow-sm transition focus:border-brand-green focus:outline-none focus:ring-2 focus:ring-brand-green/40"
             />
           </div>
+          <fieldset className="space-y-3 rounded-lg border border-brand-green/30 bg-brand-sand/20 px-4 py-4">
+            <legend className="px-2 text-sm font-semibold uppercase tracking-[0.18em] text-brand-muted">
+              Choose your roles
+            </legend>
+            <p className="m-0 text-sm text-brand-muted">
+              Pick all the ways you want to show up—switching paths later is always possible.
+            </p>
+            <div className="space-y-3">
+              {selectableRoles.map((role) => {
+                const detail = ROLE_DETAILS[role] || { label: role, description: '' };
+                const inputId = `role-${role.toLowerCase()}`;
+                const checked = selectedRoles.includes(role);
+                return (
+                  <label
+                    key={role}
+                    htmlFor={inputId}
+                    className={`flex cursor-pointer flex-col gap-1 rounded-md border px-3 py-3 transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-green/50 ${
+                      checked ? 'border-brand-green bg-white shadow-[0_10px_22px_rgba(47,133,90,0.12)]' : 'border-brand-green/30 bg-white/80'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-base font-semibold text-brand-forest">{detail.label}</span>
+                      <input
+                        id={inputId}
+                        type="checkbox"
+                        name="roles"
+                        value={role}
+                        checked={checked}
+                        onChange={() => toggleRole(role)}
+                        className="h-4 w-4 rounded border-brand-green text-brand-green focus:ring-brand-green"
+                      />
+                    </div>
+                    {detail.description ? (
+                      <span className="text-sm text-brand-muted">{detail.description}</span>
+                    ) : null}
+                  </label>
+                );
+              })}
+              {selectableRoles.length === 0 ? (
+                <p className="text-sm text-brand-muted">Roles are loading…</p>
+              ) : null}
+            </div>
+          </fieldset>
           <div className="space-y-3 pt-2">
             {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
             {success ? <p className="text-sm font-medium text-brand-green">{success}</p> : null}

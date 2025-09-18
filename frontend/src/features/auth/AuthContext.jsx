@@ -111,10 +111,10 @@ export function AuthProvider({ children }) {
     [setAuthenticated]
   );
 
-  const signup = useCallback(async ({ name, email, password }) => {
+  const signup = useCallback(async ({ name, email, password, roles }) => {
     const result = await apiRequest('/api/auth/signup', {
       method: 'POST',
-      body: { name, email, password },
+      body: { name, email, password, roles },
     });
     return result;
   }, []);
@@ -155,14 +155,22 @@ export function AuthProvider({ children }) {
   }, [auth.token]);
 
   const assignRole = useCallback(
-    async ({ userId, role }) => {
+    async ({ userId, role, roles: desiredRoles }) => {
       if (!auth.token) {
         throw new Error('Not authenticated');
+      }
+      const payload = {};
+      if (Array.isArray(desiredRoles)) {
+        payload.roles = desiredRoles;
+      } else if (role) {
+        payload.role = role;
+      } else {
+        throw new Error('A role selection is required');
       }
       const response = await apiRequest(`/api/users/${userId}/role`, {
         method: 'PATCH',
         token: auth.token,
-        body: { role },
+        body: payload,
       });
 
       if (response.user && auth.user && response.user.id === auth.user.id) {

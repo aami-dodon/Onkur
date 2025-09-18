@@ -15,7 +15,7 @@ export default function AdminDashboard() {
   const { roles, fetchUsers, assignRole } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ userId: '', role: '' });
+  const [form, setForm] = useState({ userId: '', roles: [] });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   useDocumentTitle('Onkur | Operations center 🌿');
@@ -45,10 +45,17 @@ export default function AdminDashboard() {
   }, [fetchUsers]);
 
   useEffect(() => {
-    if (roles.length && !form.role) {
-      setForm((prev) => ({ ...prev, role: roles[0] }));
+    if (!roles.length) {
+      return;
     }
-  }, [roles, form.role]);
+    setForm((prev) => {
+      if (prev.roles.length) {
+        const filtered = prev.roles.filter((role) => roles.includes(role));
+        return { ...prev, roles: filtered.length ? filtered : [roles[0]] };
+      }
+      return { ...prev, roles: [roles[0]] };
+    });
+  }, [roles]);
 
   const roleOptions = useMemo(() => roles, [roles]);
 
@@ -57,18 +64,35 @@ export default function AdminDashboard() {
     setMessage('');
     setError('');
 
-    if (!form.userId || !form.role) {
-      setError('Select a user and role');
+    if (!form.userId || !form.roles.length) {
+      setError('Select a user and at least one role');
       return;
     }
 
     try {
-      const updated = await assignRole({ userId: form.userId, role: form.role });
+      const updated = await assignRole({ userId: form.userId, roles: form.roles });
       setUsers((prev) => prev.map((entry) => (entry.id === updated.id ? updated : entry)));
-      setMessage(`Updated role to ${formatRole(updated.role)}.`);
+      setMessage(`Updated roles to ${updated.roles.map((role) => formatRole(role)).join(', ')}.`);
     } catch (err) {
       setError(err.message || 'Unable to update role');
     }
+  };
+
+  const handleUserChange = (event) => {
+    const userId = event.target.value;
+    const selectedUser = users.find((entry) => entry.id === userId);
+    setForm({
+      userId,
+      roles: selectedUser && Array.isArray(selectedUser.roles) && selectedUser.roles.length ? selectedUser.roles : roleOptions.slice(0, 1),
+    });
+  };
+
+  const toggleRole = (role) => {
+    setForm((prev) => {
+      const hasRole = prev.roles.includes(role);
+      const nextRoles = hasRole ? prev.roles.filter((entry) => entry !== role) : [...prev.roles, role];
+      return { ...prev, roles: nextRoles };
+    });
   };
 
   return (
@@ -110,7 +134,7 @@ export default function AdminDashboard() {
               id="userId"
               name="userId"
               value={form.userId}
-              onChange={(event) => setForm((prev) => ({ ...prev, userId: event.target.value }))}
+              onChange={handleUserChange}
               className="w-full rounded-md border border-brand-green/40 bg-white/90 px-3 py-3 text-base shadow-sm transition focus:border-brand-green focus:outline-none focus:ring-2 focus:ring-brand-green/40"
             >
               <option value="">Choose a user</option>
@@ -121,25 +145,27 @@ export default function AdminDashboard() {
               ))}
             </select>
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-semibold text-brand-muted" htmlFor="role">
-              Role
-            </label>
-            <select
-              id="role"
-              name="role"
-              value={form.role}
-              onChange={(event) => setForm((prev) => ({ ...prev, role: event.target.value }))}
-              className="w-full rounded-md border border-brand-green/40 bg-white/90 px-3 py-3 text-base shadow-sm transition focus:border-brand-green focus:outline-none focus:ring-2 focus:ring-brand-green/40"
-            >
-              <option value="">Choose a role</option>
-              {roleOptions.map((role) => (
-                <option key={role} value={role}>
-                  {formatRole(role)}
-                </option>
-              ))}
-            </select>
-          </div>
+          <fieldset className="flex flex-col gap-3 rounded-md border border-brand-green/30 bg-brand-sand/20 px-3 py-3">
+            <legend className="px-2 text-xs font-semibold uppercase tracking-[0.2em] text-brand-muted">
+              Roles
+            </legend>
+            {roleOptions.map((role) => {
+              const inputId = `admin-role-${role.toLowerCase()}`;
+              const checked = form.roles.includes(role);
+              return (
+                <label key={role} htmlFor={inputId} className="flex items-center justify-between gap-3 rounded-md border border-brand-green/40 bg-white/80 px-3 py-2">
+                  <span className="text-sm font-medium text-brand-forest">{formatRole(role)}</span>
+                  <input
+                    id={inputId}
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleRole(role)}
+                    className="h-4 w-4 rounded border-brand-green text-brand-green focus:ring-brand-green"
+                  />
+                </label>
+              );
+            })}
+          </fieldset>
           {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
           {message ? <p className="text-sm font-semibold text-brand-green">{message}</p> : null}
           <button type="submit" className="btn-primary">
@@ -170,7 +196,11 @@ export default function AdminDashboard() {
                   <tr key={entry.id} className={index % 2 === 0 ? 'bg-white' : 'bg-brand-green/5'}>
                     <td className="px-3 py-2 text-brand-forest">{entry.name}</td>
                     <td className="px-3 py-2 text-brand-forest">{entry.email}</td>
-                    <td className="px-3 py-2 text-brand-forest">{formatRole(entry.role)}</td>
+                    <td className="px-3 py-2 text-brand-forest">
+                      {Array.isArray(entry.roles) && entry.roles.length
+                        ? entry.roles.map((role) => formatRole(role)).join(', ')
+                        : formatRole(entry.role)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

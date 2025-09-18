@@ -31,7 +31,13 @@ export default function AppLayout({ children }) {
     return 'home';
   }, [location.pathname]);
 
-  const formattedRole = formatRole(user?.role);
+  const formattedRoles = useMemo(() => {
+    if (!user) return [];
+    if (Array.isArray(user.roles) && user.roles.length) {
+      return user.roles.map((role) => formatRole(role));
+    }
+    return user.role ? [formatRole(user.role)] : [];
+  }, [user]);
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-brand-green/10 via-brand-sand to-brand-sand">
@@ -52,9 +58,9 @@ export default function AppLayout({ children }) {
           {user ? (
             <div className="flex w-full flex-col items-center gap-2 text-sm sm:w-auto sm:items-end">
               <span className="text-base font-medium">{user.name}</span>
-              {formattedRole ? (
+              {formattedRoles.length ? (
                 <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]">
-                  {formattedRole}
+                  {formattedRoles.join(' • ')}
                 </span>
               ) : null}
               <button

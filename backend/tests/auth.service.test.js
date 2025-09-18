@@ -42,6 +42,7 @@ describe('auth.service', () => {
       email: 'user@example.com',
       role: 'VOLUNTEER',
     });
+    expect(signupResult.user.roles).toEqual(['VOLUNTEER']);
     expect(signupResult.requiresEmailVerification).toBe(true);
 
     const tokenRow = await pool.query('SELECT token FROM email_verification_tokens WHERE user_id = $1', [
@@ -77,13 +78,26 @@ describe('auth.service', () => {
     const updated = await authService.assignRole({
       actorId: admin.user.id,
       userId: volunteer.user.id,
-      role: 'EVENT_MANAGER',
+      roles: ['EVENT_MANAGER', 'SPONSOR'],
     });
 
     expect(updated).toMatchObject({
       id: volunteer.user.id,
       role: 'EVENT_MANAGER',
     });
+    expect(updated.roles).toEqual(['EVENT_MANAGER', 'SPONSOR']);
+  });
+
+  test('signup respects requested roles except admin', async () => {
+    const signupResult = await authService.signup({
+      name: 'Multi Role User',
+      email: 'multi@example.com',
+      password: 'password123',
+      roles: ['volunteer', 'sponsor', 'admin'],
+    });
+
+    expect(signupResult.user.roles).toEqual(['VOLUNTEER', 'SPONSOR']);
+    expect(signupResult.user.role).toBe('VOLUNTEER');
   });
 
   test('logout revokes token so it cannot be reused', async () => {
