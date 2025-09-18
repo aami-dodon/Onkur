@@ -7,11 +7,22 @@ const schemaPromise = (async () => {
       user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       skills TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
       interests TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
-      availability TEXT NULL,
+      availability TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
       location TEXT NULL,
+      state TEXT NULL,
       bio TEXT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS volunteer_profile_options (
+      id UUID PRIMARY KEY,
+      type TEXT NOT NULL CHECK (type = ANY(ARRAY['skill','interest','city']::TEXT[])),
+      value TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(type, value)
     )
   `);
 
@@ -72,6 +83,49 @@ const schemaPromise = (async () => {
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_volunteer_hours_user ON volunteer_hours (user_id)
   `);
+
+  const availabilityColumn = await pool.query(
+    `
+      SELECT udt_name
+      FROM information_schema.columns
+      WHERE table_name = 'volunteer_profiles'
+        AND column_name = 'availability'
+    `
+  );
+
+  if (availabilityColumn.rows.length && availabilityColumn.rows[0].udt_name !== '_text') {
+    await pool.query(`
+      ALTER TABLE volunteer_profiles
+      RENAME COLUMN availability TO availability_legacy
+    `);
+    await pool.query(`
+      ALTER TABLE volunteer_profiles
+      ADD COLUMN availability TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]
+    `);
+    const legacyValues = await pool.query(`
+      SELECT user_id, availability_legacy
+      FROM volunteer_profiles
+    `);
+    await Promise.all(
+      legacyValues.rows.map((row) => {
+        const legacy = row.availability_legacy;
+        const normalized = legacy && String(legacy).trim() ? [String(legacy).trim()] : [];
+        return pool.query(
+          `UPDATE volunteer_profiles SET availability = $2 WHERE user_id = $1`,
+          [row.user_id, normalized]
+        );
+      })
+    );
+    await pool.query(`
+      ALTER TABLE volunteer_profiles
+      DROP COLUMN IF EXISTS availability_legacy
+    `);
+  }
+
+  await pool.query(`
+    ALTER TABLE volunteer_profiles
+    ADD COLUMN IF NOT EXISTS state TEXT NULL
+  `);
 })();
 
 async function ensureSchema() {
@@ -82,7 +136,7 @@ async function getVolunteerProfile(userId) {
   await ensureSchema();
   const result = await pool.query(
     `
-      SELECT user_id, skills, interests, availability, location, bio, created_at, updated_at
+      SELECT user_id, skills, interests, availability, location, state, bio, created_at, updated_at
       FROM volunteer_profiles
       WHERE user_id = $1
     `,
@@ -91,25 +145,61 @@ async function getVolunteerProfile(userId) {
   return result.rows[0] || null;
 }
 
-async function upsertVolunteerProfile({ userId, skills, interests, availability, location, bio }) {
+async function upsertVolunteerProfile({ userId, skills, interests, availability, location, state, bio }) {
   await ensureSchema();
   const result = await pool.query(
     `
-      INSERT INTO volunteer_profiles (user_id, skills, interests, availability, location, bio, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      INSERT INTO volunteer_profiles (user_id, skills, interests, availability, location, state, bio, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
       ON CONFLICT (user_id)
       DO UPDATE SET
         skills = EXCLUDED.skills,
         interests = EXCLUDED.interests,
         availability = EXCLUDED.availability,
         location = EXCLUDED.location,
+        state = EXCLUDED.state,
         bio = EXCLUDED.bio,
         updated_at = NOW()
-      RETURNING user_id, skills, interests, availability, location, bio, created_at, updated_at
+      RETURNING user_id, skills, interests, availability, location, state, bio, created_at, updated_at
     `,
-    [userId, skills, interests, availability, location, bio]
+    [userId, skills, interests, availability, location, state, bio]
   );
   return result.rows[0];
+}
+
+async function listProfileOptions() {
+  await ensureSchema();
+  const result = await pool.query(
+    `
+      SELECT type, value
+      FROM volunteer_profile_options
+      ORDER BY type ASC, value ASC
+    `
+  );
+  return result.rows;
+}
+
+async function insertProfileOptions(type, values) {
+  await ensureSchema();
+  if (!Array.isArray(values) || !values.length) {
+    return 0;
+  }
+
+  const rows = values.map((value) => [randomUUID(), type, value]);
+  const placeholders = rows
+    .map((_, index) => `($${index * 3 + 1}, $${index * 3 + 2}, $${index * 3 + 3})`)
+    .join(', ');
+  const flatValues = rows.flat();
+
+  const result = await pool.query(
+    `
+      INSERT INTO volunteer_profile_options (id, type, value)
+      VALUES ${placeholders}
+      ON CONFLICT (type, value) DO NOTHING
+    `,
+    flatValues
+  );
+  return result.rowCount || 0;
 }
 
 async function listPublishedEvents({ category, location, theme, date }, { forUserId = null } = {}) {
@@ -483,4 +573,6 @@ module.exports = {
   markReminderSent,
   getUpcomingEventsForUser,
   getPastEventsForUser,
+  listProfileOptions,
+  insertProfileOptions,
 };

@@ -7,3 +7,4 @@ These notes apply to files under `frontend/src/features/volunteer/`.
 - Surfaces that mutate backend data should display inline success and error states rather than relying on alerts.
 - When wiring new flows into the dashboard, reuse the shared refresh helpers so profile, signup, and hours panels stay in sync a
   fter mutations.
+- Reuse the token-input and picker patterns from `ProfileEditor.jsx` when adding new profile form affordances so the UX stays consistent.

@@ -15,6 +15,8 @@ const {
   markReminderSent,
   getUpcomingEventsForUser,
   getPastEventsForUser,
+  listProfileOptions,
+  insertProfileOptions,
 } = require('./volunteerJourney.repository');
 
 const BADGES = [
@@ -39,6 +41,88 @@ const BADGES = [
 ];
 
 let reminderInterval = null;
+
+const PROFILE_OPTION_TYPES = {
+  SKILL: 'skill',
+  INTEREST: 'interest',
+  CITY: 'city',
+};
+
+const DEFAULT_PROFILE_OPTIONS = {
+  [PROFILE_OPTION_TYPES.SKILL]: [
+    'tree planting',
+    'first aid',
+    'event coordination',
+    'community outreach',
+    'waste management',
+    'teaching',
+  ],
+  [PROFILE_OPTION_TYPES.INTEREST]: [
+    'urban forestry',
+    'wetland restoration',
+    'environmental education',
+    'wildlife rescue',
+    'climate advocacy',
+    'sustainable farming',
+  ],
+  [PROFILE_OPTION_TYPES.CITY]: ['Bengaluru', 'Chennai', 'Delhi', 'Hyderabad', 'Kolkata', 'Mumbai', 'Pune'],
+};
+
+const AVAILABILITY_PRESETS = [
+  { value: 'weekday-mornings', label: 'Weekday mornings' },
+  { value: 'weekday-afternoons', label: 'Weekday afternoons' },
+  { value: 'weekday-evenings', label: 'Weekday evenings' },
+  { value: 'weekends', label: 'Weekends' },
+  { value: 'flexible', label: 'Flexible / on-call' },
+  { value: 'remote', label: 'Remote friendly' },
+];
+
+const AVAILABILITY_LOOKUP = new Map();
+AVAILABILITY_PRESETS.forEach((option) => {
+  AVAILABILITY_LOOKUP.set(option.value, option.value);
+  AVAILABILITY_LOOKUP.set(option.label.toLowerCase(), option.value);
+});
+
+const STATE_OPTIONS = [
+  'Andhra Pradesh',
+  'Arunachal Pradesh',
+  'Assam',
+  'Bihar',
+  'Chhattisgarh',
+  'Goa',
+  'Gujarat',
+  'Haryana',
+  'Himachal Pradesh',
+  'Jharkhand',
+  'Karnataka',
+  'Kerala',
+  'Madhya Pradesh',
+  'Maharashtra',
+  'Manipur',
+  'Meghalaya',
+  'Mizoram',
+  'Nagaland',
+  'Odisha',
+  'Punjab',
+  'Rajasthan',
+  'Sikkim',
+  'Tamil Nadu',
+  'Telangana',
+  'Tripura',
+  'Uttar Pradesh',
+  'Uttarakhand',
+  'West Bengal',
+  'Andaman and Nicobar Islands',
+  'Chandigarh',
+  'Dadra and Nagar Haveli and Daman and Diu',
+  'Delhi',
+  'Jammu and Kashmir',
+  'Ladakh',
+  'Lakshadweep',
+  'Puducherry',
+];
+
+const STATE_LOOKUP = new Map(STATE_OPTIONS.map((state) => [state.toLowerCase(), state]));
 
 function normalizeStringArray(value) {
   if (!value) {
@@ -73,6 +157,136 @@ function sanitizeText(value) {
   return text.length ? text : null;
 }
 
+function toTitleCase(value) {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function normalizeCity(value) {
+  const sanitized = sanitizeText(value);
+  if (!sanitized) {
+    return null;
+  }
+  return toTitleCase(sanitized);
+}
+
+function normalizeAvailabilityArray(value) {
+  if (value === null || value === undefined) {
+    return [];
+  }
+  const input = Array.isArray(value)
+    ? value
+    : String(value)
+        .split(',')
+        .map((segment) => segment.trim());
+
+  const seen = new Set();
+  const normalized = [];
+
+  input.forEach((item) => {
+    if (item === null || item === undefined) {
+      return;
+    }
+    const key = String(item).trim();
+    if (!key) {
+      return;
+    }
+    const lookupKey = key.toLowerCase();
+    const canonical = AVAILABILITY_LOOKUP.get(lookupKey) || AVAILABILITY_LOOKUP.get(key);
+    if (!canonical) {
+      throw Object.assign(new Error(`Unsupported availability option: ${key}`), { statusCode: 400 });
+    }
+    if (!seen.has(canonical)) {
+      seen.add(canonical);
+      normalized.push(canonical);
+    }
+  });
+
+  return normalized;
+}
+
+function normalizeState(value) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  const key = String(value).trim();
+  if (!key) {
+    return null;
+  }
+  const canonical = STATE_LOOKUP.get(key.toLowerCase());
+  if (!canonical) {
+    throw Object.assign(new Error('Please select a valid state in India'), { statusCode: 400 });
+  }
+  return canonical;
+}
+
+async function ensureDefaultProfileOptions() {
+  const defaultSkillValues = DEFAULT_PROFILE_OPTIONS[PROFILE_OPTION_TYPES.SKILL].map((value) => value.toLowerCase());
+  const defaultInterestValues = DEFAULT_PROFILE_OPTIONS[PROFILE_OPTION_TYPES.INTEREST].map((value) => value.toLowerCase());
+  const defaultCityValues = DEFAULT_PROFILE_OPTIONS[PROFILE_OPTION_TYPES.CITY]
+    .map((value) => normalizeCity(value))
+    .filter(Boolean);
+
+  await Promise.all([
+    insertProfileOptions(PROFILE_OPTION_TYPES.SKILL, defaultSkillValues),
+    insertProfileOptions(PROFILE_OPTION_TYPES.INTEREST, defaultInterestValues),
+    insertProfileOptions(PROFILE_OPTION_TYPES.CITY, defaultCityValues),
+  ]);
+}
+
+function formatOptionLabel(type, value) {
+  if (!value) {
+    return '';
+  }
+  return toTitleCase(value);
+}
+
+function normalizeCityValues(values) {
+  const input = Array.isArray(values) ? values : [values];
+  const seen = new Set();
+  const normalized = [];
+  input.forEach((item) => {
+    const normalizedValue = normalizeCity(item);
+    if (normalizedValue && !seen.has(normalizedValue)) {
+      seen.add(normalizedValue);
+      normalized.push(normalizedValue);
+    }
+  });
+  return normalized;
+}
+
+async function getProfileCatalogs() {
+  await ensureDefaultProfileOptions();
+  const rows = await listProfileOptions();
+  const grouped = {
+    [PROFILE_OPTION_TYPES.SKILL]: new Set(),
+    [PROFILE_OPTION_TYPES.INTEREST]: new Set(),
+    [PROFILE_OPTION_TYPES.CITY]: new Set(),
+  };
+
+  rows.forEach((row) => {
+    if (grouped[row.type]) {
+      grouped[row.type].add(row.value);
+    }
+  });
+
+  const toSortedOptions = (type) =>
+    Array.from(grouped[type])
+      .map((value) => ({ value, label: formatOptionLabel(type, value) }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+
+  return {
+    skills: toSortedOptions(PROFILE_OPTION_TYPES.SKILL),
+    interests: toSortedOptions(PROFILE_OPTION_TYPES.INTEREST),
+    locations: toSortedOptions(PROFILE_OPTION_TYPES.CITY),
+    availability: AVAILABILITY_PRESETS.slice(),
+    states: STATE_OPTIONS.map((state) => ({ value: state, label: state })),
+  };
+}
+
 function toIsoOrNull(value) {
   if (!value) {
     return null;
@@ -90,8 +304,9 @@ function mapProfileRow(row, fallbackUserId) {
       userId: fallbackUserId,
       skills: [],
       interests: [],
-      availability: '',
+      availability: [],
       location: '',
+      state: '',
       bio: '',
       createdAt: null,
       updatedAt: null,
@@ -101,8 +316,9 @@ function mapProfileRow(row, fallbackUserId) {
     userId: row.user_id,
     skills: Array.isArray(row.skills) ? row.skills : [],
     interests: Array.isArray(row.interests) ? row.interests : [],
-    availability: row.availability || '',
+    availability: normalizeAvailabilityArray(row.availability),
     location: row.location || '',
+    state: row.state || '',
     bio: row.bio || '',
     createdAt: toIsoOrNull(row.created_at),
     updatedAt: toIsoOrNull(row.updated_at),
@@ -225,19 +441,31 @@ async function getProfile(userId) {
   return mapProfileRow(row, userId);
 }
 
-async function updateProfile({ userId, skills, interests, availability, location, bio }) {
+async function updateProfile({ userId, skills, interests, availability, location, state, bio }) {
   const normalizedSkills = normalizeStringArray(skills);
   const normalizedInterests = normalizeStringArray(interests);
-  const sanitizedAvailability = sanitizeText(availability);
-  const sanitizedLocation = sanitizeText(location);
+  const normalizedAvailability = normalizeAvailabilityArray(availability);
+  const normalizedLocation = normalizeCity(location);
+  const normalizedState = normalizeState(state);
   const sanitizedBio = sanitizeText(bio);
+
+  await ensureDefaultProfileOptions();
+  await Promise.all([
+    insertProfileOptions(PROFILE_OPTION_TYPES.SKILL, normalizedSkills),
+    insertProfileOptions(PROFILE_OPTION_TYPES.INTEREST, normalizedInterests),
+    insertProfileOptions(
+      PROFILE_OPTION_TYPES.CITY,
+      normalizedLocation ? normalizeCityValues([normalizedLocation]) : []
+    ),
+  ]);
 
   const updated = await upsertVolunteerProfile({
     userId,
     skills: normalizedSkills,
     interests: normalizedInterests,
-    availability: sanitizedAvailability,
-    location: sanitizedLocation,
+    availability: normalizedAvailability,
+    location: normalizedLocation,
+    state: normalizedState,
     bio: sanitizedBio,
   });
 
@@ -245,6 +473,7 @@ async function updateProfile({ userId, skills, interests, availability, location
     userId,
     skillsCount: normalizedSkills.length,
     interestsCount: normalizedInterests.length,
+    availabilityCount: normalizedAvailability.length,
   });
 
   return mapProfileRow(updated, userId);
@@ -376,11 +605,12 @@ async function getVolunteerHours(userId) {
 }
 
 async function getVolunteerDashboard(userId) {
-  const [profile, upcoming, past, hours] = await Promise.all([
+  const [profile, upcoming, past, hours, profileCatalogs] = await Promise.all([
     getProfile(userId),
     getUpcomingEventsForUser(userId),
     getPastEventsForUser(userId),
     getVolunteerHours(userId),
+    getProfileCatalogs(),
   ]);
 
   const mapSimpleEvent = (row) => ({
@@ -399,6 +629,7 @@ async function getVolunteerDashboard(userId) {
 
   return {
     profile,
+    profileCatalogs,
     upcomingEvents,
     pastEvents,
     stats: {
@@ -473,6 +704,7 @@ module.exports = {
   BADGES,
   normalizeStringArray,
   getProfile,
+  getProfileCatalogs,
   updateProfile,
   browseEvents,
   signupForEvent,

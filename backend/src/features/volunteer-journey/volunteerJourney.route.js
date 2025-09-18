@@ -2,6 +2,7 @@ const express = require('express');
 const { authenticate } = require('../auth/auth.middleware');
 const {
   getProfile,
+  getProfileCatalogs,
   updateProfile,
   browseEvents,
   signupForEvent,
@@ -45,8 +46,11 @@ function parseFilters(query = {}) {
 
 router.get('/me/profile', authOnly, async (req, res) => {
   try {
-    const profile = await getProfile(req.user.id);
-    res.json(profile);
+    const [profile, catalogs] = await Promise.all([
+      getProfile(req.user.id),
+      getProfileCatalogs(),
+    ]);
+    res.json({ profile, catalogs });
   } catch (error) {
     const status = error.statusCode || 500;
     res.status(status).json({ error: error.message });
@@ -55,16 +59,18 @@ router.get('/me/profile', authOnly, async (req, res) => {
 
 router.put('/me/profile', authOnly, async (req, res) => {
   try {
-    const { skills, interests, availability, location, bio } = req.body || {};
+    const { skills, interests, availability, location, state, bio } = req.body || {};
     const updated = await updateProfile({
       userId: req.user.id,
       skills,
       interests,
       availability,
       location,
+      state,
       bio,
     });
-    res.json(updated);
+    const catalogs = await getProfileCatalogs();
+    res.json({ profile: updated, catalogs });
   } catch (error) {
     const status = error.statusCode || 500;
     res.status(status).json({ error: error.message });

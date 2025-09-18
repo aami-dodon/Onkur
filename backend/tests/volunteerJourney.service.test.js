@@ -88,19 +88,28 @@ describe('volunteerJourney.service', () => {
       userId: volunteer.id,
       skills: ['Tree Planting', 'tree planting', 'Community Outreach'],
       interests: ['Forests', 'Education'],
-      availability: 'Weekends',
+      availability: ['Weekends', 'weekday-evenings'],
       location: ' Pune ',
+      state: ' maharashtra ',
       bio: 'Ready to help nurture our urban forests.',
     });
 
     expect(updated.skills).toEqual(['tree planting', 'community outreach']);
     expect(updated.interests).toEqual(['forests', 'education']);
-    expect(updated.availability).toBe('Weekends');
+    expect(updated.availability).toEqual(['weekends', 'weekday-evenings']);
     expect(updated.location).toBe('Pune');
+    expect(updated.state).toBe('Maharashtra');
 
     const profile = await volunteerService.getProfile(volunteer.id);
     expect(profile.skills).toEqual(updated.skills);
     expect(profile.interests).toEqual(updated.interests);
+    expect(profile.availability).toEqual(updated.availability);
+    expect(profile.state).toBe(updated.state);
+
+    const catalogs = await volunteerService.getProfileCatalogs();
+    expect(Array.isArray(catalogs.skills)).toBe(true);
+    expect(catalogs.skills.length).toBeGreaterThan(0);
+    expect(catalogs.locations.some((option) => option.value === 'Pune')).toBe(true);
   });
 
   test('event signup enforces uniqueness and capacity while sending confirmation email', async () => {

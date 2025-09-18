@@ -33,6 +33,7 @@ export default function VolunteerDashboard() {
   const [error, setError] = useState(null);
   const [dashboard, setDashboard] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [profileCatalogs, setProfileCatalogs] = useState(null);
   const [hoursSummary, setHoursSummary] = useState(null);
   const [signups, setSignups] = useState([]);
   const [events, setEvents] = useState([]);
@@ -73,6 +74,7 @@ export default function VolunteerDashboard() {
     if (!active) return;
     setDashboard(data);
     setProfile(data.profile);
+    setProfileCatalogs(data.profileCatalogs || null);
   }
 
   async function refreshHours(activeToken = token, active = true) {
@@ -106,10 +108,21 @@ export default function VolunteerDashboard() {
   }
 
   const handleProfileSave = async (payload) => {
-    const updated = await updateVolunteerProfile(token, payload);
-    setProfile(updated);
-    setDashboard((prev) => (prev ? { ...prev, profile: updated } : prev));
-    return updated;
+    const result = await updateVolunteerProfile(token, payload);
+    const updatedProfile = result?.profile || result;
+    if (updatedProfile) {
+      setProfile(updatedProfile);
+      setDashboard((prev) =>
+        prev ? { ...prev, profile: updatedProfile } : prev
+      );
+    }
+    if (result?.catalogs) {
+      setProfileCatalogs(result.catalogs);
+      setDashboard((prev) =>
+        prev ? { ...prev, profileCatalogs: result.catalogs } : prev
+      );
+    }
+    return result;
   };
 
   const handleEventSignup = async (eventId) => {
@@ -150,7 +163,7 @@ export default function VolunteerDashboard() {
         title="Profile & availability"
         description="Keep your skills and availability current so coordinators can match you to the best opportunities."
       >
-        <ProfileEditor profile={profile} onSave={handleProfileSave} />
+        <ProfileEditor profile={profile} catalogs={profileCatalogs} onSave={handleProfileSave} />
       </DashboardCard>
       <DashboardCard
         title="Upcoming commitments"
