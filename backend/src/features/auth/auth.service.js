@@ -20,6 +20,7 @@ const {
 } = require('./auth.repository');
 const { sendVerificationEmail, sendWelcomeEmail } = require('./email.service');
 const { ROLES, DEFAULT_ROLE } = require('./constants');
+const { sortRolesByPriority, determinePrimaryRole } = require('./role.helpers');
 
 const config = require('../../config');
 
@@ -55,15 +56,14 @@ if (!JWT_SECRET) {
 function toPublicUser(user) {
   if (!user) return null;
   const roles = Array.isArray(user.roles) && user.roles.length
-    ? user.roles
-    : user.role
-    ? [user.role]
-    : [];
+    ? sortRolesByPriority(user.roles)
+    : sortRolesByPriority(user.role ? [user.role] : []);
+  const primaryRole = determinePrimaryRole(roles, user.role || DEFAULT_ROLE);
   return {
     id: user.id,
     name: user.name,
     email: user.email,
-    role: roles[0] || null,
+    role: primaryRole || null,
     roles,
     emailVerified: Boolean(user.email_verified_at),
     emailVerifiedAt:
@@ -94,7 +94,7 @@ function normalizeSignupRoles(roles) {
         .filter((role) => PUBLIC_SIGNUP_ROLES.includes(role))
     )
   );
-  return unique;
+  return sortRolesByPriority(unique);
 }
 
 async function signup({ name, email, password, roles }) {
@@ -359,11 +359,13 @@ async function assignRole({ actorId, userId, roles }) {
     )
   );
 
-  if (!normalizedRoles.length) {
+  const orderedRoles = sortRolesByPriority(normalizedRoles);
+
+  if (!orderedRoles.length) {
     throw createHttpError(400, 'At least one valid role is required');
   }
 
-  const user = await replaceUserRoles({ userId, roles: normalizedRoles });
+  const user = await replaceUserRoles({ userId, roles: orderedRoles });
   if (!user) {
     throw createHttpError(404, 'User not found');
   }
