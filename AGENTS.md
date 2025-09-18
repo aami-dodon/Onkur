@@ -17,6 +17,7 @@ These instructions apply to the entire repository unless a nested `AGENTS.md` ov
 - Group related UI pieces under `frontend/src/features/<feature-name>/` and prefer feature-level components over editing `App.jsx` directly.
 - Ensure new API calls read `import.meta.env.VITE_API_BASE_URL` for the backend origin.
 - Run `npm run build` from the `frontend` directory to validate that the Vite build still succeeds after making frontend changes.
+- Preserve the `/app` HTML rewrite middleware in `vite.config.js` so that deep links like `/app/events` continue to resolve when the dev server is accessed directly.
 
 ## Tooling
 - Do not commit environment secrets or generated assets under `dist/` or `build/`.

@@ -381,5 +381,6 @@ docker compose up --build
 - **CORS issues?** Confirm `CORS_ORIGIN` in `backend/.env` matches the frontend origin (for Vite dev this is usually `http://localhost:5173`).
 - **Connection errors?** Run `npm run test:db` and `npm run test:minio` for quick diagnostics and double-check credentials.
 - **Frontend cannot reach backend?** Verify `VITE_API_BASE_URL` points at the backend port (use `http://localhost:5000` when running both locally outside Docker, or `http://localhost:5001` when using `docker compose`).
+- **Direct links under `/app` 404?** The dev server now rewrites `/app` routes back to `/` so React Router can boot; if that overlay reappears, confirm the `app-route-rewrite` middleware still exists in `frontend/vite.config.js`.
 
 Happy building! 🎉
