@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import useDocumentTitle from '../../lib/useDocumentTitle';
 import { useAuth } from './AuthContext';
+import { getConfiguredSupportEmail } from './supportEmail';
 
 const initialState = {
   name: '',
@@ -10,6 +11,8 @@ const initialState = {
   confirmPassword: '',
 };
 
+const CHECK_EMAIL_STORAGE_KEY = 'onkur.signup.checkEmail';
+
 export default function SignupPage() {
   const { signup, roles: availableRoles } = useAuth();
   const [values, setValues] = useState(initialState);
@@ -17,7 +20,9 @@ export default function SignupPage() {
   const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState([]);
+  const navigate = useNavigate();
   useDocumentTitle('Onkur | Join the Onkur movement');
+  const configuredSupportEmail = useMemo(() => getConfiguredSupportEmail(), []);
 
   const selectableRoles = useMemo(
     () => availableRoles.filter((role) => role !== 'ADMIN'),
@@ -88,15 +93,39 @@ export default function SignupPage() {
     }
 
     try {
-      const { message } = await signup({
+      const result = await signup({
         name: values.name,
         email: values.email,
         password: values.password,
         roles: selectedRoles,
       });
+      const requiresVerification = result && result.requiresEmailVerification;
+      const supportEmail =
+        configuredSupportEmail || (result && result.supportEmail ? result.supportEmail : null);
+      const responseMessage =
+        (result && result.message) || 'Account created. Check your inbox to verify your email.';
+
       setValues(initialState);
       setSelectedRoles(selectableRoles.length ? [selectableRoles[0]] : []);
-      setSuccess(message || 'Account created. Check your inbox to verify your email.');
+
+      if (requiresVerification) {
+        const payload = {
+          email: values.email,
+          message: responseMessage,
+          supportEmail,
+        };
+        if (typeof window !== 'undefined') {
+          try {
+            window.sessionStorage.setItem(CHECK_EMAIL_STORAGE_KEY, JSON.stringify(payload));
+          } catch (storageError) {
+            console.warn('Unable to persist signup confirmation details', storageError);
+          }
+        }
+        navigate('/check-email', { replace: true, state: payload });
+        return;
+      }
+
+      setSuccess(responseMessage);
     } catch (err) {
       setError(err.message || 'We could not create your account.');
     } finally {

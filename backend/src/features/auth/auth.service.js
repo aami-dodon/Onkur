@@ -24,6 +24,25 @@ const { sortRolesByPriority, determinePrimaryRole } = require('./role.helpers');
 
 const config = require('../../config');
 
+function parseSupportEmails(raw) {
+  if (!raw || typeof raw !== 'string') {
+    return null;
+  }
+
+  const emails = raw
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+
+  if (!emails.length) {
+    return null;
+  }
+
+  return emails.join(', ');
+}
+
+const CONFIGURED_SUPPORT_EMAIL = parseSupportEmails(config.admin?.email);
+
 const SALT_ROUNDS = config.bcrypt.saltRounds;
 const JWT_SECRET = config.jwt.secret;
 const JWT_EXPIRY = config.jwt.expiry;
@@ -134,6 +153,7 @@ async function signup({ name, email, password, roles }) {
         }
       : null,
     message: 'Check your inbox to verify your email before logging in.',
+    supportEmail: CONFIGURED_SUPPORT_EMAIL,
   };
 }
 
