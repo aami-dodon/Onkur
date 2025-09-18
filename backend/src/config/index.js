@@ -36,6 +36,11 @@ const config = {
     bucket: process.env.MINIO_BUCKET,
     useSSL: process.env.MINIO_USE_SSL === "true",
   },
+  admin: {
+    name: process.env.ADMIN_NAME || "",
+    email: process.env.ADMIN_EMAIL || "",
+    password: process.env.ADMIN_PASSWORD || "",
+  },
 };
 
 module.exports = config;

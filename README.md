@@ -47,6 +47,7 @@ Consult the living [product wiki](docs/Wiki.md) for design rationale, API schema
    - `JWT_SECRET`, `JWT_EXPIRY`, `JWT_ISSUER` – JWT signing + expiry configuration.
    - `BCRYPT_SALT_ROUNDS` – bcrypt cost factor (defaults to 12).
    - `APP_BASE_URL` – canonical frontend URL used in transactional emails.
+   - `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` – bootstrap credentials for the default admin account created at startup.
    - `EMAIL_FROM`, `EMAIL_SMTP_HOST`, `EMAIL_SMTP_PORT`, `EMAIL_SMTP_SECURE`, `EMAIL_SMTP_USER`, `EMAIL_SMTP_PASS` – SMTP settings for outbound email.
    - `CORS_ORIGIN`, `PORT`, `LOG_LEVEL`, `LOG_FILE` – server + logging controls.
    - `MINIO_*` – optional object storage wiring from the base template.
