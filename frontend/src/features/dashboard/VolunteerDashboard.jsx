@@ -1,49 +1,214 @@
+import { useEffect, useMemo, useState } from 'react';
 import DashboardCard from './DashboardCard';
 import { useAuth } from '../auth/AuthContext';
 import useDocumentTitle from '../../lib/useDocumentTitle';
+import ProfileEditor from '../volunteer/ProfileEditor';
+import EventDiscovery from '../volunteer/EventDiscovery';
+import HoursTracker from '../volunteer/HoursTracker';
+import {
+  fetchVolunteerDashboard,
+  fetchVolunteerHours,
+  fetchEvents,
+  fetchMySignups,
+  updateVolunteerProfile,
+  signupForEvent,
+  logVolunteerHours,
+} from '../volunteer/api';
+
+function formatShortDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  return new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
 
 export default function VolunteerDashboard() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const firstName = user?.name?.split(' ')[0] || 'volunteer';
   useDocumentTitle(`Onkur | Hi ${firstName} 👋`);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [dashboard, setDashboard] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [hoursSummary, setHoursSummary] = useState(null);
+  const [signups, setSignups] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [eventFilters, setEventFilters] = useState({ category: '', location: '', theme: '', date: '' });
+  const [eventsLoading, setEventsLoading] = useState(false);
+
+  const totalBadgesEarned = useMemo(() => {
+    if (!hoursSummary?.badges) return 0;
+    return hoursSummary.badges.filter((badge) => badge.earned).length;
+  }, [hoursSummary]);
+
+  useEffect(() => {
+    if (!token) return;
+    let active = true;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        await Promise.all([refreshDashboard(token, active), refreshHours(token, active), refreshSignups(token, active)]);
+        await loadEvents(token, eventFilters, active);
+      } catch (err) {
+        if (active) {
+          setError(err.message || 'Unable to load your volunteer journey.');
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [token]);
+
+  async function refreshDashboard(activeToken = token, active = true) {
+    const data = await fetchVolunteerDashboard(activeToken);
+    if (!active) return;
+    setDashboard(data);
+    setProfile(data.profile);
+  }
+
+  async function refreshHours(activeToken = token, active = true) {
+    const data = await fetchVolunteerHours(activeToken);
+    if (!active) return;
+    setHoursSummary(data);
+  }
+
+  async function refreshSignups(activeToken = token, active = true) {
+    const data = await fetchMySignups(activeToken);
+    if (!active) return;
+    setSignups(Array.isArray(data.signups) ? data.signups : []);
+  }
+
+  async function loadEvents(activeToken = token, filters = eventFilters, active = true) {
+    setEventsLoading(true);
+    try {
+      const response = await fetchEvents(activeToken, filters);
+      if (!active) return;
+      setEvents(Array.isArray(response.events) ? response.events : []);
+      setEventFilters(filters);
+    } catch (err) {
+      if (active) {
+        setError(err.message || 'Unable to load events.');
+      }
+    } finally {
+      if (active) {
+        setEventsLoading(false);
+      }
+    }
+  }
+
+  const handleProfileSave = async (payload) => {
+    const updated = await updateVolunteerProfile(token, payload);
+    setProfile(updated);
+    setDashboard((prev) => (prev ? { ...prev, profile: updated } : prev));
+    return updated;
+  };
+
+  const handleEventSignup = async (eventId) => {
+    const result = await signupForEvent(token, eventId);
+    await Promise.all([refreshSignups(token), refreshDashboard(token)]);
+    await loadEvents(token, eventFilters);
+    return result;
+  };
+
+  const handleLogHours = async ({ eventId, minutes, note }) => {
+    const response = await logVolunteerHours(token, eventId, { minutes, note });
+    await Promise.all([refreshHours(token), refreshDashboard(token)]);
+    return response.entry;
+  };
+
+  const upcomingEvents = dashboard?.upcomingEvents || [];
+  const pastEvents = dashboard?.pastEvents || [];
+  const hoursLogged = hoursSummary?.totalHours ? Math.round(hoursSummary.totalHours * 10) / 10 : 0;
 
   return (
     <div className="grid gap-5 md:[grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
       <header className="flex flex-col gap-2 md:col-span-full">
-        <h2 className="m-0 font-display text-2xl font-semibold text-brand-forest">
-          Hi {firstName} 👋
-        </h2>
+        <h2 className="m-0 font-display text-2xl font-semibold text-brand-forest">Hi {firstName} 👋</h2>
         <p className="m-0 text-sm text-brand-muted sm:text-base">
-          Your dashboard keeps track of upcoming events, logged hours, and the eco-badges you earn while supporting community
-          action.
+          {loading
+            ? 'Loading your volunteer journey…'
+            : `You have logged ${hoursLogged} hours and earned ${totalBadgesEarned} eco badge${
+                totalBadgesEarned === 1 ? '' : 's'
+              }. Keep growing your impact!`}
         </p>
       </header>
+      {error ? (
+        <p className="md:col-span-full rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
+      <DashboardCard
+        title="Profile & availability"
+        description="Keep your skills and availability current so coordinators can match you to the best opportunities."
+      >
+        <ProfileEditor profile={profile} onSave={handleProfileSave} />
+      </DashboardCard>
       <DashboardCard
         title="Upcoming commitments"
-        description="You do not have any events scheduled yet. Explore opportunities once the event hub launches."
+        description={
+          upcomingEvents.length
+            ? 'Here’s what you have coming up next. Add them to your calendar and watch for reminder emails.'
+            : 'You are not signed up for any events yet. Browse the listings below to get started.'
+        }
       >
-        <span className="inline-flex items-center gap-2 rounded-full bg-brand-sky/20 px-3 py-1 text-sm font-medium text-brand-sky">
-          📅 Events opening soon
-        </span>
+        {upcomingEvents.length ? (
+          <ul className="m-0 list-none space-y-3 p-0">
+            {upcomingEvents.map((event) => (
+              <li
+                key={event.id}
+                className="rounded-2xl border border-brand-forest/10 bg-brand-sand/60 px-3 py-2 text-sm text-brand-muted"
+              >
+                <p className="m-0 font-semibold text-brand-forest">{event.title}</p>
+                <p className="m-0">{formatShortDate(event.dateStart)}</p>
+                <p className="m-0 text-xs text-brand-muted">{event.location}</p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="m-0 text-sm text-brand-muted">No upcoming events scheduled.</p>
+        )}
+        {pastEvents.length ? (
+          <div className="mt-4 space-y-2">
+            <h5 className="m-0 text-xs font-semibold uppercase tracking-[0.14em] text-brand-muted">Recently completed</h5>
+            <ul className="m-0 list-none space-y-2 p-0 text-xs text-brand-muted">
+              {pastEvents.slice(0, 3).map((event) => (
+                <li key={event.id} className="rounded-xl border border-brand-forest/10 bg-white px-3 py-2">
+                  <span className="font-semibold text-brand-forest">{event.title}</span>
+                  <span className="block">{formatShortDate(event.dateEnd)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </DashboardCard>
       <DashboardCard
+        className="md:col-span-full"
         title="Impact tracker"
-        description="Log volunteer hours to grow your seedling into a flourishing forest. Metrics arrive in Phase 2."
+        description="Log time, watch your eco badges bloom, and celebrate your wins."
       >
-        <p className="m-0 text-sm text-brand-muted">
-          Hours logged: <strong className="text-brand-forest">0</strong>
-        </p>
-        <p className="m-0 text-sm text-brand-muted">
-          Eco-badges unlocked: <strong className="text-brand-forest">Seedling</strong>
-        </p>
+        <HoursTracker summary={hoursSummary} signups={signups} onLogHours={handleLogHours} />
       </DashboardCard>
       <DashboardCard
-        title="Stories & galleries"
-        description="Share photos and reflections from the ground. Galleries unlock once events start rolling in."
+        className="md:col-span-full"
+        title="Discover new events"
+        description="Filter by category, location, theme, or date to find your next contribution."
       >
-        <p className="m-0 text-sm text-brand-muted">
-          Keep an eye out for featured community stories curated by our event teams.
-        </p>
+        <EventDiscovery
+          events={events}
+          filters={eventFilters}
+          isLoading={eventsLoading}
+          onFilterChange={(nextFilters) => loadEvents(token, nextFilters)}
+          onSignup={handleEventSignup}
+        />
       </DashboardCard>
     </div>
   );
