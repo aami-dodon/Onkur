@@ -9,7 +9,8 @@
     "test:db": "node src/utils/test-db.js",
     "test:minio": "node src/utils/test-minio.js",
     "test:connections": "npm run test:db && npm run test:minio",
-    "test": "jest"
+    "test": "jest",
+    "send:test-email": "node scripts/send-test-email.js"
   },
   "keywords": [],
   "author": "",
