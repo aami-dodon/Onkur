@@ -7,3 +7,4 @@ These notes cover files within `backend/src/features/auth/`.
 - Prefer structured audit metadata objects that can be serialized to JSON without circular references.
 - Whenever you add a new token type, document it in `docs/wiki/README.md` and extend the revoke helpers instead of creating new tables.
 - User records now maintain a primary `role` plus an expanded `user_roles` join table; always update both via the repository helpers so API responses expose a normalized `roles` array.
+- The admin bootstrapper seeds or promotes an ADMIN account from environment variables; prefer updating `admin.bootstrap.js` when adjusting default admin behavior.
