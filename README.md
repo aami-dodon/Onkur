@@ -25,6 +25,13 @@ Onkur is a mobile-first volunteering platform rooted in sustainability and commu
 - Downloadable event reports summarizing signups, attendance percentage, and total volunteer hours.
 - Notification suite for publish confirmations, assignment notices, reminders, and post-event acknowledgements.
 
+### Phase 4 – Event Gallery (Complete)
+- Mobile-first gallery grid with lightbox viewer backed by infinite scroll so visitors can relive event stories quickly.
+- Volunteer and event manager upload flow with EXIF-stripped image processing, tag selection for volunteers/sponsors/communities, and moderation email notices.
+- Admin moderation queue to approve or reject submissions, capturing decision latency metrics and sponsor mentions automatically.
+- Public `/gallery` showcase that spotlights approved events, tracks per-event views, and celebrates tagged sponsors alongside community highlights.
+- MinIO/S3-backed storage with graceful inline fallback plus transactional emails to notify contributors and sponsors when galleries go live.
+
 Consult the living [product wiki](docs/Wiki.md) for design rationale, API schemas, and rollout notes for each phase.
 
 ---

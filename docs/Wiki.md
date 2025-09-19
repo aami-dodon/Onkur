@@ -125,4 +125,9 @@
 - **Change:** Added a `DELETE /api/events/:eventId/signup` endpoint that uses a transactional `cancelEventSignup` helper to remove assignments, attendance, and logged hours before emailing the event manager via the branded template. The volunteer dashboard and events hub now surface "Leave event" actions with inline feedback and refresh all summary panels after success.
 - **Impact:** Volunteers can bow out of commitments at any time, their impact totals drop to zero for that event, and managers receive immediate notice to rebalance coverage.
 
+## Phase 4 gallery storytelling
+- **Date:** 2025-09-29
+- **Change:** Introduced an end-to-end event gallery system: uploads pass through a moderated pipeline with EXIF-stripping image processing, MinIO/S3 storage, role-aware tagging, sponsor/community notifications, public `/gallery` browsing, infinite-scroll viewing, and an admin moderation queue. Dashboard gallery tooling now lets participants submit photos, review approved stories, and admins oversee queues.
+- **Impact:** Onkur can showcase event impact through rich, mobile-first visuals. Volunteers and managers highlight participants and sponsors, admins guard quality, sponsors are alerted when featured, and visitors explore live galleries with quick load times.
+
 

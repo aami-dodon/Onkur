@@ -8,12 +8,14 @@ import ProtectedRoute from './features/auth/ProtectedRoute';
 import PublicOnlyRoute from './features/auth/PublicOnlyRoute';
 import DashboardRouter from './features/dashboard/DashboardRouter';
 import HomePage from './features/landing/HomePage';
+import PublicGalleryPage from './features/event-gallery/PublicGalleryPage';
 
 function App() {
   return (
     <AppLayout>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/gallery" element={<PublicGalleryPage />} />
         <Route
           path="/app/*"
           element={
