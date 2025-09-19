@@ -1,5 +1,10 @@
 # Onkur Change Log
 
+## Dev server cache headers for React integrity
+- **Date:** 2025-10-12
+- **Change:** Configured the Vite dev server to emit `no-store` cache headers so module requests bypass browser caches after container restarts and documented the requirement in the frontend agent guide.
+- **Impact:** Prevents stale React vendor chunks from lingering in browser caches, eliminating the "Invalid hook call" errors that previously required a manual cache clear before the dashboard would load again.
+
 ## Impact analytics rollup hardening
 - **Date:** 2025-10-11
 - **Change:** Hardened the impact analytics repository to sum recorded dashboard views instead of counting rows, expanded the Jest suite with in-memory database coverage for story submission, moderation notifications, and overview export math, and refreshed impact feature guidelines to keep future changes aligned.
