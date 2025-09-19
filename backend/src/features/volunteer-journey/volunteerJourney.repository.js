@@ -1,6 +1,5 @@
 const { randomUUID } = require('crypto');
 const pool = require('../common/db');
-const { buildLocationSearchTerms } = require('../reference-data/referenceData.service');
 
 const schemaPromise = (async () => {
   await pool.query(`
@@ -199,14 +198,8 @@ async function listPublishedEvents({ category, location, theme, date }, { forUse
   }
 
   if (location) {
-    const terms = buildLocationSearchTerms(location).map((term) => term.toLowerCase());
-    if (terms.length) {
-      const placeholders = terms
-        .map((_, index) => `$${values.length + index + 1}`)
-        .join(', ');
-      values.push(...terms);
-      conditions.push(`LOWER(e.location) = ANY(ARRAY[${placeholders}])`);
-    }
+    values.push(`%${location.toLowerCase()}%`);
+    conditions.push(`LOWER(e.location) LIKE $${values.length}`);
   }
 
   if (theme) {

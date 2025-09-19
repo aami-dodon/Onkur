@@ -1,15 +1,5 @@
 # Onkur Change Log
 
-## Free-text locations with shared suggestions
-- **Date:** 2025-09-24
-- **Change:** Relaxed location handling across volunteer profiles, discovery filters, and event management so coordinators and volunteers can enter any city or region while still seeing curated suggestions. The backend now trims and title-cases known catalogue entries without forcing slugs, and browsing filters compare both human text and slug variants so older events continue to match.
-- **Impact:** Profiles and events no longer reject unfamiliar cities, enabling outreach in new regions while keeping shared suggestions handy for quick entry. Search filters remain reliable for legacy slugged data and new free-text values alike.
-
-## Shared profile & event reference data
-- **Date:** 2025-09-23
-- **Change:** Introduced a centralized reference data service that exposes curated skills, interests, availability presets, and supported cities to both the backend and dashboard UIs. Volunteer profiles now use guided multi-selects with add-your-own options for skills and interests plus single-select availability and location pickers, while event managers pick cities from the same list. Events and profiles persist the canonical slugs and the catalogue is available through a new `/api/reference-data` endpoint.
-- **Impact:** Coordinators and volunteers see consistent language when matching opportunities. Location and availability inputs are validated against the shared catalogue, preventing typos and ensuring filters align with event metadata.
-
 ## Desktop navigation parity
 - **Date:** 2025-09-18
 - **Change:** Introduced a desktop header navigation that mirrors the mobile bottom menu, centralized the navigation config, and wired menu items to new `/app/events`, `/app/gallery`, and `/app/profile` routes.

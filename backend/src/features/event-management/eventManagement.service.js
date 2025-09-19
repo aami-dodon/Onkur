@@ -1,6 +1,5 @@
 const logger = require('../../utils/logger');
 const { sendTemplatedEmail } = require('../email/email.service');
-const { normalizeLocation, getLocationLabel } = require('../reference-data/referenceData.service');
 const {
   createEvent,
   updateEvent,
@@ -51,6 +50,7 @@ function normalizeEventPayload(payload = {}) {
   const description = String(payload.description || '').trim();
   const category = String(payload.category || '').trim();
   const theme = payload.theme ? String(payload.theme).trim() : null;
+  const location = String(payload.location || '').trim();
   const requirements = payload.requirements ? String(payload.requirements).trim() : null;
 
   if (!title) {
@@ -62,8 +62,9 @@ function normalizeEventPayload(payload = {}) {
   if (!category) {
     throw Object.assign(new Error('Category is required'), { statusCode: 400 });
   }
-
-  const location = normalizeLocation(payload.location, { required: true });
+  if (!location) {
+    throw Object.assign(new Error('Location is required'), { statusCode: 400 });
+  }
 
   const dateStart = parseDate(payload.dateStart || payload.date_start, 'Start date');
   const dateEnd = parseDate(payload.dateEnd || payload.date_end, 'End date');
@@ -89,11 +90,8 @@ function normalizeEventPayload(payload = {}) {
 
 function mapEvent(event) {
   if (!event) return null;
-  const locationValue = event.location || '';
   return {
     ...event,
-    locationValue,
-    location: getLocationLabel(locationValue),
     dateStart: toIso(event.dateStart || event.date_start),
     dateEnd: toIso(event.dateEnd || event.date_end),
     publishedAt: toIso(event.publishedAt || event.published_at),
