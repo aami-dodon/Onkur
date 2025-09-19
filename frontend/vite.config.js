@@ -18,8 +18,61 @@ const appRouteRewritePlugin = {
   },
 };
 
+const ensureCrossoriginPlugin = {
+  name: 'ensure-crossorigin-attributes',
+  transformIndexHtml: {
+    enforce: 'post',
+    transform(html) {
+      const escapeForRegex = (value) =>
+        value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      const addCrossoriginBefore = (tag, attribute) => {
+        if (/\bcrossorigin\b/.test(tag)) {
+          return tag;
+        }
+
+        const attributeIndex = tag.indexOf(attribute);
+        if (attributeIndex === -1) {
+          return tag.replace(/>$/, ' crossorigin="anonymous">');
+        }
+
+        return (
+          tag.slice(0, attributeIndex) +
+          'crossorigin="anonymous" ' +
+          tag.slice(attributeIndex)
+        );
+      };
+
+      const addCrossoriginToScript = (source, scriptSrc) => {
+        const pattern = new RegExp(
+          `<script\\s+type="module"[^>]*src="${escapeForRegex(scriptSrc)}"[^>]*>\\s*</script>`,
+          'g',
+        );
+
+        return source.replace(pattern, (tag) => addCrossoriginBefore(tag, 'src='));
+      };
+
+      const addCrossoriginToLink = (source, linkHref) => {
+        const pattern = new RegExp(
+          `<link\\s+rel="modulepreload"[^>]*href="${escapeForRegex(linkHref)}"[^>]*>`,
+          'g',
+        );
+
+        return source.replace(pattern, (tag) => addCrossoriginBefore(tag, 'href='));
+      };
+
+      let transformed = html;
+      transformed = addCrossoriginToScript(transformed, '/@vite/client');
+      transformed = addCrossoriginToScript(transformed, '/src/main.jsx');
+      transformed = addCrossoriginToLink(transformed, '/@vite/client');
+
+      return transformed;
+    },
+  },
+};
+
 export default defineConfig({
-  plugins: [react(), appRouteRewritePlugin],
+  plugins: [react(), appRouteRewritePlugin, ensureCrossoriginPlugin],
   server: {
     proxy: {
       '/api': 'http://localhost:5000', // Proxy API requests to backend
