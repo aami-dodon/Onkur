@@ -24,6 +24,40 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:5000', // Proxy API requests to backend
     },
-    allowedHosts: ['onkur.dodon.in']
+    allowedHosts: ['onkur.dodon.in'],
+  },
+  build: {
+    target: 'es2018',
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+      format: {
+        comments: false,
+      },
+    },
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react-router-dom')) {
+              return 'react-router';
+            }
+            if (id.includes('react')) {
+              return 'react-vendor';
+            }
+            return 'vendor';
+          }
+
+          if (id.includes('src/features/dashboard')) {
+            return 'dashboard';
+          }
+
+          return undefined;
+        },
+      },
+    },
   },
 });

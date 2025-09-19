@@ -1,14 +1,16 @@
-import { useMemo } from 'react';
+import { Suspense, lazy, useMemo } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthContext';
-import AdminDashboard from './AdminDashboard';
-import EventManagerDashboard from './EventManagerDashboard';
-import EventsPage from './EventsPage';
-import GalleryPage from './GalleryPage';
-import ProfilePage from './ProfilePage';
-import SponsorDashboard from './SponsorDashboard';
-import VolunteerDashboard from './VolunteerDashboard';
+import LoadingScreen from '../layout/LoadingScreen';
+
+const AdminDashboard = lazy(() => import('./AdminDashboard'));
+const EventManagerDashboard = lazy(() => import('./EventManagerDashboard'));
+const EventsPage = lazy(() => import('./EventsPage'));
+const GalleryPage = lazy(() => import('./GalleryPage'));
+const ProfilePage = lazy(() => import('./ProfilePage'));
+const SponsorDashboard = lazy(() => import('./SponsorDashboard'));
+const VolunteerDashboard = lazy(() => import('./VolunteerDashboard'));
 import { determinePrimaryRole, normalizeRoles } from './roleUtils';
 
 const HOME_COMPONENTS = {
@@ -44,21 +46,23 @@ export default function DashboardRouter() {
   const HomeComponent = resolveHome(primaryRole);
 
   return (
-    <Routes>
-      <Route index element={<HomeComponent />} />
-      <Route
-        path="events"
-        element={<EventsPage role={primaryRole} roles={normalizedRoles} />}
-      />
-      <Route
-        path="gallery"
-        element={<GalleryPage role={primaryRole} roles={normalizedRoles} />}
-      />
-      <Route
-        path="profile"
-        element={<ProfilePage role={primaryRole} roles={normalizedRoles} />}
-      />
-      <Route path="*" element={<Navigate to="." replace />} />
-    </Routes>
+    <Suspense fallback={<LoadingScreen label="Loading your dashboard" />}>
+      <Routes>
+        <Route index element={<HomeComponent />} />
+        <Route
+          path="events"
+          element={<EventsPage role={primaryRole} roles={normalizedRoles} />}
+        />
+        <Route
+          path="gallery"
+          element={<GalleryPage role={primaryRole} roles={normalizedRoles} />}
+        />
+        <Route
+          path="profile"
+          element={<ProfilePage role={primaryRole} roles={normalizedRoles} />}
+        />
+        <Route path="*" element={<Navigate to="." replace />} />
+      </Routes>
+    </Suspense>
   );
 }

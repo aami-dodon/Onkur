@@ -162,4 +162,10 @@
 - **Impact:** Event lists now render reliably for every role, giving sponsors and volunteers uninterrupted access to filters, signups, and pledge actions even while data loads or profiles await approval.
 
 
+## GTmetrix bundle optimizations
+- **Date:** 2025-10-02
+- **Change:** Swapped top-level routes and dashboard surfaces to `React.lazy` + Suspense fallbacks so React Router pages load on demand, and tuned `vite.config.js` to leverage Terser minification, drop console/debugger statements, and emit manual vendor chunks for React and router packages.
+- **Impact:** Initial page loads download smaller JavaScript payloads while subsequent navigation streams feature-specific code, aligning the dashboard with GTmetrix recommendations for minification, unused code removal, and bundle splitting.
+
+
 
