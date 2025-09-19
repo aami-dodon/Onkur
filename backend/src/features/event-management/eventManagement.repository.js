@@ -38,6 +38,11 @@ function mapEventRow(row) {
     requiredInterests: Array.isArray(row.required_interests) ? row.required_interests : [],
     requiredAvailability: Array.isArray(row.required_availability) ? row.required_availability : [],
     status: row.status,
+    approvalStatus: row.approval_status || null,
+    approvalReason: row.approval_reason || null,
+    approvedAt: toIso(row.approved_at),
+    approvedBy: row.approved_by || null,
+    submittedAt: toIso(row.submitted_at),
     createdBy: row.created_by || null,
     publishedAt: toIso(row.published_at),
     completedAt: toIso(row.completed_at),
@@ -106,6 +111,7 @@ async function createEvent({
         required_interests,
         required_availability,
         status,
+        approval_status,
         created_by
       )
       VALUES (
@@ -127,6 +133,7 @@ async function createEvent({
         $16,
         $17,
         'DRAFT',
+        'PENDING',
         $18
       )
       RETURNING *
@@ -228,6 +235,15 @@ async function setEventStatus(eventId, status) {
         SET status = $2,
             published_at = CASE WHEN $2 = 'PUBLISHED' THEN NOW() ELSE published_at END,
             completed_at = CASE WHEN $2 = 'COMPLETED' THEN NOW() ELSE completed_at END,
+            approval_status = CASE
+              WHEN $2 = 'PUBLISHED' AND approval_status <> 'APPROVED' THEN 'PENDING'
+              ELSE approval_status
+            END,
+            approval_reason = CASE WHEN $2 = 'PUBLISHED' THEN NULL ELSE approval_reason END,
+            submitted_at = CASE
+              WHEN $2 = 'PUBLISHED' AND approval_status <> 'APPROVED' THEN NOW()
+              ELSE submitted_at
+            END,
             updated_at = NOW()
         WHERE id = $1
         RETURNING *
@@ -395,6 +411,35 @@ async function replaceEventTasks(eventId, tasks = []) {
 
     return listTasksForEvent(eventId, { client });
   });
+}
+
+async function updateEventApprovalStatus({ eventId, status, actorId = null, reason = null }) {
+  await ensureSchema();
+  const normalized = typeof status === 'string' ? status.trim().toUpperCase() : '';
+  if (!['APPROVED', 'REJECTED', 'PENDING'].includes(normalized)) {
+    throw Object.assign(new Error('Unsupported approval status'), { statusCode: 400 });
+  }
+  const result = await pool.query(
+    `
+      UPDATE events
+      SET
+        approval_status = $2,
+        approval_reason = CASE WHEN $2 = 'REJECTED' THEN $3 ELSE NULL END,
+        approved_at = CASE WHEN $2 = 'APPROVED' THEN NOW() ELSE NULL END,
+        approved_by = CASE WHEN $2 = 'APPROVED' THEN $4 ELSE NULL END,
+        status = CASE WHEN $2 = 'REJECTED' THEN 'DRAFT' ELSE status END,
+        submitted_at = CASE WHEN $2 = 'PENDING' THEN NOW() ELSE submitted_at END,
+        updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `,
+    [eventId, normalized, reason ? String(reason).trim() || null : null, actorId]
+  );
+  const row = result.rows[0] || null;
+  if (!row) {
+    throw Object.assign(new Error('Event not found'), { statusCode: 404 });
+  }
+  return mapEventRow(row);
 }
 
 async function listAssignmentsForEvent(eventId, { client = pool } = {}) {
@@ -853,6 +898,7 @@ module.exports = {
   findEventById,
   listEventsForManager,
   replaceEventTasks,
+  updateEventApprovalStatus,
   listTasksForEvent,
   listAssignmentsForEvent,
   assignVolunteers,
