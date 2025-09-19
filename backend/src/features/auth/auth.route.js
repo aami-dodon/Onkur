@@ -94,11 +94,7 @@ router.patch('/api/users/:id/role', adminOnly, async (req, res) => {
   try {
     const { role, roles } = req.body || {};
     const userId = req.params.id;
-    const desiredRoles = Array.isArray(roles)
-      ? roles
-      : role
-      ? [role]
-      : [];
+    const desiredRoles = Array.isArray(roles) ? roles : role ? [role] : [];
     const updated = await assignRole({ actorId: req.user.id, userId, roles: desiredRoles });
     res.json({ user: updated });
   } catch (error) {

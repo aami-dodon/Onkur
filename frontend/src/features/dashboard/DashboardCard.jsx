@@ -1,4 +1,10 @@
-export default function DashboardCard({ title, description, children, actions = [], className = '' }) {
+export default function DashboardCard({
+  title,
+  description,
+  children,
+  actions = [],
+  className = '',
+}) {
   const baseClasses =
     'flex h-full flex-col gap-3 rounded-[20px] bg-white p-6 shadow-[0_12px_28px_rgba(47,133,90,0.15)]';
   const combinedClasses = className ? `${baseClasses} ${className}` : baseClasses;

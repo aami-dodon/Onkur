@@ -59,9 +59,10 @@ if (!JWT_SECRET) {
 
 function toPublicUser(user) {
   if (!user) return null;
-  const roles = Array.isArray(user.roles) && user.roles.length
-    ? sortRolesByPriority(user.roles)
-    : sortRolesByPriority(user.role ? [user.role] : []);
+  const roles =
+    Array.isArray(user.roles) && user.roles.length
+      ? sortRolesByPriority(user.roles)
+      : sortRolesByPriority(user.role ? [user.role] : []);
   const primaryRole = determinePrimaryRole(roles, user.role || DEFAULT_ROLE);
   return {
     id: user.id,
@@ -75,8 +76,7 @@ function toPublicUser(user) {
       user.email_verified_at instanceof Date
         ? user.email_verified_at.toISOString()
         : user.email_verified_at || null,
-    createdAt:
-      user.created_at instanceof Date ? user.created_at.toISOString() : user.created_at,
+    createdAt: user.created_at instanceof Date ? user.created_at.toISOString() : user.created_at,
   };
 }
 
@@ -122,7 +122,8 @@ function toAuditUserSnapshot(user) {
   if (!user) {
     return null;
   }
-  const roles = Array.isArray(user.roles) && user.roles.length ? sortRolesByPriority(user.roles) : undefined;
+  const roles =
+    Array.isArray(user.roles) && user.roles.length ? sortRolesByPriority(user.roles) : undefined;
   return {
     id: user.id,
     email: user.email,
@@ -235,7 +236,10 @@ async function login({ email, password }) {
       before: toAuditUserSnapshot(user),
       after: { email: user.email, success: false, reason: 'account_inactive' },
     });
-    throw createHttpError(403, 'This account has been deactivated. Reach out to the admin team to restore access.');
+    throw createHttpError(
+      403,
+      'This account has been deactivated. Reach out to the admin team to restore access.'
+    );
   }
 
   if (!user.email_verified_at) {

@@ -59,7 +59,8 @@ function toAuditUser(user) {
   if (!user) {
     return null;
   }
-  const roles = Array.isArray(user.roles) && user.roles.length ? sortRolesByPriority(user.roles) : [];
+  const roles =
+    Array.isArray(user.roles) && user.roles.length ? sortRolesByPriority(user.roles) : [];
   return {
     id: user.id,
     email: user.email,
@@ -166,7 +167,8 @@ function mapUserSummary(user) {
   if (!user) {
     return null;
   }
-  const roles = Array.isArray(user.roles) && user.roles.length ? sortRolesByPriority(user.roles) : [];
+  const roles =
+    Array.isArray(user.roles) && user.roles.length ? sortRolesByPriority(user.roles) : [];
   return {
     id: user.id,
     name: user.name,
@@ -198,7 +200,9 @@ function extractColumnValue(column, row) {
 
 function buildCsv(columns, rows) {
   const header = columns.map((column) => column.header).join(',');
-  const dataLines = rows.map((row) => columns.map((column) => formatCsvValue(extractColumnValue(column, row))).join(','));
+  const dataLines = rows.map((row) =>
+    columns.map((column) => formatCsvValue(extractColumnValue(column, row))).join(',')
+  );
   return [header, ...dataLines].join('\n');
 }
 
@@ -268,8 +272,12 @@ async function getModerationQueue({ type }) {
   }
   if (normalized === 'media') {
     const queue = await listPendingMedia({ page: 1, pageSize: 50 });
-    const uniqueEventIds = Array.from(new Set(queue.media.map((item) => item.eventId))).filter(Boolean);
-    const events = await Promise.all(uniqueEventIds.map((eventId) => findEventById(eventId).catch(() => null)));
+    const uniqueEventIds = Array.from(new Set(queue.media.map((item) => item.eventId))).filter(
+      Boolean
+    );
+    const events = await Promise.all(
+      uniqueEventIds.map((eventId) => findEventById(eventId).catch(() => null))
+    );
     const eventLookup = new Map(events.filter(Boolean).map((event) => [event.id, event]));
     return {
       type: 'media',
@@ -355,7 +363,9 @@ async function rejectEvent({ eventId, actorId, note }) {
           bodyLines: [
             `Hi ${creator.name?.split(' ')[0] || 'there'},`,
             `We reviewed <strong>${updated.title}</strong> and need a few tweaks before it can go live.`,
-            note ? `Moderator note: ${note}` : 'Reply to this email for guidance or resubmit when you are ready.',
+            note
+              ? `Moderator note: ${note}`
+              : 'Reply to this email for guidance or resubmit when you are ready.',
           ],
           previewText: 'Your event needs updates before publishing',
         });
@@ -537,9 +547,17 @@ async function exportData({ entity, format }) {
       { key: 'id', header: 'User ID' },
       { key: 'name', header: 'Name' },
       { key: 'email', header: 'Email' },
-      { key: 'roles', header: 'Roles', accessor: (row) => (Array.isArray(row.roles) ? row.roles.join('; ') : '') },
+      {
+        key: 'roles',
+        header: 'Roles',
+        accessor: (row) => (Array.isArray(row.roles) ? row.roles.join('; ') : ''),
+      },
       { key: 'is_active', header: 'Active' },
-      { key: 'email_verified_at', header: 'Email Verified At', accessor: (row) => toIso(row.email_verified_at) },
+      {
+        key: 'email_verified_at',
+        header: 'Email Verified At',
+        accessor: (row) => toIso(row.email_verified_at),
+      },
       { key: 'created_at', header: 'Created At', accessor: (row) => toIso(row.created_at) },
     ];
     return formatResponse({ columns, rows });

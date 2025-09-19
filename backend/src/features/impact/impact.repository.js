@@ -1,6 +1,8 @@
 const { randomUUID } = require('crypto');
 const pool = require('../common/db');
-const { ensureSchema: ensureVolunteerSchema } = require('../volunteer-journey/volunteerJourney.repository');
+const {
+  ensureSchema: ensureVolunteerSchema,
+} = require('../volunteer-journey/volunteerJourney.repository');
 const { ensureSchema: ensureSponsorSchema } = require('../sponsors/sponsor.repository');
 
 const STORY_STATUSES = ['PENDING', 'APPROVED', 'REJECTED'];
@@ -102,8 +104,12 @@ const schemaPromise = (async () => {
     CHECK (status = ANY(ARRAY['PENDING','APPROVED','REJECTED']::TEXT[]))
   `);
 
-  await pool.query(`CREATE INDEX IF NOT EXISTS idx_event_stories_event_status ON event_stories (event_id, status)`);
-  await pool.query(`CREATE INDEX IF NOT EXISTS idx_event_stories_created ON event_stories (created_at DESC)`);
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS idx_event_stories_event_status ON event_stories (event_id, status)`
+  );
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS idx_event_stories_created ON event_stories (created_at DESC)`
+  );
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS analytics_daily (
@@ -115,7 +121,9 @@ const schemaPromise = (async () => {
       PRIMARY KEY (date, metric_key)
     )
   `);
-  await pool.query(`CREATE INDEX IF NOT EXISTS idx_analytics_daily_metric ON analytics_daily (metric_key, date DESC)`);
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS idx_analytics_daily_metric ON analytics_daily (metric_key, date DESC)`
+  );
 })();
 
 async function ensureSchema() {
@@ -139,7 +147,7 @@ async function createStory({ eventId, authorId, title, body, mediaIds = [] }) {
       VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *
     `,
-    [id, eventId, authorId, title, body, JSON.stringify(mediaIds || [])],
+    [id, eventId, authorId, title, body, JSON.stringify(mediaIds || [])]
   );
   return mapStoryRow(result.rows[0]);
 }
@@ -153,7 +161,7 @@ async function findStoryById(storyId) {
       JOIN users u ON u.id = s.author_id
       WHERE s.id = $1
     `,
-    [storyId],
+    [storyId]
   );
   return mapStoryRow(result.rows[0]);
 }
@@ -174,7 +182,7 @@ async function listStoriesForEvent(eventId, { statuses = ['APPROVED'], limit = 1
       ORDER BY COALESCE(s.published_at, s.created_at) DESC
       LIMIT $3
     `,
-    [eventId, effectiveStatuses, safeLimit],
+    [eventId, effectiveStatuses, safeLimit]
   );
   return result.rows.map(mapStoryRow);
 }
@@ -195,9 +203,12 @@ async function listStoriesForModeration({ page = 1, pageSize = 20, status = 'PEN
       ORDER BY s.created_at ASC
       LIMIT $2 OFFSET $3
     `,
-    [normalizedStatus, limit, offset],
+    [normalizedStatus, limit, offset]
   );
-  const totalResult = await pool.query(`SELECT COUNT(*)::INT AS count FROM event_stories WHERE status = $1`, [normalizedStatus]);
+  const totalResult = await pool.query(
+    `SELECT COUNT(*)::INT AS count FROM event_stories WHERE status = $1`,
+    [normalizedStatus]
+  );
   return {
     items: result.rows.map((row) => ({ ...mapStoryRow(row), eventTitle: row.event_title || null })),
     page: currentPage,
@@ -224,7 +235,7 @@ async function updateStoryStatus({ storyId, status, moderatorId, rejectionReason
       WHERE id = $1
       RETURNING *
     `,
-    [storyId, normalized, rejectionReason, moderatorId || null],
+    [storyId, normalized, rejectionReason, moderatorId || null]
   );
   if (!result.rows[0]) {
     return null;
@@ -253,7 +264,7 @@ async function incrementDailyMetric({ metricKey, amount = 1, date = new Date() }
       ON CONFLICT (date, metric_key)
       DO UPDATE SET value = analytics_daily.value + EXCLUDED.value, updated_at = NOW()
     `,
-    [isoDate, metricKey, asNumber],
+    [isoDate, metricKey, asNumber]
   );
 }
 
@@ -273,7 +284,7 @@ async function listRecentMetrics({ metricKeys = [], days = 30 } = {}) {
       WHERE ${whereClause}
       ORDER BY date ASC, metric_key ASC
     `,
-    values,
+    values
   );
   return result.rows.map(mapDailyMetricRow);
 }
@@ -299,7 +310,7 @@ async function getVolunteerHoursAggregate() {
           COUNT(DISTINCT CASE WHEN created_at >= NOW() - INTERVAL '90 days' THEN user_id END)::INT AS active_90,
           COUNT(DISTINCT CASE WHEN created_at BETWEEN NOW() - INTERVAL '180 days' AND NOW() - INTERVAL '91 days' THEN user_id END)::INT AS previous_90
         FROM volunteer_hours
-      `,
+      `
     ),
   ]);
   return {
@@ -318,7 +329,7 @@ async function getEventParticipationSummary() {
         COUNT(DISTINCT user_id)::INT AS unique_volunteers,
         COUNT(DISTINCT event_id)::INT AS events_supported
       FROM event_signups
-    `,
+    `
   );
   return {
     totalSignups: Number(result.rows[0]?.total_signups || 0),
@@ -330,13 +341,15 @@ async function getEventParticipationSummary() {
 async function getGalleryEngagementSummary() {
   await ensureSchema();
   const [viewsResult, mediaResult] = await Promise.all([
-    pool.query('SELECT COALESCE(SUM(view_count),0)::BIGINT AS total_views, COUNT(*)::INT AS tracked_events FROM event_gallery_metrics'),
+    pool.query(
+      'SELECT COALESCE(SUM(view_count),0)::BIGINT AS total_views, COUNT(*)::INT AS tracked_events FROM event_gallery_metrics'
+    ),
     pool.query(
       `
         SELECT COUNT(*)::INT AS approved_media
         FROM event_media
         WHERE status = 'APPROVED'
-      `,
+      `
     ),
   ]);
   return {
@@ -356,14 +369,14 @@ async function getSponsorImpactSummary() {
           COALESCE(SUM(amount),0)::NUMERIC AS approved_amount
         FROM sponsorships
         WHERE status = 'APPROVED'
-      `,
+      `
     ),
     pool.query(
       `
         SELECT COALESCE(SUM(sponsor_mentions),0)::BIGINT AS sponsor_mentions
         FROM event_media
         WHERE status = 'APPROVED'
-      `,
+      `
     ),
   ]);
   return {
@@ -381,7 +394,7 @@ async function getAnalyticsUsageSummary() {
         COALESCE(SUM(CASE WHEN metric_key = 'analytics_dashboard_views' AND date >= CURRENT_DATE - INTERVAL '30 days' THEN value ELSE 0 END), 0) AS views30,
         COALESCE(SUM(CASE WHEN metric_key = 'analytics_dashboard_views' THEN value ELSE 0 END), 0) AS total_views
       FROM analytics_daily
-    `,
+    `
   );
   return {
     viewsLast30Days: Number(result.rows[0]?.views30 || 0),
@@ -399,7 +412,7 @@ async function listEventSponsorsWithContacts(eventId) {
       JOIN users u ON u.id = sp.user_id
       WHERE s.event_id = $1 AND sp.status = 'APPROVED' AND s.status = 'APPROVED'
     `,
-    [eventId],
+    [eventId]
   );
   return result.rows.map((row) => ({
     sponsorId: row.user_id,

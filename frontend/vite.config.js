@@ -23,8 +23,7 @@ const ensureCrossoriginPlugin = {
   transformIndexHtml: {
     enforce: 'post',
     transform(html) {
-      const escapeForRegex = (value) =>
-        value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escapeForRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
       const addCrossoriginBefore = (tag, attribute) => {
         if (/\bcrossorigin\b/.test(tag)) {
@@ -37,16 +36,14 @@ const ensureCrossoriginPlugin = {
         }
 
         return (
-          tag.slice(0, attributeIndex) +
-          'crossorigin="anonymous" ' +
-          tag.slice(attributeIndex)
+          tag.slice(0, attributeIndex) + 'crossorigin="anonymous" ' + tag.slice(attributeIndex)
         );
       };
 
       const addCrossoriginToScript = (source, scriptSrc) => {
         const pattern = new RegExp(
           `<script\\s+type="module"[^>]*src="${escapeForRegex(scriptSrc)}"[^>]*>\\s*</script>`,
-          'g',
+          'g'
         );
 
         return source.replace(pattern, (tag) => addCrossoriginBefore(tag, 'src='));
@@ -55,7 +52,7 @@ const ensureCrossoriginPlugin = {
       const addCrossoriginToLink = (source, linkHref) => {
         const pattern = new RegExp(
           `<link\\s+rel="modulepreload"[^>]*href="${escapeForRegex(linkHref)}"[^>]*>`,
-          'g',
+          'g'
         );
 
         return source.replace(pattern, (tag) => addCrossoriginBefore(tag, 'href='));
@@ -120,5 +117,11 @@ export default defineConfig({
         },
       },
     },
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setupTests.js',
+    mockReset: true,
   },
 });

@@ -114,7 +114,12 @@ router.post('/media/:mediaId/reject', authOnly, adminOnly, async (req, res) => {
       return res.status(400).json({ error: 'Invalid media identifier' });
     }
     const reason = req.body?.reason ? String(req.body.reason).trim() : '';
-    const media = await moderateMedia({ mediaId, action: 'reject', moderatorId: req.user.id, reason });
+    const media = await moderateMedia({
+      mediaId,
+      action: 'reject',
+      moderatorId: req.user.id,
+      reason,
+    });
     res.json({ media });
   } catch (error) {
     const status = error.statusCode || 500;

@@ -151,8 +151,8 @@ function mapProfileRow(row, fallbackUserId) {
   const combinedLocation = row.location
     ? row.location
     : cityName && stateName
-    ? `${cityName}, ${stateName}`
-    : cityName || stateName || '';
+      ? `${cityName}, ${stateName}`
+      : cityName || stateName || '';
   return {
     userId: row.user_id,
     skills: Array.isArray(row.skills) ? row.skills : [],
@@ -173,7 +173,9 @@ function mapProfileRow(row, fallbackUserId) {
 function mapEventRow(event) {
   const signupCount = Number(event.signup_count || 0);
   const hasAvailable = event.available_slots !== undefined && event.available_slots !== null;
-  const availableSlots = hasAvailable ? Number(event.available_slots) : Math.max(event.capacity - signupCount, 0);
+  const availableSlots = hasAvailable
+    ? Number(event.available_slots)
+    : Math.max(event.capacity - signupCount, 0);
   return {
     id: event.id,
     title: event.title,
@@ -198,7 +200,9 @@ function mapEventRow(event) {
 function mapSignupRow(row) {
   const signupCount = Number(row.signup_count || 0);
   const hasAvailable = row.available_slots !== undefined && row.available_slots !== null;
-  const availableSlots = hasAvailable ? Number(row.available_slots) : Math.max(row.capacity - signupCount, 0);
+  const availableSlots = hasAvailable
+    ? Number(row.available_slots)
+    : Math.max(row.capacity - signupCount, 0);
   const assignments = Array.isArray(row.assignments)
     ? row.assignments.map((assignment) => ({
         assignmentId: assignment.assignmentId,
@@ -314,7 +318,15 @@ async function getProfile(userId) {
   return mapProfileRow(row, userId);
 }
 
-async function updateProfile({ userId, skills, interests, availability, stateCode, citySlug, bio }) {
+async function updateProfile({
+  userId,
+  skills,
+  interests,
+  availability,
+  stateCode,
+  citySlug,
+  bio,
+}) {
   const normalizedSkills = normalizeStringArray(skills);
   const normalizedInterests = normalizeStringArray(interests);
   const normalizedAvailability = normalizeSlug(availability);
@@ -333,7 +345,9 @@ async function updateProfile({ userId, skills, interests, availability, stateCod
   if (normalizedAvailability) {
     const option = await findAvailabilityOption(normalizedAvailability);
     if (!option) {
-      throw Object.assign(new Error('Select an availability option from the list'), { statusCode: 400 });
+      throw Object.assign(new Error('Select an availability option from the list'), {
+        statusCode: 400,
+      });
     }
     availabilityValue = option.value;
   }
@@ -365,11 +379,11 @@ async function updateProfile({ userId, skills, interests, availability, stateCod
   const locationDisplay = cityRecord
     ? `${cityRecord.name}${stateRecord ? `, ${stateRecord.name}` : ''}`
     : stateRecord
-    ? stateRecord.name
-    : null;
+      ? stateRecord.name
+      : null;
   const sanitizedLocation = sanitizeText(locationDisplay);
 
-  const updated = await upsertVolunteerProfile({
+  await upsertVolunteerProfile({
     userId,
     skills: normalizedSkills,
     interests: normalizedInterests,
@@ -618,12 +632,16 @@ async function recordVolunteerHours({ userId, eventId, minutes, note }) {
     throw Object.assign(new Error('Logged minutes must be greater than zero'), { statusCode: 400 });
   }
   if (!eventId) {
-    throw Object.assign(new Error('Event identifier is required to log hours'), { statusCode: 400 });
+    throw Object.assign(new Error('Event identifier is required to log hours'), {
+      statusCode: 400,
+    });
   }
 
   const hasRegistration = await hasSignup({ userId, eventId });
   if (!hasRegistration) {
-    throw Object.assign(new Error('You must join the event before logging hours'), { statusCode: 400 });
+    throw Object.assign(new Error('You must join the event before logging hours'), {
+      statusCode: 400,
+    });
   }
 
   const entry = await logVolunteerHours({

@@ -94,62 +94,63 @@ export default function HoursTracker({ summary, signups, onLogHours }) {
         <h4 className="m-0 text-base font-semibold text-brand-forest">Log new hours</h4>
         {hasEligibleEvents ? (
           <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold text-brand-forest">Event</span>
-            <select
-              className="rounded-lg border border-brand-forest/20 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-green focus:outline-none"
-              name="eventId"
-              value={form.eventId}
-              onChange={handleChange}
-            >
-              {upcomingOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.title}
-                  {option.isUpcoming ? ' (upcoming)' : ''}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold text-brand-forest">Hours completed</span>
-            <input
-              className="rounded-lg border border-brand-forest/20 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-green focus:outline-none"
-              type="number"
-              name="hours"
-              min="0"
-              step="0.25"
-              placeholder="e.g. 2"
-              value={form.hours}
-              onChange={handleChange}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold text-brand-forest">Notes (optional)</span>
-            <textarea
-              className="min-h-[72px] rounded-lg border border-brand-forest/20 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-green focus:outline-none"
-              name="note"
-              placeholder="What did you work on?"
-              value={form.note}
-              onChange={handleChange}
-            />
-          </label>
-          {status ? (
-            <p
-              className={`m-0 text-sm ${
-                status.type === 'success' ? 'text-brand-green' : 'text-red-600'
-              }`}
-            >
-              {status.message}
-            </p>
-          ) : null}
-          <button type="submit" className="btn-primary" disabled={submitting}>
-            {submitting ? 'Saving…' : 'Log hours'}
-          </button>
-        </form>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-semibold text-brand-forest">Event</span>
+              <select
+                className="rounded-lg border border-brand-forest/20 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-green focus:outline-none"
+                name="eventId"
+                value={form.eventId}
+                onChange={handleChange}
+              >
+                {upcomingOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.title}
+                    {option.isUpcoming ? ' (upcoming)' : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-semibold text-brand-forest">Hours completed</span>
+              <input
+                className="rounded-lg border border-brand-forest/20 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-green focus:outline-none"
+                type="number"
+                name="hours"
+                min="0"
+                step="0.25"
+                placeholder="e.g. 2"
+                value={form.hours}
+                onChange={handleChange}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-semibold text-brand-forest">Notes (optional)</span>
+              <textarea
+                className="min-h-[72px] rounded-lg border border-brand-forest/20 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-green focus:outline-none"
+                name="note"
+                placeholder="What did you work on?"
+                value={form.note}
+                onChange={handleChange}
+              />
+            </label>
+            {status ? (
+              <p
+                className={`m-0 text-sm ${
+                  status.type === 'success' ? 'text-brand-green' : 'text-red-600'
+                }`}
+              >
+                {status.message}
+              </p>
+            ) : null}
+            <button type="submit" className="btn-primary" disabled={submitting}>
+              {submitting ? 'Saving…' : 'Log hours'}
+            </button>
+          </form>
         ) : (
           <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-brand-forest/30 bg-brand-ivory p-4 text-sm text-brand-muted">
             <p className="m-0">
-              Join an event to log your time. Head to the events hub to browse opportunities and RSVP.
+              Join an event to log your time. Head to the events hub to browse opportunities and
+              RSVP.
             </p>
             <Link className="btn-primary self-start" to="/app/events">
               Explore events
@@ -173,7 +174,9 @@ export default function HoursTracker({ summary, signups, onLogHours }) {
                   <p className="m-0 font-semibold text-brand-forest">{badge.label}</p>
                   <p className="m-0 text-xs text-brand-muted">{badge.description}</p>
                 </div>
-                <span className="text-xs font-semibold text-brand-muted">{badge.thresholdHours} hrs</span>
+                <span className="text-xs font-semibold text-brand-muted">
+                  {badge.thresholdHours} hrs
+                </span>
               </div>
               {badge.earned ? (
                 <p className="mt-2 text-xs font-semibold text-brand-green">

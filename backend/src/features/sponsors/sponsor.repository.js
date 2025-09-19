@@ -1,6 +1,8 @@
 const { randomUUID } = require('crypto');
 const pool = require('../common/db');
-const { ensureSchema: ensureVolunteerSchema } = require('../volunteer-journey/volunteerJourney.repository');
+const {
+  ensureSchema: ensureVolunteerSchema,
+} = require('../volunteer-journey/volunteerJourney.repository');
 
 const VALID_PROFILE_STATUSES = ['PENDING', 'APPROVED', 'DECLINED'];
 const VALID_SPONSORSHIP_TYPES = ['FUNDS', 'IN_KIND'];
@@ -108,8 +110,12 @@ const schemaPromise = (async () => {
   `);
 
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_sponsorships_event ON sponsorships (event_id)`);
-  await pool.query(`CREATE INDEX IF NOT EXISTS idx_sponsorships_sponsor ON sponsorships (sponsor_id)`);
-  await pool.query(`CREATE INDEX IF NOT EXISTS idx_sponsor_profiles_status ON sponsor_profiles (status)`);
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS idx_sponsorships_sponsor ON sponsorships (sponsor_id)`
+  );
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS idx_sponsor_profiles_status ON sponsor_profiles (status)`
+  );
 })();
 
 async function ensureSchema() {
@@ -178,7 +184,7 @@ async function applySponsorProfile({
       contactEmail,
       contactPhone,
       JSON.stringify(normalizedAssets),
-    ],
+    ]
   );
   return mapProfileRow(result.rows[0]);
 }
@@ -224,7 +230,7 @@ async function updateSponsorProfile(userId, updates = {}) {
       WHERE user_id = $${values.length}
       RETURNING *
     `,
-    values,
+    values
   );
 
   if (!result.rows[0]) {
@@ -236,10 +242,7 @@ async function updateSponsorProfile(userId, updates = {}) {
 
 async function findSponsorProfile(userId) {
   await ensureSchema();
-  const result = await pool.query(
-    `SELECT * FROM sponsor_profiles WHERE user_id = $1`,
-    [userId],
-  );
+  const result = await pool.query(`SELECT * FROM sponsor_profiles WHERE user_id = $1`, [userId]);
   return mapProfileRow(result.rows[0]);
 }
 
@@ -258,7 +261,7 @@ async function listSponsorProfiles({ statuses } = {}) {
   }
   const result = await pool.query(
     `SELECT * FROM sponsor_profiles ${where} ORDER BY created_at DESC`,
-    values,
+    values
   );
   return result.rows.map(mapProfileRow);
 }
@@ -278,7 +281,7 @@ async function setSponsorStatus({ userId, status }) {
       WHERE user_id = $1
       RETURNING *
     `,
-    [userId, normalized],
+    [userId, normalized]
   );
   if (!result.rows[0]) {
     throw Object.assign(new Error('Sponsor profile not found'), { statusCode: 404 });
@@ -292,13 +295,20 @@ async function setSponsorStatus({ userId, status }) {
             updated_at = NOW()
         WHERE sponsor_id = $1 AND status <> $3
       `,
-      [userId, normalized, normalized],
+      [userId, normalized, normalized]
     );
   }
   return mapProfileRow(result.rows[0]);
 }
 
-async function createSponsorship({ sponsorId, eventId, type, amount = null, notes = null, status = 'PENDING' }) {
+async function createSponsorship({
+  sponsorId,
+  eventId,
+  type,
+  amount = null,
+  notes = null,
+  status = 'PENDING',
+}) {
   await ensureSchema();
   const normalizedType = sanitizeType(type);
   if (!normalizedType) {
@@ -314,7 +324,7 @@ async function createSponsorship({ sponsorId, eventId, type, amount = null, note
       VALUES ($1,$2,$3,$4,$5,$6,$7, CASE WHEN $7 = 'APPROVED' THEN NOW() ELSE NULL END)
       RETURNING *
     `,
-    [id, sponsorId, eventId, normalizedType, amount, notes, normalizedStatus],
+    [id, sponsorId, eventId, normalizedType, amount, notes, normalizedStatus]
   );
   return mapSponsorshipRow(result.rows[0]);
 }
@@ -329,7 +339,7 @@ async function listSponsorshipsForSponsor(sponsorId) {
       WHERE s.sponsor_id = $1
       ORDER BY s.created_at DESC
     `,
-    [sponsorId],
+    [sponsorId]
   );
   return result.rows.map((row) => ({
     ...mapSponsorshipRow(row),
@@ -358,7 +368,7 @@ async function listApprovedEventSponsors(eventIds = []) {
         AND s.status = 'APPROVED'
       ORDER BY sp.org_name ASC
     `,
-    [eventIds],
+    [eventIds]
   );
   const map = new Map();
   for (const row of result.rows) {
@@ -389,7 +399,7 @@ async function listEventSponsorshipsForSponsor({ sponsorId, eventIds = [] }) {
       WHERE sponsor_id = $1 AND event_id = ANY($2::UUID[])
       ORDER BY created_at DESC
     `,
-    [sponsorId, eventIds],
+    [sponsorId, eventIds]
   );
   const map = new Map();
   for (const row of result.rows) {
@@ -413,7 +423,7 @@ async function updateSponsorshipStatus({ sponsorshipId, status }) {
       WHERE id = $1
       RETURNING *
     `,
-    [sponsorshipId, normalized],
+    [sponsorshipId, normalized]
   );
   if (!result.rows[0]) {
     throw Object.assign(new Error('Sponsorship not found'), { statusCode: 404 });
@@ -431,7 +441,7 @@ async function upsertReportSnapshot({ sponsorshipId, snapshot }) {
       WHERE id = $1
       RETURNING *
     `,
-    [sponsorshipId, JSON.stringify(normalizeJson(snapshot, {}))],
+    [sponsorshipId, JSON.stringify(normalizeJson(snapshot, {}))]
   );
   if (!result.rows[0]) {
     throw Object.assign(new Error('Sponsorship not found'), { statusCode: 404 });
@@ -448,7 +458,7 @@ async function markReportDelivered({ sponsorId }) {
       WHERE user_id = $1
       RETURNING *
     `,
-    [sponsorId],
+    [sponsorId]
   );
   return mapProfileRow(result.rows[0]);
 }

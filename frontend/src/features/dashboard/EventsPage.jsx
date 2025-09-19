@@ -49,14 +49,8 @@ export default function EventsPage({ role, roles = [] }) {
   const [supportStatus, setSupportStatus] = useState({ state: 'idle', message: '' });
 
   const firstName = useMemo(() => user?.name?.split(' ')[0] || 'friend', [user?.name]);
-  const activeRole = useMemo(
-    () => determinePrimaryRole(roles, role),
-    [roles, role]
-  );
-  const intro = useMemo(
-    () => buildIntro(activeRole, firstName),
-    [activeRole, firstName]
-  );
+  const activeRole = useMemo(() => determinePrimaryRole(roles, role), [roles, role]);
+  const intro = useMemo(() => buildIntro(activeRole, firstName), [activeRole, firstName]);
 
   const sponsorProfile = user?.sponsorProfile || null;
   const sponsorApproved = sponsorProfile?.status === 'APPROVED';
@@ -144,12 +138,14 @@ export default function EventsPage({ role, roles = [] }) {
         <p className="m-0 text-sm text-brand-muted sm:text-base">{intro.description}</p>
       </header>
       {status.phase === 'error' ? (
-        <p className="m-0 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{status.message}</p>
+        <p className="m-0 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {status.message}
+        </p>
       ) : null}
       {isSponsorMode && !sponsorApproved ? (
         <p className="m-0 rounded-2xl border border-brand-forest/20 bg-brand-sand/50 p-4 text-sm text-brand-muted">
-          Submit or update your sponsor profile to start pledging support for events. Admin approval is required before your
-          logo appears on event pages.
+          Submit or update your sponsor profile to start pledging support for events. Admin approval
+          is required before your logo appears on event pages.
         </p>
       ) : null}
       <DashboardCard
@@ -186,7 +182,9 @@ export default function EventsPage({ role, roles = [] }) {
         />
       ) : null}
       {supportStatus.state === 'error' ? (
-        <p className="m-0 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{supportStatus.message}</p>
+        <p className="m-0 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {supportStatus.message}
+        </p>
       ) : null}
       {supportStatus.state === 'success' ? (
         <p className="m-0 rounded-2xl border border-brand-green/20 bg-brand-sand/70 p-3 text-sm text-brand-forest">

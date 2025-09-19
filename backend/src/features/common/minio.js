@@ -1,5 +1,5 @@
-const Minio = require("minio");
-const config = require("../../config");
+const Minio = require('minio');
+const config = require('../../config');
 
 const minioClient = new Minio.Client({
   endPoint: config.minio.endPoint,

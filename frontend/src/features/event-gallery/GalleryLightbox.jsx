@@ -2,10 +2,13 @@ import { useEffect } from 'react';
 
 function TagChip({ tag }) {
   if (!tag) return null;
-  const tone = tag.type === 'SPONSOR' ? 'bg-white text-brand-forest' : 'bg-brand-sand text-brand-forest';
+  const tone =
+    tag.type === 'SPONSOR' ? 'bg-white text-brand-forest' : 'bg-brand-sand text-brand-forest';
   const label = tag.label || tag.type;
   return (
-    <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${tone}`}>
+    <span
+      className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${tone}`}
+    >
       {label}
     </span>
   );

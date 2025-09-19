@@ -2,7 +2,8 @@ const { sendTemplatedEmail } = require('../email/email.service');
 const config = require('../../config');
 
 function buildVerifyUrl(token) {
-  const baseUrl = (config.app && config.app.baseUrl) || config.corsOrigin || 'http://localhost:3000';
+  const baseUrl =
+    (config.app && config.app.baseUrl) || config.corsOrigin || 'http://localhost:3000';
   const normalized = baseUrl.replace(/\/$/, '');
   return `${normalized}/verify-email?token=${encodeURIComponent(token)}`;
 }

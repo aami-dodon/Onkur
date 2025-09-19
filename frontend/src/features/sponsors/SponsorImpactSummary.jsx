@@ -6,7 +6,9 @@ function MetricCard({ label, value, icon }) {
       <span className="text-2xl" aria-hidden="true">
         {icon}
       </span>
-      <span className="text-xs font-semibold uppercase tracking-[0.24em] text-brand-muted">{label}</span>
+      <span className="text-xs font-semibold uppercase tracking-[0.24em] text-brand-muted">
+        {label}
+      </span>
       <span className="text-lg font-semibold text-brand-forest">{value}</span>
     </div>
   );

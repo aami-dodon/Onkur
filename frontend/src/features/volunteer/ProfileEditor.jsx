@@ -78,11 +78,11 @@ export default function ProfileEditor({
 
   const skillOptions = useMemo(
     () => mergeSelections(lookups?.skills || [], form.skills),
-    [lookups?.skills, form.skills],
+    [lookups?.skills, form.skills]
   );
   const interestOptions = useMemo(
     () => mergeSelections(lookups?.interests || [], form.interests),
-    [lookups?.interests, form.interests],
+    [lookups?.interests, form.interests]
   );
 
   const hasChanges = useMemo(() => {
@@ -128,7 +128,11 @@ export default function ProfileEditor({
       try {
         const response = await onRequestCities(form.stateCode);
         if (cancelled) return;
-        const options = Array.isArray(response) ? response : Array.isArray(response?.cities) ? response.cities : [];
+        const options = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.cities)
+            ? response.cities
+            : [];
         setCityOptions(options);
         if (!options.some((option) => option.value === form.citySlug)) {
           setForm((prev) => ({ ...prev, citySlug: '' }));
@@ -217,11 +221,11 @@ export default function ProfileEditor({
 
   const selectedSkills = useMemo(
     () => form.skills.map((value) => ({ value, label: resolveLabel(skillOptions, value) })),
-    [form.skills, skillOptions],
+    [form.skills, skillOptions]
   );
   const selectedInterests = useMemo(
     () => form.interests.map((value) => ({ value, label: resolveLabel(interestOptions, value) })),
-    [form.interests, interestOptions],
+    [form.interests, interestOptions]
   );
 
   return (
@@ -269,7 +273,10 @@ export default function ProfileEditor({
           {selectedSkills.length ? (
             <div className="flex flex-wrap gap-2 text-xs">
               {selectedSkills.map((item) => (
-                <span key={item.value} className="rounded-full bg-brand-mint/40 px-3 py-1 text-brand-forest">
+                <span
+                  key={item.value}
+                  className="rounded-full bg-brand-mint/40 px-3 py-1 text-brand-forest"
+                >
                   {item.label}
                 </span>
               ))}
@@ -319,7 +326,10 @@ export default function ProfileEditor({
           {selectedInterests.length ? (
             <div className="flex flex-wrap gap-2 text-xs">
               {selectedInterests.map((item) => (
-                <span key={item.value} className="rounded-full bg-brand-sand px-3 py-1 text-brand-forest">
+                <span
+                  key={item.value}
+                  className="rounded-full bg-brand-sand px-3 py-1 text-brand-forest"
+                >
                   {item.label}
                 </span>
               ))}
@@ -370,7 +380,9 @@ export default function ProfileEditor({
               onChange={handleSelectChange}
               disabled={!form.stateCode || !cityOptions.length}
             >
-              <option value="">{form.stateCode ? 'Select your city' : 'Choose a state first'}</option>
+              <option value="">
+                {form.stateCode ? 'Select your city' : 'Choose a state first'}
+              </option>
               {cityOptions.map((city) => (
                 <option key={city.value} value={city.value}>
                   {city.label}

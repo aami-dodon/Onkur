@@ -72,8 +72,8 @@ export default function CheckEmailPage() {
         ) : null}
         <div className="mt-6 space-y-2 text-sm text-brand-muted">
           <p>
-            If you can’t find the email within a few minutes, check your spam folder or request another link from the
-            login page.
+            If you can’t find the email within a few minutes, check your spam folder or request
+            another link from the login page.
           </p>
           <p>
             Need help? Reach out to our admin at{' '}

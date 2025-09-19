@@ -5,7 +5,13 @@ const SUPPORT_TYPES = [
   { value: 'IN_KIND', label: 'In-kind resources' },
 ];
 
-export default function SponsorSupportForm({ event, onSubmit, onCancel, isSubmitting = false, initialSponsorship }) {
+export default function SponsorSupportForm({
+  event,
+  onSubmit,
+  onCancel,
+  isSubmitting = false,
+  initialSponsorship,
+}) {
   const [type, setType] = useState('FUNDS');
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
@@ -66,7 +72,10 @@ export default function SponsorSupportForm({ event, onSubmit, onCancel, isSubmit
       </header>
       <div className="flex flex-col gap-3">
         {SUPPORT_TYPES.map((option) => (
-          <label key={option.value} className="flex items-center gap-3 rounded-2xl border border-brand-forest/15 bg-brand-sand/60 px-4 py-3 text-sm font-medium text-brand-forest">
+          <label
+            key={option.value}
+            className="flex items-center gap-3 rounded-2xl border border-brand-forest/15 bg-brand-sand/60 px-4 py-3 text-sm font-medium text-brand-forest"
+          >
             <input
               type="radio"
               name="sponsorType"
@@ -103,8 +112,16 @@ export default function SponsorSupportForm({ event, onSubmit, onCancel, isSubmit
           placeholder="Share how you plan to support or recognition preferences."
         />
       </label>
-      {error ? <p className="m-0 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
-      {message ? <p className="m-0 rounded-xl border border-brand-green/20 bg-brand-sand/70 p-3 text-sm text-brand-forest">{message}</p> : null}
+      {error ? (
+        <p className="m-0 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
+      {message ? (
+        <p className="m-0 rounded-xl border border-brand-green/20 bg-brand-sand/70 p-3 text-sm text-brand-forest">
+          {message}
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" className="btn-primary" disabled={isSubmitting}>
           {isSubmitting ? 'Submitting…' : 'Confirm sponsorship'}

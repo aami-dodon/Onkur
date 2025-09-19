@@ -2,7 +2,11 @@ const { randomUUID } = require('crypto');
 const pool = require('../common/db');
 const logger = require('../../utils/logger');
 const { ROLES, DEFAULT_ROLE } = require('./constants');
-const { sortRolesByPriority, determinePrimaryRole, buildRolePriorityCase } = require('./role.helpers');
+const {
+  sortRolesByPriority,
+  determinePrimaryRole,
+  buildRolePriorityCase,
+} = require('./role.helpers');
 
 const roleCheckArray = ROLES.map((role) => `'${role}'`).join(', ');
 const roleOrderCase = buildRolePriorityCase('role');
@@ -340,16 +344,7 @@ async function recordAuditLog({
       INSERT INTO audit_logs (id, actor_id, action, entity_type, entity_id, before, after, metadata)
       VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb)
     `,
-    [
-      id,
-      actorId,
-      action,
-      entityType,
-      entityId || null,
-      beforeJson,
-      afterJson,
-      metadataJson,
-    ]
+    [id, actorId, action, entityType, entityId || null, beforeJson, afterJson, metadataJson]
   );
 }
 
@@ -369,7 +364,7 @@ async function revokeToken({ jti, expiresAt }) {
 async function isTokenRevoked(jti) {
   await ensureSchema();
   const result = await pool.query(
-    `SELECT 1 FROM revoked_tokens WHERE jti = $1 AND expires_at >= NOW()` ,
+    `SELECT 1 FROM revoked_tokens WHERE jti = $1 AND expires_at >= NOW()`,
     [jti]
   );
   return Boolean(result.rowCount);
@@ -390,7 +385,9 @@ async function createEmailVerificationToken({ userId, expiresInMinutes }) {
   const token = randomUUID().replace(/-/g, '');
   const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000);
 
-  await pool.query(`DELETE FROM email_verification_tokens WHERE user_id = $1 AND used_at IS NULL`, [userId]);
+  await pool.query(`DELETE FROM email_verification_tokens WHERE user_id = $1 AND used_at IS NULL`, [
+    userId,
+  ]);
 
   const result = await pool.query(
     `
@@ -440,10 +437,7 @@ async function deleteVerificationTokensForUser({ userId, exceptTokenId = null })
       [userId, exceptTokenId]
     );
   } else {
-    await pool.query(
-      `DELETE FROM email_verification_tokens WHERE user_id = $1`,
-      [userId]
-    );
+    await pool.query(`DELETE FROM email_verification_tokens WHERE user_id = $1`, [userId]);
   }
 }
 

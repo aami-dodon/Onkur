@@ -156,7 +156,7 @@ async function createEvent({
       requiredInterests,
       requiredAvailability,
       createdBy,
-    ],
+    ]
   );
   return findEventById(id);
 }
@@ -206,7 +206,7 @@ async function updateEvent(eventId, updates = {}) {
       SET ${fields.join(', ')}, updated_at = NOW()
       WHERE id = $${fields.length + 1}
     `,
-    values,
+    values
   );
   const fresh = await findEventById(eventId);
   if (!fresh) {
@@ -223,7 +223,9 @@ async function setEventStatus(eventId, status) {
 
   return withTransaction(async (client) => {
     await ensureSchema();
-    const current = await client.query('SELECT status FROM events WHERE id = $1 FOR UPDATE', [eventId]);
+    const current = await client.query('SELECT status FROM events WHERE id = $1 FOR UPDATE', [
+      eventId,
+    ]);
     if (!current.rows[0]) {
       throw Object.assign(new Error('Event not found'), { statusCode: 404 });
     }
@@ -238,7 +240,7 @@ async function setEventStatus(eventId, status) {
         WHERE id = $1
         RETURNING *
       `,
-      [eventId, status],
+      [eventId, status]
     );
 
     return mapEventRow(result.rows[0]);
@@ -393,7 +395,7 @@ async function findEventById(eventId, { client = pool } = {}) {
       ) hours ON hours.event_id = e.id
       WHERE e.id = $1
     `,
-    [eventId],
+    [eventId]
   );
   return mapEventRow(result.rows[0]);
 }
@@ -433,7 +435,7 @@ async function listEventsForManager(managerId) {
       WHERE e.created_by = $1
       ORDER BY e.date_start ASC
     `,
-    [managerId],
+    [managerId]
   );
   return result.rows.map(mapEventRow);
 }
@@ -446,7 +448,7 @@ async function listTasksForEvent(eventId, { client = pool } = {}) {
       WHERE event_id = $1
       ORDER BY created_at ASC
     `,
-    [eventId],
+    [eventId]
   );
   return result.rows.map((row) => ({
     id: row.id,
@@ -467,7 +469,9 @@ async function replaceEventTasks(eventId, tasks = []) {
       throw Object.assign(new Error('Event not found'), { statusCode: 404 });
     }
 
-    const existing = await client.query(`SELECT id FROM event_tasks WHERE event_id = $1`, [eventId]);
+    const existing = await client.query(`SELECT id FROM event_tasks WHERE event_id = $1`, [
+      eventId,
+    ]);
     const existingIds = new Set(existing.rows.map((row) => row.id));
     const keepIds = new Set();
 
@@ -477,7 +481,9 @@ async function replaceEventTasks(eventId, tasks = []) {
       }
       const requiredCount = Number(task.requiredCount || task.required_count || 1);
       if (!Number.isFinite(requiredCount) || requiredCount <= 0) {
-        throw Object.assign(new Error('Task required count must be greater than zero'), { statusCode: 400 });
+        throw Object.assign(new Error('Task required count must be greater than zero'), {
+          statusCode: 400,
+        });
       }
 
       if (task.id && existingIds.has(task.id)) {
@@ -487,7 +493,7 @@ async function replaceEventTasks(eventId, tasks = []) {
             SET title = $1, description = $2, required_count = $3, updated_at = NOW()
             WHERE id = $4 AND event_id = $5
           `,
-          [task.title, task.description || null, requiredCount, task.id, eventId],
+          [task.title, task.description || null, requiredCount, task.id, eventId]
         );
         keepIds.add(task.id);
       } else {
@@ -497,7 +503,7 @@ async function replaceEventTasks(eventId, tasks = []) {
             INSERT INTO event_tasks (id, event_id, title, description, required_count)
             VALUES ($1, $2, $3, $4, $5)
           `,
-          [id, eventId, task.title, task.description || null, requiredCount],
+          [id, eventId, task.title, task.description || null, requiredCount]
         );
         keepIds.add(id);
       }
@@ -506,10 +512,10 @@ async function replaceEventTasks(eventId, tasks = []) {
     if (existingIds.size) {
       const toDelete = [...existingIds].filter((id) => !keepIds.has(id));
       if (toDelete.length) {
-        await client.query(
-          `DELETE FROM event_tasks WHERE event_id = $1 AND id = ANY($2::UUID[])`,
-          [eventId, toDelete],
-        );
+        await client.query(`DELETE FROM event_tasks WHERE event_id = $1 AND id = ANY($2::UUID[])`, [
+          eventId,
+          toDelete,
+        ]);
       }
     }
 
@@ -539,7 +545,7 @@ async function listAssignmentsForEvent(eventId, { client = pool } = {}) {
       WHERE ea.event_id = $1
       ORDER BY et.title ASC, u.name ASC
     `,
-    [eventId],
+    [eventId]
   );
   return result.rows.map((row) => ({
     id: row.id,
@@ -557,7 +563,7 @@ async function listAssignmentsForEvent(eventId, { client = pool } = {}) {
   }));
 }
 
-async function assignVolunteers(eventId, assignments = [], { assignedBy = null } = {}) {
+async function assignVolunteers(eventId, assignments = []) {
   if (!assignments.length) {
     return { assignments: await listAssignmentsForEvent(eventId), newAssignments: [] };
   }
@@ -573,12 +579,14 @@ async function assignVolunteers(eventId, assignments = [], { assignedBy = null }
 
     for (const assignment of assignments) {
       if (!assignment || !assignment.taskId || !assignment.userId) {
-        throw Object.assign(new Error('Task and volunteer identifiers are required'), { statusCode: 400 });
+        throw Object.assign(new Error('Task and volunteer identifiers are required'), {
+          statusCode: 400,
+        });
       }
 
       const taskResult = await client.query(
         `SELECT id FROM event_tasks WHERE id = $1 AND event_id = $2`,
-        [assignment.taskId, eventId],
+        [assignment.taskId, eventId]
       );
       if (!taskResult.rows[0]) {
         throw Object.assign(new Error('Task not found for this event'), { statusCode: 404 });
@@ -586,12 +594,15 @@ async function assignVolunteers(eventId, assignments = [], { assignedBy = null }
 
       const signupResult = await client.query(
         `SELECT id FROM event_signups WHERE event_id = $1 AND user_id = $2`,
-        [eventId, assignment.userId],
+        [eventId, assignment.userId]
       );
       if (!signupResult.rows[0]) {
-        throw Object.assign(new Error('Volunteer must be registered for the event before assignment'), {
-          statusCode: 400,
-        });
+        throw Object.assign(
+          new Error('Volunteer must be registered for the event before assignment'),
+          {
+            statusCode: 400,
+          }
+        );
       }
 
       const existing = await client.query(
@@ -599,7 +610,7 @@ async function assignVolunteers(eventId, assignments = [], { assignedBy = null }
           SELECT id FROM event_assignments
           WHERE event_id = $1 AND task_id = $2 AND user_id = $3
         `,
-        [eventId, assignment.taskId, assignment.userId],
+        [eventId, assignment.taskId, assignment.userId]
       );
 
       if (existing.rows[0]) {
@@ -609,7 +620,7 @@ async function assignVolunteers(eventId, assignments = [], { assignedBy = null }
             SET status = $1, updated_at = NOW()
             WHERE id = $2
           `,
-          [assignment.status || 'ASSIGNED', existing.rows[0].id],
+          [assignment.status || 'ASSIGNED', existing.rows[0].id]
         );
       } else {
         const id = randomUUID();
@@ -619,9 +630,13 @@ async function assignVolunteers(eventId, assignments = [], { assignedBy = null }
             VALUES ($1, $2, $3, $4, $5)
             RETURNING id
           `,
-          [id, eventId, assignment.taskId, assignment.userId, assignment.status || 'ASSIGNED'],
+          [id, eventId, assignment.taskId, assignment.userId, assignment.status || 'ASSIGNED']
         );
-        newAssignments.push({ assignmentId: result.rows[0].id, userId: assignment.userId, taskId: assignment.taskId });
+        newAssignments.push({
+          assignmentId: result.rows[0].id,
+          userId: assignment.userId,
+          taskId: assignment.taskId,
+        });
       }
     }
 
@@ -637,14 +652,16 @@ async function getAttendanceRecord(eventId, userId, { client = pool } = {}) {
       FROM event_attendance
       WHERE event_id = $1 AND user_id = $2
     `,
-    [eventId, userId],
+    [eventId, userId]
   );
   return result.rows[0] || null;
 }
 
 async function recordAttendance(eventId, userId, { action, minutesOverride = null } = {}) {
   if (!['check-in', 'check-out'].includes(action)) {
-    throw Object.assign(new Error('Action must be either check-in or check-out'), { statusCode: 400 });
+    throw Object.assign(new Error('Action must be either check-in or check-out'), {
+      statusCode: 400,
+    });
   }
 
   return withTransaction(async (client) => {
@@ -656,10 +673,12 @@ async function recordAttendance(eventId, userId, { action, minutesOverride = nul
 
     const signupResult = await client.query(
       `SELECT id FROM event_signups WHERE event_id = $1 AND user_id = $2`,
-      [eventId, userId],
+      [eventId, userId]
     );
     if (!signupResult.rows[0]) {
-      throw Object.assign(new Error('Volunteer is not registered for this event'), { statusCode: 400 });
+      throw Object.assign(new Error('Volunteer is not registered for this event'), {
+        statusCode: 400,
+      });
     }
 
     let attendance = await getAttendanceRecord(eventId, userId, { client });
@@ -672,7 +691,7 @@ async function recordAttendance(eventId, userId, { action, minutesOverride = nul
           VALUES ($1, $2, $3)
           RETURNING id, event_id, user_id, check_in_at, check_out_at, minutes, hours_entry_id, created_at, updated_at
         `,
-        [id, eventId, userId],
+        [id, eventId, userId]
       );
       attendance = insert.rows[0];
     }
@@ -691,13 +710,15 @@ async function recordAttendance(eventId, userId, { action, minutesOverride = nul
           WHERE id = $1
           RETURNING id, event_id, user_id, check_in_at, check_out_at, minutes, hours_entry_id, created_at, updated_at
         `,
-        [attendance.id],
+        [attendance.id]
       );
       return { ...updated.rows[0], alreadyCheckedIn: false };
     }
 
     if (!attendance.check_in_at) {
-      throw Object.assign(new Error('Volunteer must be checked in before checking out'), { statusCode: 400 });
+      throw Object.assign(new Error('Volunteer must be checked in before checking out'), {
+        statusCode: 400,
+      });
     }
 
     if (attendance.check_out_at) {
@@ -712,7 +733,9 @@ async function recordAttendance(eventId, userId, { action, minutesOverride = nul
       : Math.max(1, Math.round(diffMs / 60000));
 
     if (!Number.isFinite(minutesComputed) || minutesComputed <= 0) {
-      throw Object.assign(new Error('Computed attendance minutes must be greater than zero'), { statusCode: 400 });
+      throw Object.assign(new Error('Computed attendance minutes must be greater than zero'), {
+        statusCode: 400,
+      });
     }
 
     let hoursEntryId = attendance.hours_entry_id;
@@ -724,7 +747,7 @@ async function recordAttendance(eventId, userId, { action, minutesOverride = nul
           VALUES ($1, $2, $3, $4, $5)
           RETURNING id
         `,
-        [hoursId, userId, eventId, minutesComputed, 'Auto-tracked via event attendance'],
+        [hoursId, userId, eventId, minutesComputed, 'Auto-tracked via event attendance']
       );
       hoursEntryId = hoursResult.rows[0].id;
     }
@@ -736,7 +759,7 @@ async function recordAttendance(eventId, userId, { action, minutesOverride = nul
         WHERE id = $1
         RETURNING id, event_id, user_id, check_in_at, check_out_at, minutes, hours_entry_id, created_at, updated_at
       `,
-      [attendance.id, minutesComputed, hoursEntryId],
+      [attendance.id, minutesComputed, hoursEntryId]
     );
 
     return { ...updated.rows[0], alreadyCheckedOut: false };
@@ -762,7 +785,7 @@ async function listEventSignups(eventId, { client = pool } = {}) {
       WHERE es.event_id = $1
       ORDER BY u.name ASC
     `,
-    [eventId],
+    [eventId]
   );
   return result.rows.map((row) => ({
     signupId: row.id,
@@ -778,10 +801,7 @@ async function listEventSignups(eventId, { client = pool } = {}) {
 }
 
 async function getUserContact(userId, { client = pool } = {}) {
-  const result = await client.query(
-    `SELECT id, name, email FROM users WHERE id = $1`,
-    [userId],
-  );
+  const result = await client.query(`SELECT id, name, email FROM users WHERE id = $1`, [userId]);
   return result.rows[0] || null;
 }
 
@@ -796,11 +816,11 @@ async function generateEventReport(eventId) {
     pool.query(`SELECT COUNT(*)::INT AS count FROM event_signups WHERE event_id = $1`, [eventId]),
     pool.query(
       `SELECT COUNT(*)::INT AS checked_in FROM event_attendance WHERE event_id = $1 AND check_in_at IS NOT NULL`,
-      [eventId],
+      [eventId]
     ),
     pool.query(
       `SELECT COALESCE(SUM(minutes), 0)::INT AS total_minutes FROM volunteer_hours WHERE event_id = $1`,
-      [eventId],
+      [eventId]
     ),
   ]);
 
@@ -822,7 +842,7 @@ async function generateEventReport(eventId) {
         generated_at = NOW()
       RETURNING event_id, total_signups, total_checked_in, total_hours, generated_at
     `,
-    [eventId, totalSignups, totalCheckedIn, Math.round(totalHours)],
+    [eventId, totalSignups, totalCheckedIn, Math.round(totalHours)]
   );
 
   const reportRow = reportResult.rows[0];
@@ -877,7 +897,9 @@ async function findEventCategory(value) {
     return null;
   }
   await ensureSchema();
-  const result = await pool.query(`SELECT value, label FROM event_categories WHERE value = $1`, [value]);
+  const result = await pool.query(`SELECT value, label FROM event_categories WHERE value = $1`, [
+    value,
+  ]);
   return result.rows[0] || null;
 }
 
@@ -929,7 +951,7 @@ async function listUsersWithRoles(roles = []) {
         s.name,
         c.name
     `,
-    [normalizedRoles],
+    [normalizedRoles]
   );
 
   return result.rows.map((row) => ({
@@ -961,7 +983,7 @@ async function upsertEventCategory({ value, label }) {
       DO UPDATE SET label = EXCLUDED.label, updated_at = NOW()
       RETURNING value, label
     `,
-    [value, label],
+    [value, label]
   );
   return result.rows[0];
 }

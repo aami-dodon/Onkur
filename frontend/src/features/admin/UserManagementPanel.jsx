@@ -57,7 +57,9 @@ export default function UserManagementPanel({
                 htmlFor={inputId}
                 className="flex items-center justify-between gap-3 rounded-md border border-brand-green/40 bg-white/80 px-3 py-2"
               >
-                <span className="text-sm font-medium text-brand-forest">{role.replace('_', ' ')}</span>
+                <span className="text-sm font-medium text-brand-forest">
+                  {role.replace('_', ' ')}
+                </span>
                 <input
                   id={inputId}
                   type="checkbox"
@@ -87,13 +89,11 @@ export default function UserManagementPanel({
         </label>
 
         {state.error ? <p className="text-sm font-medium text-red-600">{state.error}</p> : null}
-        {state.message ? <p className="text-sm font-semibold text-brand-green">{state.message}</p> : null}
+        {state.message ? (
+          <p className="text-sm font-semibold text-brand-green">{state.message}</p>
+        ) : null}
 
-        <button
-          type="submit"
-          className="btn-primary"
-          disabled={state.status === 'loading'}
-        >
+        <button type="submit" className="btn-primary" disabled={state.status === 'loading'}>
           {state.status === 'loading' ? 'Saving…' : 'Update user'}
         </button>
       </form>

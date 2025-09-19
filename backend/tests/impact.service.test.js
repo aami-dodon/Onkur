@@ -161,7 +161,7 @@ describe('impact.service', () => {
     });
 
     const analytics = await pool.query(
-      "SELECT value FROM analytics_daily WHERE metric_key = 'stories_submitted'",
+      "SELECT value FROM analytics_daily WHERE metric_key = 'stories_submitted'"
     );
     expect(Number(analytics.rows[0]?.value)).toBe(1);
   });
@@ -223,19 +223,19 @@ describe('impact.service', () => {
 
     await pool.query(
       'INSERT INTO sponsor_profiles (user_id, org_name, contact_name, contact_email, status) VALUES ($1,$2,$3,$4,$5)',
-      [sponsorA, 'Green Roots', 'Riya', 'riya@greenroots.org', 'APPROVED'],
+      [sponsorA, 'Green Roots', 'Riya', 'riya@greenroots.org', 'APPROVED']
     );
     await pool.query(
       'INSERT INTO sponsor_profiles (user_id, org_name, contact_name, contact_email, status) VALUES ($1,$2,$3,$4,$5)',
-      [sponsorB, 'Eco Friends', 'Dev', null, 'APPROVED'],
+      [sponsorB, 'Eco Friends', 'Dev', null, 'APPROVED']
     );
     await pool.query(
       'INSERT INTO sponsorships (id, sponsor_id, event_id, status, amount) VALUES ($1,$2,$3,$4,$5)',
-      [randomUUID(), sponsorA, eventId, 'APPROVED', 5000],
+      [randomUUID(), sponsorA, eventId, 'APPROVED', 5000]
     );
     await pool.query(
       'INSERT INTO sponsorships (id, sponsor_id, event_id, status, amount) VALUES ($1,$2,$3,$4,$5)',
-      [randomUUID(), sponsorB, eventId, 'APPROVED', 2500],
+      [randomUUID(), sponsorB, eventId, 'APPROVED', 2500]
     );
 
     sendTemplatedEmailMock.mockClear();
@@ -249,7 +249,7 @@ describe('impact.service', () => {
     expect(sendTemplatedEmailMock).toHaveBeenCalledTimes(3);
 
     const publishedMetric = await pool.query(
-      "SELECT value FROM analytics_daily WHERE metric_key = 'stories_published'",
+      "SELECT value FROM analytics_daily WHERE metric_key = 'stories_published'"
     );
     expect(Number(publishedMetric.rows[0]?.value)).toBe(1);
   });
@@ -298,7 +298,7 @@ describe('impact.service', () => {
       ]),
     ]);
 
-    const pending = await impactService.submitImpactStory({
+    await impactService.submitImpactStory({
       eventId,
       author: { id: authorId },
       title: 'Mangroves breathing again',
@@ -320,57 +320,64 @@ describe('impact.service', () => {
       mediaIds: [],
     });
 
-    await impactService.approveImpactStory({ storyId: approved.story.id, moderator: { id: moderatorId } });
-    await impactService.rejectImpactStory({ storyId: rejected.story.id, moderator: { id: moderatorId }, reason: 'Needs edits' });
+    await impactService.approveImpactStory({
+      storyId: approved.story.id,
+      moderator: { id: moderatorId },
+    });
+    await impactService.rejectImpactStory({
+      storyId: rejected.story.id,
+      moderator: { id: moderatorId },
+      reason: 'Needs edits',
+    });
 
     await pool.query(
-      'INSERT INTO volunteer_hours (id, user_id, event_id, minutes, created_at) VALUES ($1,$2,$3,$4, NOW() - INTERVAL \'15 days\')',
-      [randomUUID(), authorId, eventId, 180],
+      "INSERT INTO volunteer_hours (id, user_id, event_id, minutes, created_at) VALUES ($1,$2,$3,$4, NOW() - INTERVAL '15 days')",
+      [randomUUID(), authorId, eventId, 180]
     );
     await pool.query(
-      'INSERT INTO volunteer_hours (id, user_id, event_id, minutes, created_at) VALUES ($1,$2,$3,$4, NOW() - INTERVAL \'60 days\')',
-      [randomUUID(), authorId, otherEventId, 120],
+      "INSERT INTO volunteer_hours (id, user_id, event_id, minutes, created_at) VALUES ($1,$2,$3,$4, NOW() - INTERVAL '60 days')",
+      [randomUUID(), authorId, otherEventId, 120]
     );
     await pool.query(
-      'INSERT INTO volunteer_hours (id, user_id, event_id, minutes, created_at) VALUES ($1,$2,$3,$4, NOW() - INTERVAL \'120 days\')',
-      [randomUUID(), authorId, eventId, 90],
+      "INSERT INTO volunteer_hours (id, user_id, event_id, minutes, created_at) VALUES ($1,$2,$3,$4, NOW() - INTERVAL '120 days')",
+      [randomUUID(), authorId, eventId, 90]
     );
 
     await pool.query(
-      'INSERT INTO event_signups (id, event_id, user_id, created_at) VALUES ($1,$2,$3,NOW() - INTERVAL \'2 days\')',
-      [randomUUID(), eventId, authorId],
+      "INSERT INTO event_signups (id, event_id, user_id, created_at) VALUES ($1,$2,$3,NOW() - INTERVAL '2 days')",
+      [randomUUID(), eventId, authorId]
     );
     await pool.query(
-      'INSERT INTO event_signups (id, event_id, user_id, created_at) VALUES ($1,$2,$3,NOW() - INTERVAL \'10 days\')',
-      [randomUUID(), otherEventId, authorId],
+      "INSERT INTO event_signups (id, event_id, user_id, created_at) VALUES ($1,$2,$3,NOW() - INTERVAL '10 days')",
+      [randomUUID(), otherEventId, authorId]
     );
 
     await pool.query(
       'INSERT INTO event_media (id, event_id, caption, status, sponsor_mentions) VALUES ($1,$2,$3,$4,$5)',
-      [randomUUID(), eventId, 'Gallery highlight', 'APPROVED', 4],
+      [randomUUID(), eventId, 'Gallery highlight', 'APPROVED', 4]
     );
     await pool.query(
       'INSERT INTO event_media (id, event_id, caption, status, sponsor_mentions) VALUES ($1,$2,$3,$4,$5)',
-      [randomUUID(), otherEventId, 'Garden photo', 'APPROVED', 2],
+      [randomUUID(), otherEventId, 'Garden photo', 'APPROVED', 2]
     );
 
     await pool.query(
-      'INSERT INTO event_gallery_metrics (event_id, view_count, last_viewed_at) VALUES ($1,$2,NOW() - INTERVAL \'1 day\')',
-      [eventId, 120],
+      "INSERT INTO event_gallery_metrics (event_id, view_count, last_viewed_at) VALUES ($1,$2,NOW() - INTERVAL '1 day')",
+      [eventId, 120]
     );
     await pool.query(
-      'INSERT INTO event_gallery_metrics (event_id, view_count, last_viewed_at) VALUES ($1,$2,NOW() - INTERVAL \'4 days\')',
-      [otherEventId, 45],
+      "INSERT INTO event_gallery_metrics (event_id, view_count, last_viewed_at) VALUES ($1,$2,NOW() - INTERVAL '4 days')",
+      [otherEventId, 45]
     );
 
     await pool.query(
-      "INSERT INTO analytics_daily (date, metric_key, value) VALUES (CURRENT_DATE, 'analytics_dashboard_views', 4)",
+      "INSERT INTO analytics_daily (date, metric_key, value) VALUES (CURRENT_DATE, 'analytics_dashboard_views', 4)"
     );
     await pool.query(
-      "INSERT INTO analytics_daily (date, metric_key, value) VALUES (CURRENT_DATE - INTERVAL '10 days', 'analytics_dashboard_views', 3)",
+      "INSERT INTO analytics_daily (date, metric_key, value) VALUES (CURRENT_DATE - INTERVAL '10 days', 'analytics_dashboard_views', 3)"
     );
     await pool.query(
-      "INSERT INTO analytics_daily (date, metric_key, value) VALUES (CURRENT_DATE - INTERVAL '40 days', 'analytics_dashboard_views', 2)",
+      "INSERT INTO analytics_daily (date, metric_key, value) VALUES (CURRENT_DATE - INTERVAL '40 days', 'analytics_dashboard_views', 2)"
     );
 
     const overview = await impactService.getImpactAnalyticsOverview();
