@@ -137,4 +137,10 @@
 - **Impact:** Backend containers boot cleanly again, keeping gallery moderation, uploads, and notifications online for admins and event teams.
 
 
+## Mobile header compaction
+- **Date:** 2025-09-30
+- **Change:** Slimmed the authenticated dashboard header with tighter spacing, hid the subtitle on mobile, and relocated the logout action to the sticky bottom navigation.
+- **Impact:** Mobile users regain vertical space for content while still accessing logout from the persistent footer, and desktop retains the prominent logout control.
+
+
 
