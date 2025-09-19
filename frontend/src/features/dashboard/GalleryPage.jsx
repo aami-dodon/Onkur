@@ -1,43 +1,14 @@
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { apiRequest } from '../../lib/apiClient';
 import useDocumentTitle from '../../lib/useDocumentTitle';
 import { useAuth } from '../auth/AuthContext';
+import MediaUploadForm from '../event-gallery/MediaUploadForm';
+import EventGalleryViewer from '../event-gallery/EventGalleryViewer';
+import ModerationQueue from '../event-gallery/ModerationQueue';
+import { fetchGalleryEvents } from '../event-gallery/galleryApi';
 import DashboardCard from './DashboardCard';
-import { determinePrimaryRole } from './roleUtils';
-
-const GALLERY_SPOTLIGHTS = [
-  {
-    id: 'mangrove',
-    emoji: '🌿',
-    title: 'Mangrove guardians',
-    summary: '50 volunteers restored 2km of coastline habitat with new mangrove plantings.',
-    impact: '1,200 seedlings planted',
-    tags: ['Habitat', 'Coastal resilience'],
-  },
-  {
-    id: 'bike',
-    emoji: '🚲',
-    title: 'Bike kitchen reboot',
-    summary: 'A youth-led repair-a-thon tuned 86 community bikes and hosted a pop-up safety clinic.',
-    impact: '86 bikes back on the road',
-    tags: ['Mobility', 'Youth'],
-  },
-  {
-    id: 'canopy',
-    emoji: '🌳',
-    title: 'City canopy census',
-    summary: 'Volunteers catalogued 1,400 trees and tagged gaps for next season’s planting map.',
-    impact: '12 new micro-forests planned',
-    tags: ['Urban forestry', 'Data'],
-  },
-];
-
-const STORY_TIPS = [
-  'Capture before-and-after scenes to show how spaces transform.',
-  'Highlight two quotes—one from a volunteer and one from a community member.',
-  'Log attendance and hours so sponsors can see their impact grow.',
-  'Upload at least five photos per story to keep galleries immersive.',
-];
+import { determinePrimaryRole, normalizeRoles } from './roleUtils';
 
 function buildIntro(role, firstName) {
   switch (role) {
@@ -45,7 +16,7 @@ function buildIntro(role, firstName) {
       return {
         title: `Curate your event stories, ${firstName}`,
         description:
-          'Every gallery entry helps teams relive the day. Organize photos, quotes, and metrics so celebrations stay vibrant.',
+          'Upload photos, tag volunteers and sponsors, and keep your impact gallery fresh so teams can relive the day.',
       };
     case 'SPONSOR':
       return {
@@ -57,7 +28,7 @@ function buildIntro(role, firstName) {
       return {
         title: `Moderate and elevate Onkur stories, ${firstName}`,
         description:
-          'Ensure every gallery reflects our shared values, then surface inspiring examples to the broader community.',
+          'Approve new uploads, reject anything off-brand, and spotlight the best galleries for the public hub.',
       };
     default:
       return {
@@ -68,19 +39,111 @@ function buildIntro(role, firstName) {
   }
 }
 
+function uniqEvents(events) {
+  const map = new Map();
+  events.forEach((event) => {
+    if (!event || !event.id) return;
+    if (!map.has(event.id)) {
+      map.set(event.id, {
+        id: event.id,
+        title: event.title,
+      });
+    }
+  });
+  return Array.from(map.values());
+}
+
 export default function GalleryPage({ role, roles = [] }) {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const firstName = useMemo(() => user?.name?.split(' ')[0] || 'friend', [user?.name]);
-  const activeRole = useMemo(
-    () => determinePrimaryRole(roles, role),
-    [roles, role]
-  );
-  const intro = useMemo(
-    () => buildIntro(activeRole, firstName),
-    [activeRole, firstName]
-  );
+  const normalizedRoles = useMemo(() => normalizeRoles(roles, role), [roles, role]);
+  const activeRole = useMemo(() => determinePrimaryRole(normalizedRoles, role), [normalizedRoles, role]);
+  const intro = useMemo(() => buildIntro(activeRole, firstName), [activeRole, firstName]);
+
+  const [uploadableEvents, setUploadableEvents] = useState([]);
+  const [uploadStatus, setUploadStatus] = useState({ state: 'idle', message: '' });
+  const [galleryEvents, setGalleryEvents] = useState([]);
+  const [galleryStatus, setGalleryStatus] = useState({ state: 'idle', message: '' });
+  const [selectedEventId, setSelectedEventId] = useState('');
+  const [refreshSignal, setRefreshSignal] = useState(0);
 
   useDocumentTitle('Onkur | Gallery');
+
+  const canUpload = useMemo(
+    () => normalizedRoles.includes('VOLUNTEER') || normalizedRoles.includes('EVENT_MANAGER'),
+    [normalizedRoles],
+  );
+
+  useEffect(() => {
+    if (!token) {
+      setUploadableEvents([]);
+      return;
+    }
+    let isMounted = true;
+    (async () => {
+      setUploadStatus({ state: 'loading', message: '' });
+      try {
+        const requests = [];
+        if (normalizedRoles.includes('VOLUNTEER')) {
+          requests.push(
+            apiRequest('/api/me/signups', { token }).then((response) =>
+              (response.signups || []).map((signup) => ({ id: signup.event_id || signup.eventId, title: signup.title })),
+            ),
+          );
+        }
+        if (normalizedRoles.includes('EVENT_MANAGER') || normalizedRoles.includes('ADMIN')) {
+          requests.push(
+            apiRequest('/api/manager/events', { token }).then((response) =>
+              (response.events || []).map((event) => ({ id: event.id, title: event.title })),
+            ),
+          );
+        }
+        const resolved = await Promise.all(requests);
+        if (!isMounted) return;
+        const merged = uniqEvents(resolved.flat());
+        setUploadableEvents(merged);
+        setUploadStatus({ state: 'success', message: '' });
+        setSelectedEventId((current) => (current || (merged[0] ? merged[0].id : '')));
+      } catch (error) {
+        if (!isMounted) return;
+        setUploadStatus({ state: 'error', message: error.message || 'Unable to load your events' });
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, [normalizedRoles, token]);
+
+  const loadGalleryEvents = useCallback(async () => {
+    setGalleryStatus({ state: 'loading', message: '' });
+    try {
+      const response = await fetchGalleryEvents({ pageSize: 24 });
+      const events = response.events || [];
+      setGalleryEvents(events);
+      setGalleryStatus({ state: 'success', message: '' });
+      setSelectedEventId((current) => (current || (events[0] ? events[0].id : '')));
+    } catch (error) {
+      setGalleryStatus({ state: 'error', message: error.message || 'Unable to load galleries' });
+    }
+  }, []);
+
+  useEffect(() => {
+    loadGalleryEvents();
+  }, [loadGalleryEvents]);
+
+  const handleUploaded = useCallback(
+    (media) => {
+      if (media?.eventId) {
+        setSelectedEventId(media.eventId);
+        setRefreshSignal((value) => value + 1);
+      }
+      loadGalleryEvents();
+    },
+    [loadGalleryEvents],
+  );
+
+  const viewerEvents = useMemo(() => galleryEvents.filter((event) => event && event.id), [galleryEvents]);
+  const isAdmin = normalizedRoles.includes('ADMIN');
 
   return (
     <div className="flex flex-col gap-6">
@@ -88,53 +151,45 @@ export default function GalleryPage({ role, roles = [] }) {
         <h2 className="m-0 font-display text-2xl font-semibold text-brand-forest">{intro.title}</h2>
         <p className="m-0 text-sm text-brand-muted sm:text-base">{intro.description}</p>
       </header>
+
+      {canUpload ? (
+        <MediaUploadForm token={token} events={uploadableEvents} onUploaded={handleUploaded} />
+      ) : null}
+
       <DashboardCard
-        title="Spotlight galleries"
-        description="The latest stories from our community. Dive in for photos, quotes, and measurable impact."
+        title="Gallery explorer"
+        description="Pick an event to view its approved media. Scroll to load more moments and open photos for a closer look."
         className="md:col-span-full"
       >
-        <div className="grid gap-4 md:[grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
-          {GALLERY_SPOTLIGHTS.map((gallery) => (
-            <article
-              key={gallery.id}
-              className="flex flex-col gap-3 rounded-2xl border border-brand-forest/10 bg-brand-sand/60 p-4"
-            >
-              <header className="flex items-center gap-3">
-                <span aria-hidden="true" className="text-2xl">
-                  {gallery.emoji}
-                </span>
-                <div>
-                  <h3 className="m-0 text-base font-semibold text-brand-forest">{gallery.title}</h3>
-                  <p className="m-0 text-xs font-semibold uppercase tracking-[0.14em] text-brand-muted">
-                    {gallery.impact}
-                  </p>
-                </div>
-              </header>
-              <p className="m-0 text-sm text-brand-muted">{gallery.summary}</p>
-              <div className="mt-auto flex flex-wrap gap-2">
-                {gallery.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border border-brand-forest/20 bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-forest"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </article>
-          ))}
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap gap-2">
+            {viewerEvents.map((event) => (
+              <button
+                key={event.id}
+                type="button"
+                onClick={() => setSelectedEventId(event.id)}
+                className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition ${
+                  selectedEventId === event.id
+                    ? 'bg-brand-forest text-white shadow-lg'
+                    : 'bg-brand-sand text-brand-forest hover:bg-brand-sand/80'
+                }`}
+              >
+                {event.title}
+              </button>
+            ))}
+          </div>
+          {galleryStatus.state === 'error' ? (
+            <p className="text-sm text-red-600">{galleryStatus.message}</p>
+          ) : null}
+          <EventGalleryViewer eventId={selectedEventId} token={token} refreshSignal={refreshSignal} />
         </div>
       </DashboardCard>
-      <DashboardCard
-        title="Storytelling checklist"
-        description="Use this quick list before publishing to keep every gallery polished and informative."
-      >
-        <ol className="m-0 list-decimal space-y-2 pl-5 text-sm text-brand-muted">
-          {STORY_TIPS.map((tip) => (
-            <li key={tip}>{tip}</li>
-          ))}
-        </ol>
-      </DashboardCard>
+
+      {isAdmin ? <ModerationQueue token={token} /> : null}
+
+      {uploadStatus.state === 'error' ? (
+        <p className="text-sm text-red-600">{uploadStatus.message}</p>
+      ) : null}
     </div>
   );
 }
