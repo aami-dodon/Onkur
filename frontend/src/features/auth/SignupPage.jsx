@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import useDocumentTitle from '../../lib/useDocumentTitle';
 import { useAuth } from './AuthContext';
 import { getConfiguredSupportEmail } from './supportEmail';
@@ -20,7 +20,6 @@ export default function SignupPage() {
   const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState([]);
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   useDocumentTitle('Onkur | Join the Onkur movement');
   const configuredSupportEmail = useMemo(() => getConfiguredSupportEmail(), []);
@@ -30,31 +29,18 @@ export default function SignupPage() {
     [availableRoles]
   );
 
-  const roleQuery = searchParams.get('role');
-
   useEffect(() => {
     if (!selectableRoles.length) {
       setSelectedRoles([]);
       return;
     }
-
-    if (roleQuery && selectableRoles.includes(roleQuery)) {
-      setSelectedRoles((prev) => {
-        if (prev.length === 1 && prev[0] === roleQuery) {
-          return prev;
-        }
-        return [roleQuery];
-      });
-      return;
-    }
-
     setSelectedRoles((prev) => {
       if (prev.length) {
         return prev.filter((role) => selectableRoles.includes(role));
       }
       return [selectableRoles[0]];
     });
-  }, [selectableRoles, roleQuery]);
+  }, [selectableRoles]);
 
   const ROLE_DETAILS = useMemo(
     () => ({

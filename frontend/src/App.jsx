@@ -8,14 +8,12 @@ import ProtectedRoute from './features/auth/ProtectedRoute';
 import PublicOnlyRoute from './features/auth/PublicOnlyRoute';
 import DashboardRouter from './features/dashboard/DashboardRouter';
 import HomePage from './features/landing/HomePage';
-import JourneyDetailsPage from './features/landing/JourneyDetailsPage';
 
 function App() {
   return (
     <AppLayout>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/journeys/:role" element={<JourneyDetailsPage />} />
         <Route
           path="/app/*"
           element={

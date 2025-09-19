@@ -26,28 +26,24 @@ const HIGHLIGHTS = [
 const ROLE_CARDS = [
   {
     role: 'Volunteers',
-    slug: 'volunteers',
     blurb:
       'Discover events that match your skills, register instantly, and collect hours, certificates, and stories of impact.',
     accent: 'leaf',
   },
   {
     role: 'Event Managers',
-    slug: 'event-managers',
     blurb:
       'Plan meaningful gatherings, assign tasks, track attendance, and publish galleries that showcase every milestone.',
     accent: 'sun',
   },
   {
     role: 'Sponsors',
-    slug: 'sponsors',
     blurb:
       'Champion local change with funding or resources and receive beautiful, data-rich reports on how you made a difference.',
     accent: 'wave',
   },
   {
     role: 'Admins',
-    slug: 'admins',
     blurb:
       'Steward the platform, approve initiatives, moderate galleries, and ensure everyone experiences Onkur at its best.',
     accent: 'roots',
@@ -139,7 +135,7 @@ export default function HomePage() {
               <h4>{role.role}</h4>
               <p>{role.blurb}</p>
               <div className="role-card__cta">
-                <Link to={`/journeys/${role.slug}`}>Discover their journey →</Link>
+                <span>Discover their journey →</span>
               </div>
             </article>
           ))}
