@@ -10,3 +10,4 @@ These instructions apply to files within `backend/src/features/volunteer-journey
 - When adding or updating routes, remember the router mounts at `/api`; define paths like `/me/profile` rather than duplicating the prefix.
 - When expanding profile metadata, keep the lookup seeding in `profile.bootstrap.js` in sync so startups continue to populate reference data without manual SQL.
 - Keep schema bootstrap logic idempotent—check for existing constraints and indexes before adding them so repeated server starts do not crash.
+- If you adjust event signup flows, reuse `createEventSignup`/`cancelEventSignup` so assignments, attendance, and volunteer hours stay consistent when volunteers join or leave.

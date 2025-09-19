@@ -8,3 +8,4 @@ These notes apply to files within `frontend/src/features/dashboard/`.
 - Do not reintroduce event discovery feeds on the volunteer dashboard; direct volunteers to the dedicated events hub for browsing opportunities.
 - Keep the profile completion call-to-action lightweight and motivational; only surface it when the dashboard API reports missing profile fields and link the button to `/app/profile`.
 - Use the shared `ProfileCompletionCallout` component alongside `profileProgress` helpers so every role stays visually consistent while tailoring their motivation copy.
+- Upcoming commitment cards should offer leave actions with inline success/error copy while continuing to refresh dashboard, signups, and hours summaries through the shared helpers.

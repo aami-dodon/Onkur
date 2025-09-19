@@ -694,6 +694,94 @@ async function createEventSignup({ eventId, userId }) {
   }
 }
 
+async function cancelEventSignup({ eventId, userId }) {
+  await ensureSchema();
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const eventResult = await client.query(
+      `
+        SELECT
+          e.id,
+          e.title,
+          e.date_start,
+          e.date_end,
+          e.location,
+          e.capacity,
+          e.status,
+          e.created_by,
+          mgr.name AS manager_name,
+          mgr.email AS manager_email
+        FROM events e
+        LEFT JOIN users mgr ON mgr.id = e.created_by
+        WHERE e.id = $1
+        FOR UPDATE
+      `,
+      [eventId],
+    );
+
+    const event = eventResult.rows[0];
+    if (!event) {
+      throw Object.assign(new Error('Event not found'), { statusCode: 404 });
+    }
+
+    const signupResult = await client.query(
+      `
+        SELECT id, created_at
+        FROM event_signups
+        WHERE event_id = $1 AND user_id = $2
+        FOR UPDATE
+      `,
+      [eventId, userId],
+    );
+
+    const signup = signupResult.rows[0];
+    if (!signup) {
+      throw Object.assign(new Error('You are not registered for this event'), { statusCode: 404 });
+    }
+
+    await client.query(`DELETE FROM event_assignments WHERE event_id = $1 AND user_id = $2`, [eventId, userId]);
+
+    const removedHours = await client.query(
+      `
+        DELETE FROM volunteer_hours
+        WHERE event_id = $1 AND user_id = $2
+        RETURNING id, minutes
+      `,
+      [eventId, userId],
+    );
+
+    await client.query(`DELETE FROM event_attendance WHERE event_id = $1 AND user_id = $2`, [eventId, userId]);
+
+    await client.query(`DELETE FROM event_signups WHERE event_id = $1 AND user_id = $2`, [eventId, userId]);
+
+    await client.query('COMMIT');
+
+    const managerContact = event.created_by
+      ? {
+          id: event.created_by,
+          name: event.manager_name || null,
+          email: event.manager_email || null,
+        }
+      : null;
+
+    const totalMinutesRemoved = removedHours.rows.reduce((total, row) => total + Number(row.minutes || 0), 0);
+
+    return {
+      event,
+      signup,
+      manager: managerContact,
+      removedMinutes: totalMinutesRemoved,
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function hasSignup({ userId, eventId }) {
   await ensureSchema();
   const result = await pool.query(
@@ -930,6 +1018,7 @@ module.exports = {
   listPublishedEvents,
   findEventById,
   createEventSignup,
+  cancelEventSignup,
   hasSignup,
   listSignupsForUser,
   logVolunteerHours,

@@ -22,7 +22,7 @@ function summarize(event) {
   return `${event.description.slice(0, 137)}…`;
 }
 
-export default function EventDiscovery({ events, filters, onFilterChange, onSignup, isLoading }) {
+export default function EventDiscovery({ events, filters, onFilterChange, onSignup, onLeave, isLoading }) {
   const [form, setForm] = useState({ category: '', location: '', theme: '', date: '' });
   const [actionStates, setActionStates] = useState({});
 
@@ -58,17 +58,34 @@ export default function EventDiscovery({ events, filters, onFilterChange, onSign
 
   const handleSignup = async (eventId) => {
     if (!onSignup) return;
-    setActionStates((prev) => ({ ...prev, [eventId]: { status: 'loading' } }));
+    setActionStates((prev) => ({ ...prev, [eventId]: { status: 'join-loading' } }));
     try {
       await onSignup(eventId);
       setActionStates((prev) => ({
         ...prev,
-        [eventId]: { status: 'success', message: 'You\u2019re confirmed!' },
+        [eventId]: { status: 'join-success', message: 'You\u2019re confirmed!' },
       }));
     } catch (error) {
       setActionStates((prev) => ({
         ...prev,
-        [eventId]: { status: 'error', message: error.message || 'Unable to join this event.' },
+        [eventId]: { status: 'join-error', message: error.message || 'Unable to join this event.' },
+      }));
+    }
+  };
+
+  const handleLeave = async (eventId) => {
+    if (!onLeave) return;
+    setActionStates((prev) => ({ ...prev, [eventId]: { status: 'leave-loading' } }));
+    try {
+      await onLeave(eventId);
+      setActionStates((prev) => ({
+        ...prev,
+        [eventId]: { status: 'leave-success', message: 'You left this event.' },
+      }));
+    } catch (error) {
+      setActionStates((prev) => ({
+        ...prev,
+        [eventId]: { status: 'leave-error', message: error.message || 'Unable to leave this event.' },
       }));
     }
   };
@@ -150,10 +167,11 @@ export default function EventDiscovery({ events, filters, onFilterChange, onSign
         ) : null}
         {events.map((event) => {
           const state = actionStates[event.id] || { status: 'idle' };
-          const isWorking = state.status === 'loading';
+          const isJoining = state.status === 'join-loading';
+          const isLeaving = state.status === 'leave-loading';
           const alreadyJoined = event.isRegistered;
           const isFull = event.availableSlots <= 0;
-          const canJoin = !alreadyJoined && !isFull && !isWorking;
+          const canJoin = !alreadyJoined && !isFull && !isJoining && !isLeaving;
           return (
             <article
               key={event.id}
@@ -180,24 +198,38 @@ export default function EventDiscovery({ events, filters, onFilterChange, onSign
                 </div>
               </dl>
               <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  className="btn-primary"
-                  disabled={!canJoin}
-                  onClick={() => handleSignup(event.id)}
-                >
-                  {alreadyJoined ? 'Joined' : isFull ? 'Full' : isWorking ? 'Joining…' : 'Sign up'}
-                </button>
+                {!alreadyJoined ? (
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={!canJoin}
+                    onClick={() => handleSignup(event.id)}
+                  >
+                    {isFull ? 'Full' : isJoining ? 'Joining…' : 'Sign up'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="rounded-md border border-brand-forest/20 bg-white px-3 py-2 text-xs font-semibold text-brand-forest shadow-sm disabled:opacity-60"
+                    disabled={isLeaving}
+                    onClick={() => handleLeave(event.id)}
+                  >
+                    {isLeaving ? 'Leaving…' : 'Leave event'}
+                  </button>
+                )}
                 {alreadyJoined ? (
                   <span className="text-xs font-semibold text-brand-green">You\u2019re confirmed!</span>
                 ) : null}
                 {isFull && !alreadyJoined ? (
                   <span className="text-xs text-brand-muted">This event reached capacity.</span>
                 ) : null}
-                {state.status === 'error' ? (
+                {state.status === 'join-error' || state.status === 'leave-error' ? (
                   <span className="text-xs text-red-600">{state.message}</span>
                 ) : null}
-                {state.status === 'success' && !alreadyJoined ? (
+                {state.status === 'join-success' && !alreadyJoined ? (
+                  <span className="text-xs font-semibold text-brand-green">{state.message}</span>
+                ) : null}
+                {state.status === 'leave-success' && alreadyJoined ? (
                   <span className="text-xs font-semibold text-brand-green">{state.message}</span>
                 ) : null}
               </div>

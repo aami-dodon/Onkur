@@ -10,3 +10,4 @@ These notes apply to files under `frontend/src/features/volunteer/`.
 - Use `btn-primary` for forward actions that add or save volunteer profile data so the calls-to-action stand out.
 - Hours logging UI should hide mutation forms when there are no eligible events and instead guide volunteers to join an event first.
 - When surfacing guidance CTAs (like the events hub link), apply `self-start` alongside `btn-primary` so the button keeps its standard width instead of stretching edge-to-edge.
+- Provide "Leave event" affordances alongside signup actions, keep them styled as bordered secondary buttons, and surface inline feedback that clears when new data loads.

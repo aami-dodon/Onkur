@@ -16,6 +16,7 @@ const {
   listPublishedEvents,
   findEventById,
   createEventSignup,
+  cancelEventSignup,
   hasSignup,
   listSignupsForUser,
   logVolunteerHours,
@@ -481,6 +482,66 @@ async function signupForEvent({ eventId, user }) {
   };
 }
 
+async function leaveEvent({ eventId, user }) {
+  if (!eventId) {
+    throw Object.assign(new Error('Event identifier is required'), { statusCode: 400 });
+  }
+
+  const cancellation = await cancelEventSignup({ eventId, userId: user.id });
+  const { manager } = cancellation;
+
+  let emailDispatched = false;
+  if (manager?.email) {
+    const managerFirstName = manager.name ? manager.name.split(' ')[0] : 'there';
+    const volunteerName = user.name || 'A volunteer';
+    try {
+      await sendTemplatedEmail({
+        to: manager.email,
+        subject: `${volunteerName} left ${cancellation.event.title}`,
+        heading: 'Volunteer departure notice',
+        bodyLines: [
+          `Hi ${managerFirstName},`,
+          `${volunteerName} just left <strong>${cancellation.event.title}</strong>.`,
+          `When: ${formatEventDateRange(cancellation.event)}`,
+          `Where: ${cancellation.event.location}`,
+          'Their logged hours for this event have been reset to 0 so you can plan coverage accordingly.',
+        ],
+        cta: null,
+        previewText: `${volunteerName} left ${cancellation.event.title}`,
+      });
+      emailDispatched = true;
+    } catch (error) {
+      logger.warn('Failed to send event departure notice', {
+        error: error.message,
+        managerId: manager.id || null,
+        eventId,
+        userId: user.id,
+      });
+    }
+  } else {
+    logger.warn('No manager email available for event departure notice', {
+      eventId,
+      userId: user.id,
+    });
+  }
+
+  const freshEvent = await findEventById(eventId);
+
+  logger.info('Volunteer left event', {
+    userId: user.id,
+    eventId,
+    managerId: manager?.id || null,
+    removedMinutes: cancellation.removedMinutes,
+    emailDispatched,
+  });
+
+  return {
+    event: freshEvent ? mapEventRow({ ...freshEvent, is_registered: false }) : null,
+    removedMinutes: cancellation.removedMinutes,
+    emailDispatched,
+  };
+}
+
 async function listMySignups(userId) {
   const rows = await listSignupsForUser(userId);
   const now = Date.now();
@@ -648,6 +709,7 @@ module.exports = {
   getCitiesForState,
   browseEvents,
   signupForEvent,
+  leaveEvent,
   listMySignups,
   recordVolunteerHours,
   getVolunteerHours,
