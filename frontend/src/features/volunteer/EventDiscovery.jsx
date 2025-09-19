@@ -22,7 +22,16 @@ function summarize(event) {
   return `${event.description.slice(0, 137)}…`;
 }
 
-export default function EventDiscovery({ events, filters, onFilterChange, onSignup, onLeave, isLoading }) {
+export default function EventDiscovery({
+  events,
+  filters,
+  onFilterChange,
+  onSignup,
+  onLeave,
+  isLoading,
+  mode = 'volunteer',
+  sponsorOptions = null,
+}) {
   const [form, setForm] = useState({ category: '', location: '', theme: '', date: '' });
   const [actionStates, setActionStates] = useState({});
 
@@ -197,8 +206,27 @@ export default function EventDiscovery({ events, filters, onFilterChange, onSign
                   </dd>
                 </div>
               </dl>
+              {sponsors.length ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {sponsors.map((sponsor) => (
+                    <span
+                      key={sponsor.sponsorId || sponsor.orgName}
+                      className="inline-flex items-center gap-2 rounded-full bg-brand-sand px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-forest"
+                    >
+                      {sponsor.logoUrl ? (
+                        <img src={sponsor.logoUrl} alt={sponsor.orgName} className="h-5 w-5 rounded-full object-cover" />
+                      ) : null}
+                      {sponsor.orgName}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
               <div className="flex flex-wrap items-center gap-2">
-                {!alreadyJoined ? (
+                {isSponsorMode ? (
+                  <button type="button" className="btn-primary" onClick={() => sponsorOptions?.onSupport?.(event)}>
+                    {mySponsorship ? 'Update pledge' : 'Support this event'}
+                  </button>
+                ) : !alreadyJoined ? (
                   <button
                     type="button"
                     className="btn-primary"
@@ -217,20 +245,23 @@ export default function EventDiscovery({ events, filters, onFilterChange, onSign
                     {isLeaving ? 'Leaving…' : 'Leave event'}
                   </button>
                 )}
-                {alreadyJoined ? (
+                {!isSponsorMode && alreadyJoined ? (
                   <span className="text-xs font-semibold text-brand-green">You\u2019re confirmed!</span>
                 ) : null}
-                {isFull && !alreadyJoined ? (
+                {!isSponsorMode && isFull && !alreadyJoined ? (
                   <span className="text-xs text-brand-muted">This event reached capacity.</span>
                 ) : null}
-                {state.status === 'join-error' || state.status === 'leave-error' ? (
+                {!isSponsorMode && (state.status === 'join-error' || state.status === 'leave-error') ? (
                   <span className="text-xs text-red-600">{state.message}</span>
                 ) : null}
-                {state.status === 'join-success' && !alreadyJoined ? (
+                {!isSponsorMode && state.status === 'join-success' && !alreadyJoined ? (
                   <span className="text-xs font-semibold text-brand-green">{state.message}</span>
                 ) : null}
-                {state.status === 'leave-success' && alreadyJoined ? (
+                {!isSponsorMode && state.status === 'leave-success' && alreadyJoined ? (
                   <span className="text-xs font-semibold text-brand-green">{state.message}</span>
+                ) : null}
+                {isSponsorMode && mySponsorship ? (
+                  <span className="text-xs text-brand-muted">{`Your pledge is ${mySponsorship.status.toLowerCase()}.`}</span>
                 ) : null}
               </div>
             </article>
@@ -239,7 +270,11 @@ export default function EventDiscovery({ events, filters, onFilterChange, onSign
       </div>
       {events.length ? (
         <p className="m-0 text-xs text-brand-muted">
-          {totalAvailable
+          {mode === 'sponsor'
+            ? totalAvailable
+              ? `${totalAvailable} event${totalAvailable === 1 ? '' : 's'} ready for sponsorship.`
+              : 'All listed events are already fully supported.'
+            : totalAvailable
             ? `${totalAvailable} event${totalAvailable === 1 ? '' : 's'} still ${
                 totalAvailable === 1 ? 'has' : 'have'
               } volunteer spots available.`

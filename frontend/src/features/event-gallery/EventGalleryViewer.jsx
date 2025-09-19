@@ -179,6 +179,21 @@ export default function EventGalleryViewer({ eventId, token, refreshSignal = 0 }
             {eventInfo.category ? `${eventInfo.category} · ` : ''}
             {eventInfo.theme || 'Gallery story'}
           </p>
+          {Array.isArray(eventInfo.sponsors) && eventInfo.sponsors.length ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {eventInfo.sponsors.map((sponsor) => (
+                <span
+                  key={sponsor.sponsorId || sponsor.orgName}
+                  className="inline-flex items-center gap-2 rounded-full bg-brand-sand px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-forest"
+                >
+                  {sponsor.logoUrl ? (
+                    <img src={sponsor.logoUrl} alt={sponsor.orgName} className="h-5 w-5 rounded-full object-cover" />
+                  ) : null}
+                  {sponsor.orgName}
+                </span>
+              ))}
+            </div>
+          ) : null}
         </header>
       ) : null}
       {status === 'error' ? (

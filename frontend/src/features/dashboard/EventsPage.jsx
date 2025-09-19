@@ -6,6 +6,8 @@ import EventDiscovery from '../volunteer/EventDiscovery';
 import { fetchEvents, signupForEvent, leaveEvent } from '../volunteer/api';
 import DashboardCard from './DashboardCard';
 import { determinePrimaryRole } from './roleUtils';
+import SponsorSupportForm from '../sponsors/SponsorSupportForm';
+import { pledgeEventSponsorship } from '../sponsors/api';
 
 const DEFAULT_FILTERS = { category: '', location: '', theme: '', date: '' };
 
@@ -43,6 +45,8 @@ export default function EventsPage({ role, roles = [] }) {
   const [events, setEvents] = useState([]);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [status, setStatus] = useState({ phase: 'loading', message: '' });
+  const [supportingEvent, setSupportingEvent] = useState(null);
+  const [supportStatus, setSupportStatus] = useState({ state: 'idle', message: '' });
 
   const firstName = useMemo(() => user?.name?.split(' ')[0] || 'friend', [user?.name]);
   const activeRole = useMemo(
@@ -53,6 +57,9 @@ export default function EventsPage({ role, roles = [] }) {
     () => buildIntro(activeRole, firstName),
     [activeRole, firstName]
   );
+
+  const sponsorProfile = user?.sponsorProfile || null;
+  const sponsorApproved = sponsorProfile?.status === 'APPROVED';
 
   useDocumentTitle('Onkur | Events');
 
@@ -101,7 +108,34 @@ export default function EventsPage({ role, roles = [] }) {
     return result;
   };
 
+  const handleSupport = (event) => {
+    setSupportStatus({ state: 'idle', message: '' });
+    setSupportingEvent(event);
+  };
+
+  const handleSupportSubmit = async ({ type, amount, notes }) => {
+    if (!token || !supportingEvent) {
+      throw new Error('Authentication required');
+    }
+    setSupportStatus({ state: 'loading', message: '' });
+    try {
+      await pledgeEventSponsorship(token, supportingEvent.id, { type, amount, notes });
+      setSupportStatus({ state: 'success', message: 'Sponsorship saved.' });
+      setSupportingEvent(null);
+      setFilters((previous) => ({ ...previous }));
+    } catch (error) {
+      setSupportStatus({ state: 'error', message: error.message || 'Unable to save sponsorship.' });
+      throw error;
+    }
+  };
+
+  const closeSupportForm = () => {
+    setSupportingEvent(null);
+    setSupportStatus({ state: 'idle', message: '' });
+  };
+
   const isLoading = status.phase === 'loading';
+  const isSponsorMode = activeRole === 'SPONSOR';
 
   return (
     <div className="flex flex-col gap-6">
@@ -111,6 +145,12 @@ export default function EventsPage({ role, roles = [] }) {
       </header>
       {status.phase === 'error' ? (
         <p className="m-0 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{status.message}</p>
+      ) : null}
+      {isSponsorMode && !sponsorApproved ? (
+        <p className="m-0 rounded-2xl border border-brand-forest/20 bg-brand-sand/50 p-4 text-sm text-brand-muted">
+          Submit or update your sponsor profile to start pledging support for events. Admin approval is required before your
+          logo appears on event pages.
+        </p>
       ) : null}
       <DashboardCard
         title="Opportunities open now"
@@ -122,10 +162,37 @@ export default function EventsPage({ role, roles = [] }) {
           filters={filters}
           isLoading={isLoading}
           onFilterChange={handleFilterChange}
-          onSignup={handleSignup}
-          onLeave={handleLeave}
+          onSignup={isSponsorMode ? undefined : handleSignup}
+          onLeave={isSponsorMode ? undefined : handleLeave}
+          mode={isSponsorMode ? 'sponsor' : 'volunteer'}
+          sponsorOptions={
+            isSponsorMode && sponsorApproved
+              ? {
+                  onSupport: handleSupport,
+                }
+              : null
+          }
         />
       </DashboardCard>
+      {supportingEvent ? (
+        <SponsorSupportForm
+          event={supportingEvent}
+          initialSponsorship={supportingEvent.mySponsorship}
+          isSubmitting={supportStatus.state === 'loading'}
+          onSubmit={async (payload) => {
+            await handleSupportSubmit(payload);
+          }}
+          onCancel={closeSupportForm}
+        />
+      ) : null}
+      {supportStatus.state === 'error' ? (
+        <p className="m-0 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{supportStatus.message}</p>
+      ) : null}
+      {supportStatus.state === 'success' ? (
+        <p className="m-0 rounded-2xl border border-brand-green/20 bg-brand-sand/70 p-3 text-sm text-brand-forest">
+          {supportStatus.message}
+        </p>
+      ) : null}
     </div>
   );
 }

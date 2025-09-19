@@ -7,6 +7,7 @@ const minioClient = require('../common/minio');
 const { findUserById } = require('../auth/auth.repository');
 const { findEventById } = require('../event-management/eventManagement.repository');
 const { sendTemplatedEmail } = require('../email/email.service');
+const { attachApprovedSponsors } = require('../sponsors/sponsor.service');
 const {
   createMedia,
   listApprovedMediaForEvent,
@@ -88,7 +89,8 @@ async function ensureEvent(eventId) {
   if (!event) {
     throw Object.assign(new Error('Event not found'), { statusCode: 404 });
   }
-  return event;
+  const withSponsors = await attachApprovedSponsors([event]);
+  return withSponsors[0] || event;
 }
 
 function resolveRoles(user) {
@@ -440,7 +442,9 @@ async function getEventGallery({ eventId, page, pageSize }) {
 
 async function listEventsWithGalleries({ page, pageSize }) {
   const result = await listGalleryEvents({ page, pageSize });
-  return result;
+  const events = Array.isArray(result.events) ? result.events : [];
+  const enriched = await attachApprovedSponsors(events);
+  return { ...result, events: enriched };
 }
 
 async function getModerationQueue({ page, pageSize }) {
