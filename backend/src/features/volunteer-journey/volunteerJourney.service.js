@@ -1,5 +1,6 @@
 const logger = require('../../utils/logger');
 const { sendTemplatedEmail } = require('../email/email.service');
+const { findUserById } = require('../auth/auth.repository');
 const {
   getVolunteerProfile,
   upsertVolunteerProfile,
@@ -438,7 +439,21 @@ async function signupForEvent({ eventId, user }) {
   }
   const { event, signup } = await createEventSignup({ eventId, userId: user.id });
 
+  let manager = null;
+  if (event.created_by) {
+    try {
+      manager = await findUserById(event.created_by);
+    } catch (error) {
+      logger.error('Failed to load event manager for signup notification', {
+        error: error.message,
+        eventId,
+        managerId: event.created_by,
+      });
+    }
+  }
+
   let emailDispatched = false;
+  let managerEmailDispatched = false;
   try {
     await sendTemplatedEmail({
       to: user.email,
@@ -464,10 +479,48 @@ async function signupForEvent({ eventId, user }) {
   }
 
   const freshEvent = await findEventById(eventId);
+
+  if (manager && manager.email) {
+    const volunteerName = user.name ? user.name.split(' ')[0] : 'A volunteer';
+    const managerName = manager.name ? manager.name.split(' ')[0] : 'there';
+    const bodyLines = [
+      `Hi ${managerName},`,
+      `${volunteerName} just joined <strong>${event.title}</strong>.`,
+      `When: ${formatEventDateRange(freshEvent || event)}`,
+    ];
+    if (event.location) {
+      bodyLines.push(`Where: ${event.location}`);
+    }
+    if (freshEvent && typeof freshEvent.signup_count === 'number') {
+      bodyLines.push(`Total registered volunteers: ${freshEvent.signup_count}`);
+    }
+    bodyLines.push('Review the roster and assignments from your event workspace.');
+
+    try {
+      await sendTemplatedEmail({
+        to: manager.email,
+        subject: `${volunteerName} just joined ${event.title}`,
+        heading: 'A new volunteer is on board',
+        bodyLines,
+        cta: null,
+        previewText: `${volunteerName} joined ${event.title}`,
+      });
+      managerEmailDispatched = true;
+    } catch (error) {
+      logger.error('Failed to send manager signup notification email', {
+        error: error.message,
+        userId: user.id,
+        managerId: manager.id,
+        eventId,
+      });
+    }
+  }
+
   logger.info('Volunteer signed up for event', {
     userId: user.id,
     eventId,
     emailDispatched,
+    managerEmailDispatched,
   });
 
   return {
@@ -479,6 +532,7 @@ async function signupForEvent({ eventId, user }) {
     },
     event: mapEventRow({ ...freshEvent, is_registered: true }),
     emailDispatched,
+    managerEmailDispatched,
   };
 }
 

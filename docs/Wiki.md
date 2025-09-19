@@ -114,8 +114,15 @@
 - **Change:** Fixed the event creation repository insert statement to provide parameter placeholders for every column so the database receives the required availability and creator values alongside the draft status default.
 - **Impact:** Event managers can save drafts without encountering the "INSERT has more target columns than expressions" error.
 
+
+## Manager notifications on volunteer signups
+- **Date:** 2025-09-28
+- **Change:** Updated the volunteer signup service to look up an event's manager and send them a branded notification email whenever a volunteer registers, while preserving the primary confirmation flow if the manager email fails.
+- **Impact:** Event managers now receive timely awareness of new volunteers joining their events, letting them review rosters and plan assignments without monitoring the dashboard constantly.
+
 ## Volunteer event departures reset impact
 - **Date:** 2025-09-28
 - **Change:** Added a `DELETE /api/events/:eventId/signup` endpoint that uses a transactional `cancelEventSignup` helper to remove assignments, attendance, and logged hours before emailing the event manager via the branded template. The volunteer dashboard and events hub now surface "Leave event" actions with inline feedback and refresh all summary panels after success.
 - **Impact:** Volunteers can bow out of commitments at any time, their impact totals drop to zero for that event, and managers receive immediate notice to rebalance coverage.
+
 
