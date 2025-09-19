@@ -1,7 +1,5 @@
 # Onkur
 
-[![CI](https://github.com/Onkur/Onkur/actions/workflows/ci.yml/badge.svg)](https://github.com/Onkur/Onkur/actions/workflows/ci.yml)
-
 Onkur is a sustainability-driven volunteering platform that helps communities coordinate events, celebrate impact stories, and nurture sponsor partnerships. The repository contains an Express + PostgreSQL API (`backend/`) and a Vite + React client (`frontend/`). This refresh aligns the project with shared conventions, automated quality checks, and documentation so teams can steward the forest together.
 
 ## Landing Page
