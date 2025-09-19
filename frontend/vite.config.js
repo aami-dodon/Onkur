@@ -73,6 +73,9 @@ const ensureCrossoriginPlugin = {
 
 export default defineConfig({
   plugins: [react(), appRouteRewritePlugin, ensureCrossoriginPlugin],
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+  },
   server: {
     proxy: {
       '/api': 'http://localhost:5000', // Proxy API requests to backend

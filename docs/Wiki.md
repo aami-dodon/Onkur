@@ -1,5 +1,12 @@
 # Onkur Change Log
 
+## React dedupe for hook stability
+- **Date:** 2025-10-05
+- **Change:** Configured Vite to deduplicate `react` and `react-dom` module resolution so the dev server and production build alw
+  ays share a single React instance.
+- **Impact:** Custom hooks like `useDocumentTitle` execute within React's dispatcher again, resolving the "Invalid hook call" err
+  or that prevented the landing page from rendering.
+
 ## Direct main bundle loading
 - **Date:** 2025-10-04
 - **Change:** Updated the frontend entry script to load `src/main.js` directly, replaced the JSX entry module with a JavaScript
