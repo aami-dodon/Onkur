@@ -1,5 +1,13 @@
 # Onkur Change Log
 
+## Audit log metadata defaults
+- **Date:** 2025-10-09
+- **Change:** Normalized the backend audit logging helper to always persist an empty JSON object when optional metadata is
+  omitted, aligning inserts with the database `metadata` column's `NOT NULL` constraint and preventing login attempts from
+  failing mid-request.
+- **Impact:** Authentication flows, including login, now record audit trails without tripping the metadata constraint, so users
+  reach the dashboard even when no supplemental metadata accompanies the audit entry.
+
 ## React 18.3 alignment for auth hooks
 - **Date:** 2025-10-07
 - **Change:** Upgraded the frontend to `react@18.3.1` and `react-dom@18.3.1`, refreshed the lockfile, and enforced `npm dedupe` guidance so the Auth context resolves hooks against a single React dispatcher.
