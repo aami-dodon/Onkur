@@ -179,9 +179,3 @@
 - **Impact:** The dashboard avoids render-blocking stylesheet imports while trimming roughly 2KB from the compiled CSS bundle, improving page load performance.
 
 
-## Phase 6 admin oversight
-- **Date:** 2025-10-03
-- **Change:** Delivered the admin operations console with consolidated moderation queues (events, sponsors, galleries), approval/rejection APIs that emit audit logs, volunteer/user deactivation controls, cross-role reporting with CSV/Excel exports, and manager notifications on event decisions.
-- **Impact:** Admins can now govern the entire ecosystem from one responsive dashboard, track turnaround metrics, and share dataset exports with stakeholders while every decision is captured for transparency.
-
-
