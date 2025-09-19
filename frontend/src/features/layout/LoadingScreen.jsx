@@ -1,7 +1,7 @@
 export default function LoadingScreen({ label = 'Loading Onkur…' }) {
   return (
     <div
-      className="flex flex-col items-center justify-center gap-4 px-4 py-16 text-brand-green"
+      className="flex w-full min-h-[220px] flex-col items-center justify-center gap-4 px-4 py-16 text-brand-green"
       role="status"
       aria-live="polite"
     >

@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { Suspense, useMemo } from 'react';
 
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import BottomNav from './BottomNav';
 import DesktopNav from './DesktopNav';
+import LoadingScreen from './LoadingScreen';
 
 function formatRole(role) {
   if (!role) return '';
@@ -109,7 +110,9 @@ export default function AppLayout({ children }) {
         {isAuthenticated ? <DesktopNav active={activeNav} /> : null}
       </header>
       <main className="flex-1 px-5 pb-16 pt-6 sm:px-8">
-        <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">{children}</div>
+        <Suspense fallback={<LoadingScreen label="Loading the next page…" />}>
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">{children}</div>
+        </Suspense>
       </main>
       {isAuthenticated ? <BottomNav active={activeNav} /> : null}
     </div>
