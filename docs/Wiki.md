@@ -1,5 +1,10 @@
 # Onkur Change Log
 
+## React 18.3 alignment for auth hooks
+- **Date:** 2025-10-07
+- **Change:** Upgraded the frontend to `react@18.3.1` and `react-dom@18.3.1`, refreshed the lockfile, and enforced `npm dedupe` guidance so the Auth context resolves hooks against a single React dispatcher.
+- **Impact:** Logged-in sessions no longer trigger the "Invalid hook call" error inside `AuthProvider`, restoring dashboard access while keeping the Vite dedupe safeguards documented for future dependency work.
+
 ## Layout Suspense loader overlay
 - **Date:** 2025-10-06
 - **Change:** Wrapped the layout content area in its own `Suspense` boundary that renders the shared `LoadingScreen` and adjusted the loader container sizing so route-to-route navigation always presents an inline progress indicator without collapsing the spinner.

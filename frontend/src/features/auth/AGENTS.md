@@ -7,3 +7,4 @@ These notes apply to components within `frontend/src/features/auth/`.
 - When introducing additional auth flows (e.g. reset password), update the wiki to describe the UX and API touchpoints.
 - Multi-role selectors should prefer accessible checkbox groups that sync with the context `roles` list and never expose the `ADMIN` option to end users signing up.
 - Surface admin support contact details via the shared `getConfiguredSupportEmail` helper so the value always matches `VITE_ADMIN_EMAIL`.
+- Keep `react` and `react-dom` dependency versions aligned with the workspace baseline and run `npm dedupe` after adjusting packages so hooks in `AuthContext` always resolve against a single React instance.
