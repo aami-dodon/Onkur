@@ -2,14 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import DashboardCard from './DashboardCard';
 import { useAuth } from '../auth/AuthContext';
 import useDocumentTitle from '../../lib/useDocumentTitle';
-import EventDiscovery from '../volunteer/EventDiscovery';
 import HoursTracker from '../volunteer/HoursTracker';
 import {
   fetchVolunteerDashboard,
   fetchVolunteerHours,
-  fetchEvents,
   fetchMySignups,
-  signupForEvent,
   logVolunteerHours,
 } from '../volunteer/api';
 
@@ -32,9 +29,6 @@ export default function VolunteerDashboard() {
   const [dashboard, setDashboard] = useState(null);
   const [hoursSummary, setHoursSummary] = useState(null);
   const [signups, setSignups] = useState([]);
-  const [events, setEvents] = useState([]);
-  const [eventFilters, setEventFilters] = useState({ category: '', location: '', theme: '', date: '' });
-  const [eventsLoading, setEventsLoading] = useState(false);
 
   const totalBadgesEarned = useMemo(() => {
     if (!hoursSummary?.badges) return 0;
@@ -49,7 +43,6 @@ export default function VolunteerDashboard() {
       setError(null);
       try {
         await Promise.all([refreshDashboard(token, active), refreshHours(token, active), refreshSignups(token, active)]);
-        await loadEvents(token, eventFilters, active);
       } catch (err) {
         if (active) {
           setError(err.message || 'Unable to load your volunteer journey.');
@@ -82,31 +75,6 @@ export default function VolunteerDashboard() {
     if (!active) return;
     setSignups(Array.isArray(data.signups) ? data.signups : []);
   }
-
-  async function loadEvents(activeToken = token, filters = eventFilters, active = true) {
-    setEventsLoading(true);
-    try {
-      const response = await fetchEvents(activeToken, filters);
-      if (!active) return;
-      setEvents(Array.isArray(response.events) ? response.events : []);
-      setEventFilters(filters);
-    } catch (err) {
-      if (active) {
-        setError(err.message || 'Unable to load events.');
-      }
-    } finally {
-      if (active) {
-        setEventsLoading(false);
-      }
-    }
-  }
-
-  const handleEventSignup = async (eventId) => {
-    const result = await signupForEvent(token, eventId);
-    await Promise.all([refreshSignups(token), refreshDashboard(token)]);
-    await loadEvents(token, eventFilters);
-    return result;
-  };
 
   const handleLogHours = async ({ eventId, minutes, note }) => {
     const response = await logVolunteerHours(token, eventId, { minutes, note });
@@ -141,7 +109,7 @@ export default function VolunteerDashboard() {
         description={
           upcomingEvents.length
             ? 'Here’s what you have coming up next. Add them to your calendar and watch for reminder emails.'
-            : 'You are not signed up for any events yet. Browse the listings below to get started.'
+            : 'You are not signed up for any events yet. Check back soon for new opportunities or visit the events hub to explore more ways to help.'
         }
       >
         {upcomingEvents.length ? (
@@ -180,19 +148,6 @@ export default function VolunteerDashboard() {
         description="Log time, watch your eco badges bloom, and celebrate your wins."
       >
         <HoursTracker summary={hoursSummary} signups={signups} onLogHours={handleLogHours} />
-      </DashboardCard>
-      <DashboardCard
-        className="md:col-span-full"
-        title="Discover new events"
-        description="Filter by category, location, theme, or date to find your next contribution."
-      >
-        <EventDiscovery
-          events={events}
-          filters={eventFilters}
-          isLoading={eventsLoading}
-          onFilterChange={(nextFilters) => loadEvents(token, nextFilters)}
-          onSignup={handleEventSignup}
-        />
       </DashboardCard>
     </div>
   );
