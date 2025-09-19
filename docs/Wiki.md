@@ -1,5 +1,15 @@
 # Onkur Change Log
 
+## Impact analytics rollup hardening
+- **Date:** 2025-10-11
+- **Change:** Hardened the impact analytics repository to sum recorded dashboard views instead of counting rows, expanded the Jest suite with in-memory database coverage for story submission, moderation notifications, and overview export math, and refreshed impact feature guidelines to keep future changes aligned.
+- **Impact:** Stakeholders now see accurate analytics usage totals, regression coverage guards the end-to-end story pipeline, and future impact work has a documented testing contract.
+
+## Phase 7 impact storytelling & analytics
+- **Date:** 2025-10-10
+- **Change:** Delivered the Phase 7 impact layer: beneficiaries can submit rich stories tied to events, admins moderate approvals with sponsor + author notifications, the gallery now renders approved impact stories, and a consolidated analytics API/CSV export surfaces volunteer hours, participation, gallery reach, and sponsor impressions. Volunteer dashboards show a new community highlights card.
+- **Impact:** Storytelling now travels from submission through approval to public display, sponsors get notified when spotlighted, and admins plus stakeholders can export platform-wide impact metrics while volunteers see how their hours move the needle.
+
 ## Audit log metadata defaults
 - **Date:** 2025-10-09
 - **Change:** Normalized the backend audit logging helper to always persist an empty JSON object when optional metadata is

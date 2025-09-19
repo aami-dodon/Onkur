@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import GalleryLightbox from './GalleryLightbox';
 import { fetchEventGallery } from './galleryApi';
+import ImpactStoriesList from '../impact/ImpactStoriesList';
+import { fetchImpactStories } from '../impact/impactApi';
 
 function MediaCard({ media, onSelect }) {
   const tags = Array.isArray(media.tags) ? media.tags : [];
@@ -72,7 +74,7 @@ function GalleryGrid({ items, onSelect, isLoading }) {
   );
 }
 
-export default function EventGalleryViewer({ eventId, token, refreshSignal = 0 }) {
+export default function EventGalleryViewer({ eventId, token, refreshSignal = 0, onStoriesLoaded }) {
   const [items, setItems] = useState([]);
   const [eventInfo, setEventInfo] = useState(null);
   const [metrics, setMetrics] = useState({ viewCount: 0, lastViewedAt: null });
@@ -81,6 +83,8 @@ export default function EventGalleryViewer({ eventId, token, refreshSignal = 0 }
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(null);
+  const [stories, setStories] = useState([]);
+  const [storyState, setStoryState] = useState({ status: 'idle', error: '' });
   const observerRef = useRef(null);
   const sentinelRef = useRef(null);
 
@@ -93,6 +97,8 @@ export default function EventGalleryViewer({ eventId, token, refreshSignal = 0 }
     setStatus('idle');
     setError('');
     setSelectedIndex(null);
+    setStories([]);
+    setStoryState({ status: 'idle', error: '' });
   }, [eventId, refreshSignal]);
 
   const loadPage = useCallback(
@@ -130,6 +136,32 @@ export default function EventGalleryViewer({ eventId, token, refreshSignal = 0 }
       loadPage(1);
     }
   }, [eventId, loadPage, page, status]);
+
+  useEffect(() => {
+    if (!eventId) {
+      setStories([]);
+      setStoryState({ status: 'idle', error: '' });
+      return;
+    }
+    let active = true;
+    (async () => {
+      setStoryState({ status: 'loading', error: '' });
+      try {
+        const response = await fetchImpactStories({ eventId, limit: 6 });
+        if (!active) return;
+        const list = Array.isArray(response.stories) ? response.stories : [];
+        setStories(list);
+        setStoryState({ status: 'success', error: '' });
+        onStoriesLoaded?.(list);
+      } catch (err) {
+        if (!active) return;
+        setStoryState({ status: 'error', error: err.message || 'Unable to load stories' });
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [eventId, refreshSignal, onStoriesLoaded]);
 
   useEffect(() => {
     if (!hasMore) {
@@ -206,6 +238,21 @@ export default function EventGalleryViewer({ eventId, token, refreshSignal = 0 }
       {status === 'loading' ? (
         <p className="text-center text-sm text-brand-muted">Loading more moments…</p>
       ) : null}
+      <section className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <h4 className="m-0 text-base font-semibold text-brand-forest">Impact stories</h4>
+          <p className="m-0 text-xs uppercase tracking-[0.24em] text-brand-muted">Community voices from this event</p>
+        </div>
+        {storyState.status === 'error' ? (
+          <div className="rounded-3xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">{storyState.error}</div>
+        ) : null}
+        {storyState.status === 'loading' && !stories.length ? (
+          <div className="rounded-3xl border border-dashed border-brand-forest/15 bg-white/80 p-4 text-center text-sm text-brand-muted">
+            Gathering stories…
+          </div>
+        ) : null}
+        <ImpactStoriesList stories={stories} emptyState="No stories yet. Share yours to inspire the next crew." />
+      </section>
       <GalleryLightbox
         media={activeMedia}
         onClose={() => setSelectedIndex(null)}

@@ -10,6 +10,7 @@ import {
   logVolunteerHours,
   leaveEvent as leaveEventRequest,
 } from '../volunteer/api';
+import { fetchImpactAnalytics } from '../impact/impactApi';
 import ProfileCompletionCallout from './ProfileCompletionCallout';
 import calculateProfileProgress from './profileProgress';
 
@@ -20,6 +21,10 @@ function formatShortDate(value) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(date);
+}
+
+function formatNumber(value, { maximumFractionDigits = 1 } = {}) {
+  return Number(value || 0).toLocaleString('en-US', { maximumFractionDigits });
 }
 
 export default function VolunteerDashboard() {
@@ -34,6 +39,8 @@ export default function VolunteerDashboard() {
   const [signups, setSignups] = useState([]);
   const [leaveStatus, setLeaveStatus] = useState({});
   const [leaveFeedback, setLeaveFeedback] = useState(null);
+  const [impactOverview, setImpactOverview] = useState(null);
+  const [impactState, setImpactState] = useState({ status: 'idle', error: '' });
 
   const profileProgress = useMemo(
     () => calculateProfileProgress(dashboard?.profile),
@@ -52,7 +59,12 @@ export default function VolunteerDashboard() {
       setLoading(true);
       setError(null);
       try {
-        await Promise.all([refreshDashboard(token, active), refreshHours(token, active), refreshSignups(token, active)]);
+        await Promise.all([
+          refreshDashboard(token, active),
+          refreshHours(token, active),
+          refreshSignups(token, active),
+          refreshImpact(token, active),
+        ]);
       } catch (err) {
         if (active) {
           setError(err.message || 'Unable to load your volunteer journey.');
@@ -86,6 +98,20 @@ export default function VolunteerDashboard() {
     setSignups(Array.isArray(data.signups) ? data.signups : []);
   }
 
+  async function refreshImpact(activeToken = token, active = true) {
+    if (!active) return;
+    setImpactState({ status: 'loading', error: '' });
+    try {
+      const response = await fetchImpactAnalytics({ token: activeToken });
+      if (!active) return;
+      setImpactOverview(response.overview || null);
+      setImpactState({ status: 'success', error: '' });
+    } catch (err) {
+      if (!active) return;
+      setImpactState({ status: 'error', error: err.message || 'Unable to load community impact metrics.' });
+    }
+  }
+
   const handleLogHours = async ({ eventId, minutes, note }) => {
     const response = await logVolunteerHours(token, eventId, { minutes, note });
     await Promise.all([refreshHours(token), refreshDashboard(token)]);
@@ -100,7 +126,7 @@ export default function VolunteerDashboard() {
       await leaveEventRequest(token, eventId);
       setLeaveStatus((prev) => ({ ...prev, [eventId]: 'success' }));
       setLeaveFeedback({ type: 'success', message: 'You left the event. We\u2019ll keep your calendar clear.' });
-      await Promise.all([refreshDashboard(token), refreshSignups(token), refreshHours(token)]);
+      await Promise.all([refreshDashboard(token), refreshSignups(token), refreshHours(token), refreshImpact(token)]);
     } catch (error) {
       setLeaveStatus((prev) => ({ ...prev, [eventId]: 'error' }));
       setLeaveFeedback({ type: 'error', message: error.message || 'Unable to leave this event.' });
@@ -110,6 +136,10 @@ export default function VolunteerDashboard() {
   const upcomingEvents = dashboard?.upcomingEvents || [];
   const pastEvents = dashboard?.pastEvents || [];
   const hoursLogged = hoursSummary?.totalHours ? Math.round(hoursSummary.totalHours * 10) / 10 : 0;
+  const retentionDelta = impactOverview?.volunteerEngagement?.retentionDelta ?? 0;
+  const retentionLabel = Number.isFinite(retentionDelta)
+    ? `${retentionDelta >= 0 ? '+' : ''}${(retentionDelta * 100).toFixed(1)}%`
+    : '—';
 
   return (
     <div className="grid gap-5 md:[grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
@@ -203,6 +233,41 @@ export default function VolunteerDashboard() {
         description="Log time, watch your eco badges bloom, and celebrate your wins."
       >
         <HoursTracker summary={hoursSummary} signups={signups} onLogHours={handleLogHours} />
+      </DashboardCard>
+
+      <DashboardCard
+        className="md:col-span-full"
+        title="Community impact highlights"
+        description="See how everyone’s efforts are showing up across Onkur."
+      >
+        {impactState.status === 'loading' && !impactOverview ? (
+          <p className="m-0 text-sm text-brand-muted">Measuring collective impact…</p>
+        ) : null}
+        {impactState.status === 'error' ? (
+          <p className="m-0 text-sm font-medium text-red-600">{impactState.error}</p>
+        ) : null}
+        {impactOverview ? (
+          <ul className="m-0 list-none space-y-2 p-0 text-sm text-brand-muted">
+            <li>
+              <strong className="text-brand-forest">{formatNumber(impactOverview.volunteerEngagement?.totalHours || 0)}</strong>{' '}
+              volunteer hours recorded across the community.
+            </li>
+            <li>
+              {formatNumber(impactOverview.stories?.approved ?? 0, { maximumFractionDigits: 0 })} stories approved this season and{' '}
+              {formatNumber(impactOverview.eventParticipation?.eventsSupported ?? 0, { maximumFractionDigits: 0 })} events supported by volunteers.
+            </li>
+            <li>
+              Galleries reached {formatNumber(impactOverview.galleryEngagement?.totalViews || 0, { maximumFractionDigits: 0 })} views
+              and spotlighted sponsors {formatNumber(impactOverview.sponsorImpact?.sponsorMentions || 0, {
+                maximumFractionDigits: 0,
+              })}{' '}
+              times.
+            </li>
+            <li>
+              Volunteer retention trend vs last quarter: <span className="font-semibold text-brand-forest">{retentionLabel}</span>
+            </li>
+          </ul>
+        ) : null}
       </DashboardCard>
     </div>
   );

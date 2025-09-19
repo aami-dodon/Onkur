@@ -45,6 +45,12 @@ Onkur is a mobile-first volunteering platform rooted in sustainability and commu
 - Reporting overview with platform metrics plus one-click CSV/Excel exports for users, events, sponsorships, and media.
 - Extended audit logging with before/after snapshots tied to each entity for transparent governance.
 
+### Phase 7 – Impact & Community (Complete)
+- Beneficiaries, volunteers, and sponsors can submit rich event stories that flow through admin moderation with automated approval/rejection emails.
+- Approved impact stories surface alongside event galleries with sponsor highlights and community-friendly storytelling cards.
+- Platform-wide analytics dashboard reveals volunteer hours, participation, gallery engagement, and sponsor impressions with CSV export support.
+- Volunteer dashboards now feature community impact highlights so contributors see the ripple effect of their hours.
+
 Consult the living [product wiki](docs/Wiki.md) for design rationale, API schemas, and rollout notes for each phase.
 
 ---
@@ -121,6 +127,7 @@ npm run build
 ```
 
 The GitHub Actions pipeline (`.github/workflows/ci.yml`) mirrors these steps to keep the main branch healthy.
+Jest coverage now includes the impact storytelling pipeline—submission, moderation notifications, and analytics exports—so regressions surface quickly.
 
 ---
 
