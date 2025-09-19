@@ -82,3 +82,8 @@
 - **Date:** 2025-09-25
 - **Change:** Promoted the custom skill and interest buttons on the volunteer profile editor to use the primary button style and documented the expectation in the volunteer frontend guidelines.
 - **Impact:** The calls-to-action to add new skills or interests now stand out visually, guiding members to enrich their profiles without hunting for the controls.
+
+## Hours logging requires event participation
+- **Date:** 2025-09-25
+- **Change:** Updated the volunteer hours tracker to hide the logging form when a volunteer has not joined any events, replacing it with guidance to explore the events hub. Documented the pattern in the volunteer frontend guidelines.
+- **Impact:** Volunteers understand they must RSVP to an event before logging time and are directed to the appropriate place to do so, preventing empty submissions.
