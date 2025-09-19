@@ -82,8 +82,3 @@
 - **Date:** 2025-09-25
 - **Change:** Promoted the custom skill and interest buttons on the volunteer profile editor to use the primary button style and documented the expectation in the volunteer frontend guidelines.
 - **Impact:** The calls-to-action to add new skills or interests now stand out visually, guiding members to enrich their profiles without hunting for the controls.
-
-## Volunteer impact tracker event guidance
-- **Date:** 2025-09-25
-- **Change:** Updated the volunteer impact tracker so the event field shows an informational message instead of a selectable option when no eligible signups exist.
-- **Impact:** Volunteers see clearer guidance that they must join an event before logging hours, avoiding confusion from an empty dropdown choice.
