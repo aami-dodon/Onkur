@@ -131,6 +131,10 @@ const schemaPromise = (async () => {
       capacity INTEGER NOT NULL CHECK (capacity > 0),
       requirements TEXT NULL,
       status TEXT NOT NULL DEFAULT 'DRAFT',
+      approval_status TEXT NOT NULL DEFAULT 'PENDING',
+      approval_note TEXT NULL,
+      approval_decided_at TIMESTAMPTZ NULL,
+      approval_decided_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
       created_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
       published_at TIMESTAMPTZ NULL,
       completed_at TIMESTAMPTZ NULL,
@@ -149,6 +153,20 @@ const schemaPromise = (async () => {
   await pool.query(
     `ALTER TABLE events ADD CONSTRAINT events_status_check CHECK (status = ANY(ARRAY['DRAFT','PUBLISHED','CANCELLED','COMPLETED']::TEXT[]))`,
   );
+
+  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS approval_status TEXT NOT NULL DEFAULT 'PENDING'`);
+  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS approval_note TEXT NULL`);
+  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS approval_decided_at TIMESTAMPTZ NULL`);
+  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS approval_decided_by UUID NULL REFERENCES users(id) ON DELETE SET NULL`);
+  await pool.query(`
+    ALTER TABLE events
+    DROP CONSTRAINT IF EXISTS events_approval_status_check
+  `);
+  await pool.query(`
+    ALTER TABLE events
+    ADD CONSTRAINT events_approval_status_check
+    CHECK (approval_status = ANY(ARRAY['PENDING','APPROVED','REJECTED']::TEXT[]))
+  `);
 
   await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS category_value TEXT NULL`);
   await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS location_state_code TEXT NULL`);

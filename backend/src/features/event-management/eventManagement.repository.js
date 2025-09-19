@@ -38,7 +38,13 @@ function mapEventRow(row) {
     requiredInterests: Array.isArray(row.required_interests) ? row.required_interests : [],
     requiredAvailability: Array.isArray(row.required_availability) ? row.required_availability : [],
     status: row.status,
+    approvalStatus: row.approval_status || 'PENDING',
+    approvalNote: row.approval_note || null,
+    approvalDecidedAt: toIso(row.approval_decided_at),
+    approvalDecidedBy: row.approval_decided_by || null,
     createdBy: row.created_by || null,
+    createdByName: row.creator_name || row.created_by_name || null,
+    createdByEmail: row.creator_email || row.created_by_email || null,
     publishedAt: toIso(row.published_at),
     completedAt: toIso(row.completed_at),
     createdAt: toIso(row.created_at),
@@ -236,6 +242,120 @@ async function setEventStatus(eventId, status) {
     );
 
     return mapEventRow(result.rows[0]);
+  });
+}
+
+function normalizeApprovalStatus(status) {
+  if (!status) {
+    return null;
+  }
+  const value = String(status).trim().toUpperCase();
+  if (value === 'PENDING' || value === 'APPROVED' || value === 'REJECTED') {
+    return value;
+  }
+  return null;
+}
+
+async function listEventsPendingApproval() {
+  await ensureSchema();
+  const result = await pool.query(
+    `
+      SELECT
+        e.*, 
+        cat.label AS category_label,
+        s.name AS state_name,
+        c.name AS city_name,
+        COALESCE(signups.count, 0) AS signup_count,
+        COALESCE(att.checked_in, 0) AS checked_in_count,
+        COALESCE(hours.total_minutes, 0) AS total_minutes,
+        creator.name AS creator_name,
+        creator.email AS creator_email
+      FROM events e
+      LEFT JOIN event_categories cat ON cat.value = e.category_value
+      LEFT JOIN indian_states s ON s.code = e.location_state_code
+      LEFT JOIN indian_cities c ON c.slug = e.location_city_slug
+      LEFT JOIN users creator ON creator.id = e.created_by
+      LEFT JOIN (
+        SELECT event_id, COUNT(*)::INT AS count
+        FROM event_signups
+        GROUP BY event_id
+      ) signups ON signups.event_id = e.id
+      LEFT JOIN (
+        SELECT event_id, COUNT(*)::INT AS checked_in
+        FROM event_attendance
+        WHERE check_in_at IS NOT NULL
+        GROUP BY event_id
+      ) att ON att.event_id = e.id
+      LEFT JOIN (
+        SELECT event_id, SUM(minutes)::INT AS total_minutes
+        FROM volunteer_hours
+        GROUP BY event_id
+      ) hours ON hours.event_id = e.id
+      WHERE e.approval_status = 'PENDING'
+      ORDER BY e.created_at ASC
+    `
+  );
+  return result.rows.map((row) =>
+    mapEventRow({
+      ...row,
+      creator_name: row.creator_name || (row.created_by_name ?? null),
+      creator_email: row.creator_email || (row.created_by_email ?? null),
+    })
+  );
+}
+
+async function setEventApprovalStatus(eventId, { status, note = null, moderatorId = null }) {
+  const normalizedStatus = normalizeApprovalStatus(status);
+  if (!normalizedStatus) {
+    throw Object.assign(new Error('Unsupported approval status'), { statusCode: 400 });
+  }
+
+  return withTransaction(async (client) => {
+    await ensureSchema();
+    const current = await client.query('SELECT * FROM events WHERE id = $1 FOR UPDATE', [eventId]);
+    const existing = current.rows[0];
+    if (!existing) {
+      throw Object.assign(new Error('Event not found'), { statusCode: 404 });
+    }
+
+    const moderationNote = note ? String(note).trim() : null;
+    const shouldReset = normalizedStatus === 'REJECTED';
+
+    const updateResult = await client.query(
+      `
+        UPDATE events
+        SET approval_status = $2,
+            approval_note = $3,
+            approval_decided_at = CASE WHEN $2 <> 'PENDING' THEN NOW() ELSE NULL END,
+            approval_decided_by = CASE WHEN $2 <> 'PENDING' THEN $4 ELSE NULL END,
+            status = CASE
+              WHEN $2 = 'APPROVED' THEN 'PUBLISHED'
+              WHEN $2 = 'REJECTED' THEN 'DRAFT'
+              ELSE status
+            END,
+            published_at = CASE WHEN $2 = 'APPROVED' THEN COALESCE(published_at, NOW()) ELSE published_at END,
+            updated_at = NOW()
+        WHERE id = $1
+        RETURNING *
+      `,
+      [eventId, normalizedStatus, moderationNote, moderatorId]
+    );
+
+    const updated = updateResult.rows[0];
+
+    if (shouldReset && updated) {
+      await client.query(
+        `
+          UPDATE events
+          SET published_at = NULL
+          WHERE id = $1
+        `,
+        [eventId]
+      );
+      updated.published_at = null;
+    }
+
+    return mapEventRow(updated);
   });
 }
 
@@ -850,6 +970,8 @@ module.exports = {
   createEvent,
   updateEvent,
   setEventStatus,
+  listEventsPendingApproval,
+  setEventApprovalStatus,
   findEventById,
   listEventsForManager,
   replaceEventTasks,
