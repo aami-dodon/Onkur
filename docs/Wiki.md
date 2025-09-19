@@ -99,3 +99,8 @@
 - **Change:** Adjusted the volunteer hours tracker events hub link to use a self-starting primary button so the CTA renders at its standard width instead of stretching across the card. Added the expectation to the volunteer frontend guidelines.
 - **Impact:** Volunteers see a tidy guidance card that matches other dashboard buttons while still drawing attention to the events hub when they need to join an opportunity before logging hours.
 
+## Event launch outreach automation
+- **Date:** 2025-09-26
+- **Change:** Event creation now schedules branded emails to every volunteer and sponsor in the background, tailoring the message, CTA, and impact notes when their profile skills, interests, availability, or location align with the opportunity.
+- **Impact:** Event managers publish without waiting on email dispatch while volunteers and sponsors receive timely, personalized nudges that highlight why the event matters to them.
+

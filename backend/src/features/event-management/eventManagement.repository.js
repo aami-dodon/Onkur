@@ -759,6 +759,76 @@ async function findEventCategory(value) {
   return result.rows[0] || null;
 }
 
+async function listUsersWithRoles(roles = []) {
+  if (!Array.isArray(roles) || roles.length === 0) {
+    return [];
+  }
+
+  const normalizedRoles = roles
+    .map((role) => (typeof role === 'string' ? role.trim().toUpperCase() : ''))
+    .filter(Boolean);
+
+  if (!normalizedRoles.length) {
+    return [];
+  }
+
+  await ensureSchema();
+
+  const result = await pool.query(
+    `
+      SELECT
+        u.id,
+        u.name,
+        u.email,
+        u.role,
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT ur.role), NULL) AS roles,
+        vp.skills,
+        vp.interests,
+        vp.availability,
+        vp.state_code,
+        vp.city_slug,
+        vp.location,
+        s.name AS state_name,
+        c.name AS city_name
+      FROM users u
+      JOIN user_roles ur ON ur.user_id = u.id
+      LEFT JOIN volunteer_profiles vp ON vp.user_id = u.id
+      LEFT JOIN indian_states s ON s.code = vp.state_code
+      LEFT JOIN indian_cities c ON c.slug = vp.city_slug
+      WHERE ur.role = ANY($1::TEXT[])
+      GROUP BY
+        u.id,
+        vp.skills,
+        vp.interests,
+        vp.availability,
+        vp.state_code,
+        vp.city_slug,
+        vp.location,
+        s.name,
+        c.name
+    `,
+    [normalizedRoles],
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    role: row.role,
+    roles: Array.isArray(row.roles) ? row.roles : [],
+    profile: {
+      skills: Array.isArray(row.skills) ? row.skills : [],
+      interests: Array.isArray(row.interests) ? row.interests : [],
+      availability: row.availability || null,
+      stateCode: row.state_code || null,
+      citySlug: row.city_slug || null,
+      location: row.location || null,
+      stateName: row.state_name || null,
+      cityName: row.city_name || null,
+    },
+  }));
+}
+
 async function upsertEventCategory({ value, label }) {
   await ensureSchema();
   const result = await pool.query(
@@ -793,4 +863,5 @@ module.exports = {
   listEventCategories,
   findEventCategory,
   upsertEventCategory,
+  listUsersWithRoles,
 };

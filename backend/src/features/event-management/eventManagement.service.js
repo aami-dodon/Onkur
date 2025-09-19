@@ -1,4 +1,5 @@
 const logger = require('../../utils/logger');
+const config = require('../../config');
 const { sendTemplatedEmail } = require('../email/email.service');
 const {
   createEvent,
@@ -18,6 +19,7 @@ const {
   listEventCategories,
   findEventCategory,
   upsertEventCategory,
+  listUsersWithRoles,
 } = require('./eventManagement.repository');
 const {
   listSkillOptions,
@@ -109,6 +111,262 @@ function describeLocation(event) {
   }
   const summary = parts.filter(Boolean).join(', ');
   return summary || 'Location to be announced';
+}
+
+function resolveAppBaseUrl() {
+  const base =
+    (config.app && config.app.baseUrl) ||
+    config.corsOrigin ||
+    'http://localhost:3000';
+  return String(base).replace(/\/$/, '');
+}
+
+function formatEventDateRange(event) {
+  if (!event) {
+    return 'Schedule to be announced';
+  }
+
+  const start = event.dateStart ? new Date(event.dateStart) : null;
+  const end = event.dateEnd ? new Date(event.dateEnd) : null;
+
+  if (!start || Number.isNaN(start.getTime()) || !end || Number.isNaN(end.getTime())) {
+    return 'Schedule to be announced';
+  }
+
+  const dateOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+  const timeOptions = { hour: '2-digit', minute: '2-digit' };
+  const sameDay = start.toDateString() === end.toDateString();
+
+  if (sameDay) {
+    const dateLabel = start.toLocaleDateString(undefined, dateOptions);
+    const startTime = start.toLocaleTimeString(undefined, timeOptions);
+    const endTime = end.toLocaleTimeString(undefined, timeOptions);
+    return `${dateLabel} · ${startTime} – ${endTime}`;
+  }
+
+  const startLabel = `${start.toLocaleDateString(undefined, dateOptions)} ${start.toLocaleTimeString(
+    undefined,
+    timeOptions,
+  )}`;
+  const endLabel = `${end.toLocaleDateString(undefined, dateOptions)} ${end.toLocaleTimeString(
+    undefined,
+    timeOptions,
+  )}`;
+  return `${startLabel} → ${endLabel}`;
+}
+
+function toStringArray(value) {
+  if (!value && value !== 0) {
+    return [];
+  }
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => (entry === null || entry === undefined ? '' : String(entry).trim()))
+      .filter(Boolean);
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? [trimmed] : [];
+  }
+  const stringified = String(value).trim();
+  return stringified ? [stringified] : [];
+}
+
+function formatMatchList(items = []) {
+  const list = items.filter(Boolean);
+  if (!list.length) {
+    return '';
+  }
+  if (list.length === 1) {
+    return list[0];
+  }
+  const last = list[list.length - 1];
+  const leading = list.slice(0, -1);
+  return `${leading.join(', ')} and ${last}`;
+}
+
+function buildProfileMatches(event, profile = {}) {
+  if (!event || !profile) {
+    return [];
+  }
+
+  const matches = [];
+  const eventSkills = toStringArray(event.requiredSkills);
+  const profileSkills = toStringArray(profile.skills);
+  const skillMatches = eventSkills.filter((skill) => profileSkills.includes(skill));
+  if (skillMatches.length) {
+    const label = skillMatches.length > 1 ? `skills (${skillMatches.join(', ')})` : `skill (${skillMatches[0]})`;
+    matches.push(label);
+  }
+
+  const eventInterests = toStringArray(event.requiredInterests);
+  const profileInterests = toStringArray(profile.interests);
+  const interestMatches = eventInterests.filter((interest) => profileInterests.includes(interest));
+  if (interestMatches.length) {
+    const label =
+      interestMatches.length > 1
+        ? `interests (${interestMatches.join(', ')})`
+        : `interest (${interestMatches[0]})`;
+    matches.push(label);
+  }
+
+  const eventAvailability = toStringArray(event.requiredAvailability);
+  const profileAvailability = toStringArray(profile.availability);
+  const availabilityMatches = eventAvailability.filter((availability) => profileAvailability.includes(availability));
+  if (availabilityMatches.length) {
+    const label =
+      availabilityMatches.length > 1
+        ? `availability preferences (${availabilityMatches.join(', ')})`
+        : `availability preference (${availabilityMatches[0]})`;
+    matches.push(label);
+  }
+
+  if (!toBooleanFlag(event.isOnline)) {
+    const cityMatch = profile.citySlug && event.citySlug && profile.citySlug === event.citySlug;
+    if (cityMatch) {
+      matches.push(`city focus (${profile.cityName || profile.location || 'your city'})`);
+    } else if (profile.stateCode && event.stateCode && profile.stateCode === event.stateCode) {
+      matches.push(`state focus (${profile.stateName || profile.stateCode})`);
+    }
+  }
+
+  return matches;
+}
+
+function buildPersonalizedNote(event, recipient, role) {
+  const matches = buildProfileMatches(event, recipient?.profile);
+  if (!matches.length) {
+    return null;
+  }
+  const matchSummary = formatMatchList(matches);
+  if (role === 'SPONSOR') {
+    return `Why it matters for you: This initiative aligns with your ${matchSummary}.`;
+  }
+  return `We picked this opportunity for you because it matches your ${matchSummary}.`;
+}
+
+async function dispatchRoleEmails({ role, recipients, event, actor, baseUrl }) {
+  if (!Array.isArray(recipients) || recipients.length === 0) {
+    return;
+  }
+
+  const eventUrl = `${baseUrl}/app/events/${event.id}`;
+  const preview = `${event.title} • ${formatEventDateRange(event)}`;
+  const locationSummary = describeLocation(event);
+  const managerFirstName = actor?.name ? actor.name.split(' ')[0] : 'An event manager';
+  const capacityLine = event.capacity ? `Spots available: ${event.capacity}.` : null;
+
+  const subject =
+    role === 'SPONSOR'
+      ? `Support "${event.title}" and amplify its impact`
+      : `New event "${event.title}" is ready for volunteers`;
+
+  const heading =
+    role === 'SPONSOR'
+      ? 'Help this initiative take root'
+      : 'Be one of the first to RSVP';
+
+  const ctaLabel = role === 'SPONSOR' ? 'Review event brief' : 'Review and RSVP';
+
+  const results = await Promise.allSettled(
+    recipients.map(async (recipient) => {
+      if (!recipient?.email) {
+        return null;
+      }
+      const firstName = recipient.name?.split(' ')[0] || (role === 'SPONSOR' ? 'partner' : 'volunteer');
+      const personalizedNote = buildPersonalizedNote(event, recipient, role);
+      const bodyLines = [
+        `Hi ${firstName},`,
+        role === 'SPONSOR'
+          ? `${managerFirstName} just launched <strong>${event.title}</strong>, and we're inviting sponsors to help it flourish.`
+          : `${managerFirstName} just created <strong>${event.title}</strong> and would love your support on the ground.`,
+        `Category: ${event.category}`,
+        `Schedule: ${formatEventDateRange(event)}`,
+        `Location: ${locationSummary}`,
+      ];
+
+      if (event.theme) {
+        bodyLines.push(`Theme: ${event.theme}`);
+      }
+
+      if (capacityLine && role !== 'SPONSOR') {
+        bodyLines.push(capacityLine);
+      }
+
+      if (personalizedNote) {
+        bodyLines.push(personalizedNote);
+      }
+
+      bodyLines.push(
+        role === 'SPONSOR'
+          ? 'Review the brief to see how your sponsorship or network can accelerate this cause.'
+          : 'Tap below to read the full brief and claim your spot before it fills up.',
+      );
+
+      return sendTemplatedEmail({
+        to: recipient.email,
+        subject,
+        heading,
+        previewText: preview,
+        bodyLines,
+        cta: {
+          label: ctaLabel,
+          url: eventUrl,
+        },
+      });
+    }),
+  );
+
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      const recipient = recipients[index];
+      logger.warn('Failed to send event creation email', {
+        eventId: event.id,
+        role,
+        userId: recipient?.id || null,
+        error: result.reason?.message || String(result.reason),
+      });
+    }
+  });
+}
+
+async function sendEventCreationEmails({ event, actor }) {
+  if (!event?.id) {
+    return;
+  }
+
+  const baseUrl = resolveAppBaseUrl();
+  const recipients = await listUsersWithRoles(['VOLUNTEER', 'SPONSOR']);
+  const actorId = actor?.id || null;
+
+  const volunteers = recipients.filter(
+    (recipient) =>
+      recipient.roles?.includes('VOLUNTEER') && recipient.id !== actorId && recipient.email,
+  );
+
+  const sponsors = recipients.filter(
+    (recipient) => recipient.roles?.includes('SPONSOR') && recipient.id !== actorId && recipient.email,
+  );
+
+  await Promise.all([
+    dispatchRoleEmails({ role: 'VOLUNTEER', recipients: volunteers, event, actor, baseUrl }),
+    dispatchRoleEmails({ role: 'SPONSOR', recipients: sponsors, event, actor, baseUrl }),
+  ]);
+}
+
+function scheduleEventCreationEmails({ event, actor }) {
+  if (!event?.id) {
+    return;
+  }
+
+  setImmediate(() => {
+    sendEventCreationEmails({ event, actor }).catch((error) => {
+      logger.warn('Event creation email dispatch failed', {
+        eventId: event.id,
+        error: error.message,
+      });
+    });
+  });
 }
 
 function normalizeEventPayload(payload = {}) {
@@ -304,7 +562,9 @@ async function createEventDraft({ payload, actor }) {
     categoryValue: category.value,
     isOnline: location.isOnline,
   });
-  return mapEvent(event);
+  const mapped = mapEvent(event);
+  scheduleEventCreationEmails({ event: mapped, actor });
+  return mapped;
 }
 
 async function updateEventDetails(eventId, payload) {
