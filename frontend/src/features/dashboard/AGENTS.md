@@ -6,3 +6,4 @@ These notes apply to files within `frontend/src/features/dashboard/`.
 - Keep dashboard routes declarative; export simple React components and let `DashboardRouter` determine which variant to render.
 - The volunteer landing view should focus on commitments and impact summaries; surface profile editing only via the dedicated profile page and keep the commitments card full-width for consistency across roles.
 - Do not reintroduce event discovery feeds on the volunteer dashboard; direct volunteers to the dedicated events hub for browsing opportunities.
+- Keep the profile completion call-to-action lightweight and motivational; only surface it when the dashboard API reports missing profile fields and link the button to `/app/profile`.
