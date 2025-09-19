@@ -178,4 +178,9 @@
 - **Change:** Moved Google Font loading from a CSS `@import` into `<link>` tags within `index.html` and introduced cssnano into the PostCSS pipeline so production builds ship minified stylesheets.
 - **Impact:** The dashboard avoids render-blocking stylesheet imports while trimming roughly 2KB from the compiled CSS bundle, improving page load performance.
 
+## Google Fonts swap delivery
+- **Date:** 2025-10-03
+- **Change:** Swapped the dashboard back to Google Fonts, loading Inter and Nunito weights through `<link>` tags that request latin subsets with `display=swap` while removing the bundled WOFF2 assets and `fonts.css` entrypoint.
+- **Impact:** The build avoids binary font commits while still shipping non-blocking typography with the lighter latin-focused families the UI expects.
+
 
