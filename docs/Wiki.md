@@ -114,3 +114,8 @@
 - **Change:** Fixed the event creation repository insert statement to provide parameter placeholders for every column so the database receives the required availability and creator values alongside the draft status default.
 - **Impact:** Event managers can save drafts without encountering the "INSERT has more target columns than expressions" error.
 
+## Manager notifications on volunteer signups
+- **Date:** 2025-09-28
+- **Change:** Updated the volunteer signup service to look up an event's manager and send them a branded notification email whenever a volunteer registers, while preserving the primary confirmation flow if the manager email fails.
+- **Impact:** Event managers now receive timely awareness of new volunteers joining their events, letting them review rosters and plan assignments without monitoring the dashboard constantly.
+

@@ -70,6 +70,7 @@ describe('volunteerJourney.service', () => {
     status = 'PUBLISHED',
     startOffsetHours = 48,
     durationHours = 2,
+    createdBy = null,
   } = {}) {
     await repository.ensureSchema();
     const id = randomUUID();
@@ -77,12 +78,12 @@ describe('volunteerJourney.service', () => {
     const end = new Date(start.getTime() + durationHours * 60 * 60 * 1000);
     await pool.query(
       `
-        INSERT INTO events (id, title, description, category, theme, date_start, date_end, location, capacity, status, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+        INSERT INTO events (id, title, description, category, theme, date_start, date_end, location, capacity, status, created_by, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
       `,
-      [id, title, description, category, theme, start, end, location, capacity, status]
+      [id, title, description, category, theme, start, end, location, capacity, status, createdBy]
     );
-    return { id, title, description, category, theme, location, capacity, status, start, end };
+    return { id, title, description, category, theme, location, capacity, status, start, end, createdBy };
   }
 
   test('updates and reads volunteer profile fields with normalization', async () => {
@@ -115,17 +116,22 @@ describe('volunteerJourney.service', () => {
     expect(profile.citySlug).toBe('mh-pune');
   });
 
-  test('event signup enforces uniqueness and capacity while sending confirmation email', async () => {
+  test('event signup enforces uniqueness and capacity while notifying stakeholders', async () => {
+    const manager = await createVolunteer({ name: 'Coordinator', email: 'manager@example.com' });
     const primaryVolunteer = await createVolunteer({ name: 'Primary', email: 'primary@example.com' });
     const secondaryVolunteer = await createVolunteer({ name: 'Secondary', email: 'secondary@example.com' });
-    const event = await createPublishedEvent({ capacity: 1, location: 'Lakeside' });
+    const event = await createPublishedEvent({ capacity: 1, location: 'Lakeside', createdBy: manager.id });
 
     const list = await volunteerService.browseEvents({ location: 'Lakeside' }, { userId: primaryVolunteer.id });
     expect(list).toHaveLength(1);
 
     const signup = await volunteerService.signupForEvent({ eventId: event.id, user: primaryVolunteer });
     expect(signup.event.isRegistered).toBe(true);
-    expect(emailServiceMock.sendTemplatedEmail).toHaveBeenCalledTimes(1);
+    expect(signup.managerEmailDispatched).toBe(true);
+    expect(emailServiceMock.sendTemplatedEmail).toHaveBeenCalledTimes(2);
+    const [volunteerEmail, managerEmail] = emailServiceMock.sendTemplatedEmail.mock.calls;
+    expect(volunteerEmail[0].to).toBe(primaryVolunteer.email);
+    expect(managerEmail[0].to).toBe(manager.email);
 
     await expect(volunteerService.signupForEvent({ eventId: event.id, user: primaryVolunteer })).rejects.toMatchObject({
       statusCode: 409,

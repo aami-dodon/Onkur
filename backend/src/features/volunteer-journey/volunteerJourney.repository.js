@@ -640,7 +640,7 @@ async function createEventSignup({ eventId, userId }) {
 
     const eventResult = await client.query(
       `
-        SELECT id, title, date_start, date_end, location, capacity, status
+        SELECT id, title, date_start, date_end, location, capacity, status, created_by
         FROM events
         WHERE id = $1
         FOR UPDATE
