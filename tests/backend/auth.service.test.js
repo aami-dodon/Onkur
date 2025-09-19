@@ -1,5 +1,11 @@
 const { newDb } = require('pg-mem');
 
+jest.mock('utils/logger', () => ({
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+}));
+
 describe('auth.service', () => {
   let pool;
   let authService;
@@ -16,14 +22,9 @@ describe('auth.service', () => {
     const pg = db.adapters.createPg();
     pool = new pg.Pool();
 
-    jest.doMock('../src/features/common/db', () => pool);
-    jest.doMock('../src/utils/logger', () => ({
-      info: jest.fn(),
-      warn: jest.fn(),
-      error: jest.fn(),
-    }));
+    jest.doMock('features/common/db', () => pool);
 
-    authService = require('../src/features/auth/auth.service');
+    authService = require('features/auth/auth.service');
   });
 
   afterEach(() => {

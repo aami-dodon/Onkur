@@ -2,6 +2,21 @@
 
 Onkur is a mobile-first volunteering platform rooted in sustainability and community stewardship. The product is rolling out in three phases that collectively deliver authentication, volunteer empowerment, and rich event management workflows. Each milestone builds on a green-themed, responsive foundation so that every role—from volunteers to sponsors—has a tailored experience on phones first and desktops second.
 
+## 📁 Repository layout
+
+```
+.
+├── src
+│   ├── backend   # Express API, feature modules, and infrastructure scripts
+│   └── frontend  # Vite + React single page app
+├── tests
+│   └── backend   # Jest suites exercising backend features with pg-mem
+├── docs          # Living product and contributor documentation
+└── .github       # Continuous integration workflows
+```
+
+The backend and frontend retain their existing feature-based structure under `src/<app>/src/features`. Shared contributor expectations live in [`AGENTS.md`](AGENTS.md) files within each tree.
+
 ## 🚦 Phase roadmap
 
 ### Phase 1 – Foundation (Complete)
@@ -60,7 +75,7 @@ Consult the living [product wiki](docs/Wiki.md) for design rationale, API schema
 ### Backend (Express + Postgres)
 1. Install dependencies
    ```bash
-   cd backend
+   cd src/backend
    npm install
    ```
 2. Configure environment variables
@@ -91,7 +106,7 @@ Consult the living [product wiki](docs/Wiki.md) for design rationale, API schema
 ### Frontend (Vite + React)
 1. Install dependencies and configure the API origin
    ```bash
-   cd frontend
+   cd src/frontend
    npm install
    cp .env.example .env
    ```
@@ -114,15 +129,17 @@ docker compose up --build
 ---
 
 ## ✅ Testing & quality
-Run the test suite and production build locally before pushing:
+Run the automated quality checks locally before pushing:
 
 ```bash
 # backend
-cd backend
+cd src/backend
+npm run lint
 npm test
 
 # frontend
 cd ../frontend
+npm run lint
 npm run build
 ```
 
@@ -132,8 +149,16 @@ Jest coverage now includes the impact storytelling pipeline—submission, modera
 ---
 
 ## 🧭 Architecture quick reference
-- **Backend features** live under `backend/src/features/<feature-name>/`. Auth endpoints are defined in `auth.route.js`, volunteer flows under `volunteer-journey/`, and event tooling under `event-management/`.
-- **Frontend features** live under `frontend/src/features/<feature-name>/`. Dedicated modules for auth, volunteer, and event manager experiences plug into the router and reuse the shared `AuthProvider` for session state.
+- **Backend features** live under `src/backend/src/features/<feature-name>/`. Auth endpoints are defined in `auth.route.js`, volunteer flows under `volunteer-journey/`, and event tooling under `event-management/`.
+- **Frontend features** live under `src/frontend/src/features/<feature-name>/`. Dedicated modules for auth, volunteer, and event manager experiences plug into the router and reuse the shared `AuthProvider` for session state.
 - **Shared documentation**: the wiki captures stakeholder goals, color palette, data models, API reference, and roadmap milestones.
+
+## 🤝 Contributing
+
+We welcome improvements that keep sustainability at the forefront. Review the [Code of Conduct](CODE_OF_CONDUCT.md) and [Contributing guide](CONTRIBUTING.md) before opening a pull request.
+
+## 📄 License
+
+This project is released under the [MIT License](LICENSE).
 
 Stay grounded, build sustainably, and keep the forest thriving. 🌱
