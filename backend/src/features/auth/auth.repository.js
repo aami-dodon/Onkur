@@ -329,8 +329,12 @@ async function recordAuditLog({
   await ensureSchema();
   const id = randomUUID();
   const beforeJson = serializeSnapshot(before);
-  const afterJson = serializeSnapshot(after ?? metadata ?? {});
-  const metadataJson = metadata && after === null ? serializeSnapshot(metadata) : null;
+  const hasExplicitAfter = after !== undefined && after !== null;
+  const normalizedMetadata = metadata === undefined || metadata === null ? {} : metadata;
+  const afterJson = hasExplicitAfter
+    ? serializeSnapshot(after)
+    : serializeSnapshot(normalizedMetadata);
+  const metadataJson = serializeSnapshot(normalizedMetadata);
   await pool.query(
     `
       INSERT INTO audit_logs (id, actor_id, action, entity_type, entity_id, before, after, metadata)
