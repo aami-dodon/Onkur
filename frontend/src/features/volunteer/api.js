@@ -46,6 +46,10 @@ export function signupForEvent(token, eventId) {
   return apiRequest(`/api/events/${eventId}/signup`, { method: 'POST', token });
 }
 
+export function leaveEvent(token, eventId) {
+  return apiRequest(`/api/events/${eventId}/signup`, { method: 'DELETE', token });
+}
+
 export function fetchMySignups(token) {
   return apiRequest('/api/me/signups', { token });
 }

@@ -7,6 +7,7 @@ const {
   getCitiesForState,
   browseEvents,
   signupForEvent,
+  leaveEvent,
   listMySignups,
   recordVolunteerHours,
   getVolunteerHours,
@@ -114,6 +115,20 @@ router.post('/events/:eventId/signup', authOnly, async (req, res) => {
     }
     const result = await signupForEvent({ eventId, user: req.user });
     res.status(201).json(result);
+  } catch (error) {
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message });
+  }
+});
+
+router.delete('/events/:eventId/signup', authOnly, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    if (!uuidPattern.test(eventId)) {
+      return res.status(400).json({ error: 'Invalid event identifier' });
+    }
+    const result = await leaveEvent({ eventId, user: req.user });
+    res.json(result);
   } catch (error) {
     const status = error.statusCode || 500;
     res.status(status).json({ error: error.message });

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import useDocumentTitle from '../../lib/useDocumentTitle';
 import { useAuth } from '../auth/AuthContext';
 import EventDiscovery from '../volunteer/EventDiscovery';
-import { fetchEvents, signupForEvent } from '../volunteer/api';
+import { fetchEvents, signupForEvent, leaveEvent } from '../volunteer/api';
 import DashboardCard from './DashboardCard';
 import { determinePrimaryRole } from './roleUtils';
 
@@ -92,6 +92,15 @@ export default function EventsPage({ role, roles = [] }) {
     return result;
   };
 
+  const handleLeave = async (eventId) => {
+    if (!token) {
+      throw new Error('You need to be signed in to manage your event signups.');
+    }
+    const result = await leaveEvent(token, eventId);
+    setFilters((previous) => ({ ...previous }));
+    return result;
+  };
+
   const isLoading = status.phase === 'loading';
 
   return (
@@ -114,6 +123,7 @@ export default function EventsPage({ role, roles = [] }) {
           isLoading={isLoading}
           onFilterChange={handleFilterChange}
           onSignup={handleSignup}
+          onLeave={handleLeave}
         />
       </DashboardCard>
     </div>

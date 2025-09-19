@@ -8,6 +8,7 @@ import {
   fetchVolunteerHours,
   fetchMySignups,
   logVolunteerHours,
+  leaveEvent as leaveEventRequest,
 } from '../volunteer/api';
 import ProfileCompletionCallout from './ProfileCompletionCallout';
 import calculateProfileProgress from './profileProgress';
@@ -31,6 +32,8 @@ export default function VolunteerDashboard() {
   const [dashboard, setDashboard] = useState(null);
   const [hoursSummary, setHoursSummary] = useState(null);
   const [signups, setSignups] = useState([]);
+  const [leaveStatus, setLeaveStatus] = useState({});
+  const [leaveFeedback, setLeaveFeedback] = useState(null);
 
   const profileProgress = useMemo(
     () => calculateProfileProgress(dashboard?.profile),
@@ -89,6 +92,21 @@ export default function VolunteerDashboard() {
     return response.entry;
   };
 
+  const handleLeaveEvent = async (eventId) => {
+    if (!eventId) return;
+    setLeaveStatus((prev) => ({ ...prev, [eventId]: 'loading' }));
+    setLeaveFeedback(null);
+    try {
+      await leaveEventRequest(token, eventId);
+      setLeaveStatus((prev) => ({ ...prev, [eventId]: 'success' }));
+      setLeaveFeedback({ type: 'success', message: 'You left the event. We\u2019ll keep your calendar clear.' });
+      await Promise.all([refreshDashboard(token), refreshSignups(token), refreshHours(token)]);
+    } catch (error) {
+      setLeaveStatus((prev) => ({ ...prev, [eventId]: 'error' }));
+      setLeaveFeedback({ type: 'error', message: error.message || 'Unable to leave this event.' });
+    }
+  };
+
   const upcomingEvents = dashboard?.upcomingEvents || [];
   const pastEvents = dashboard?.pastEvents || [];
   const hoursLogged = hoursSummary?.totalHours ? Math.round(hoursSummary.totalHours * 10) / 10 : 0;
@@ -134,15 +152,37 @@ export default function VolunteerDashboard() {
                 key={event.id}
                 className="rounded-2xl border border-brand-forest/10 bg-brand-sand/60 px-3 py-2 text-sm text-brand-muted"
               >
-                <p className="m-0 font-semibold text-brand-forest">{event.title}</p>
-                <p className="m-0">{formatShortDate(event.dateStart)}</p>
-                <p className="m-0 text-xs text-brand-muted">{event.location}</p>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="m-0 font-semibold text-brand-forest">{event.title}</p>
+                    <p className="m-0">{formatShortDate(event.dateStart)}</p>
+                    <p className="m-0 text-xs text-brand-muted">{event.location}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded-md border border-brand-forest/20 bg-white px-3 py-2 text-xs font-semibold text-brand-forest shadow-sm disabled:opacity-60"
+                    onClick={() => handleLeaveEvent(event.id)}
+                    disabled={leaveStatus[event.id] === 'loading'}
+                  >
+                    {leaveStatus[event.id] === 'loading' ? 'Leaving…' : 'Leave event'}
+                  </button>
+                </div>
+                {leaveStatus[event.id] === 'error' ? (
+                  <p className="mt-2 text-xs text-red-600">We couldn’t update this signup. Try again.</p>
+                ) : null}
               </li>
             ))}
           </ul>
         ) : (
           <p className="m-0 text-sm text-brand-muted">No upcoming events scheduled.</p>
         )}
+        {leaveFeedback ? (
+          <p
+            className={`mt-3 text-xs ${leaveFeedback.type === 'success' ? 'text-brand-green' : 'text-red-600'}`}
+          >
+            {leaveFeedback.message}
+          </p>
+        ) : null}
         {pastEvents.length ? (
           <div className="mt-4 space-y-2">
             <h5 className="m-0 text-xs font-semibold uppercase tracking-[0.14em] text-brand-muted">Recently completed</h5>
