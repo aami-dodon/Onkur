@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import DashboardCard from './DashboardCard';
 import { useAuth } from '../auth/AuthContext';
 import useDocumentTitle from '../../lib/useDocumentTitle';
@@ -10,6 +9,8 @@ import {
   fetchMySignups,
   logVolunteerHours,
 } from '../volunteer/api';
+import ProfileCompletionCallout from './ProfileCompletionCallout';
+import calculateProfileProgress from './profileProgress';
 
 function formatShortDate(value) {
   if (!value) return '';
@@ -31,45 +32,10 @@ export default function VolunteerDashboard() {
   const [hoursSummary, setHoursSummary] = useState(null);
   const [signups, setSignups] = useState([]);
 
-  const profileProgress = useMemo(() => {
-    if (!dashboard?.profile) {
-      return null;
-    }
-
-    const { profile } = dashboard;
-    const requirements = [
-      {
-        label: 'Add at least one skill',
-        complete: Array.isArray(profile.skills) && profile.skills.length > 0,
-      },
-      {
-        label: 'Share the causes you care about',
-        complete: Array.isArray(profile.interests) && profile.interests.length > 0,
-      },
-      {
-        label: 'Set your availability',
-        complete: Boolean(profile.availability && profile.availability.trim().length),
-      },
-      {
-        label: 'Add your home base or region',
-        complete: Boolean(profile.location && profile.location.trim().length),
-      },
-      {
-        label: 'Introduce yourself with a short bio',
-        complete: Boolean(profile.bio && profile.bio.trim().length),
-      },
-    ];
-
-    const completed = requirements.filter((item) => item.complete).length;
-    const percentage = Math.round((completed / requirements.length) * 100);
-    const missing = requirements.filter((item) => !item.complete).map((item) => item.label);
-
-    return {
-      percentage,
-      missing,
-      isComplete: completed === requirements.length,
-    };
-  }, [dashboard]);
+  const profileProgress = useMemo(
+    () => calculateProfileProgress(dashboard?.profile),
+    [dashboard]
+  );
 
   const totalBadgesEarned = useMemo(() => {
     if (!hoursSummary?.badges) return 0;
@@ -139,32 +105,13 @@ export default function VolunteerDashboard() {
               }. Keep growing your impact!`}
         </p>
       </header>
-      {!loading && !error && profileProgress && !profileProgress.isComplete ? (
-        <section className="md:col-span-full rounded-3xl border border-amber-200 bg-amber-50 p-5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-2 sm:max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-amber-600">
-                <span>{profileProgress.percentage}% complete</span>
-              </div>
-              <h3 className="m-0 font-display text-xl font-semibold text-brand-forest">Complete your profile to unlock tailored invites</h3>
-              <p className="m-0 text-sm text-brand-muted">
-                Finishing your profile helps event managers match you with roles faster and gives check-in teams the context they need to support you on site.
-              </p>
-              {profileProgress.missing.length ? (
-                <ul className="m-0 list-disc space-y-1 pl-5 text-sm text-amber-700">
-                  {profileProgress.missing.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-            <div className="flex shrink-0 items-center">
-              <Link className="btn-primary" to="/app/profile">
-                Update my profile
-              </Link>
-            </div>
-          </div>
-        </section>
+      {!loading && !error ? (
+        <ProfileCompletionCallout
+          progress={profileProgress}
+          className="md:col-span-full"
+          title="Complete your profile to unlock tailored invites"
+          description="Finishing your profile helps event managers match you with roles faster and gives check-in teams the context they need to support you on site."
+        />
       ) : null}
       {error ? (
         <p className="md:col-span-full rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">

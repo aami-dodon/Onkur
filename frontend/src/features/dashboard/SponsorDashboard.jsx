@@ -1,11 +1,19 @@
+import { useMemo } from 'react';
 import DashboardCard from './DashboardCard';
 import { useAuth } from '../auth/AuthContext';
 import useDocumentTitle from '../../lib/useDocumentTitle';
+import ProfileCompletionCallout from './ProfileCompletionCallout';
+import calculateProfileProgress from './profileProgress';
 
 export default function SponsorDashboard() {
   const { user } = useAuth();
   const firstName = user?.name?.split(' ')[0] || 'sponsor';
   useDocumentTitle(`Onkur | Thank you, ${firstName} 🌍`);
+
+  const profileProgress = useMemo(
+    () => calculateProfileProgress(user?.profile),
+    [user?.profile]
+  );
 
   return (
     <div className="grid gap-5 md:[grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
@@ -17,6 +25,12 @@ export default function SponsorDashboard() {
           Track the visibility of your contributions and stay close to the stories your support makes possible.
         </p>
       </header>
+      <ProfileCompletionCallout
+        progress={profileProgress}
+        className="md:col-span-full"
+        title="Complete your profile to spotlight your mission"
+        description="Introduce your organization, causes, and recognition preferences so we can celebrate your sponsorship the right way."
+      />
       <DashboardCard
         title="Active sponsorships"
         description="A summary of the events and initiatives you are fueling will appear here soon."
