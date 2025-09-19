@@ -52,3 +52,8 @@
 - **Date:** 2025-09-22
 - **Change:** Removed the in-dashboard profile editor for volunteers and expanded the upcoming commitments card to span the dashboard width so all roles treat profile updates through the dedicated profile page.
 - **Impact:** Volunteers manage their profiles from the Profile menu while the dashboard highlights schedules and logged impact without split attention.
+
+## Volunteer dashboard event discovery removal
+- **Date:** 2025-09-22
+- **Change:** Retired the "Discover new events" panel from the volunteer home view so the dashboard centers on commitments and impact tracking while directing discovery traffic to the dedicated events hub.
+- **Impact:** Volunteers see a streamlined home focused on what they’ve scheduled and accomplished, using the events hub when they’re ready to browse new opportunities.
