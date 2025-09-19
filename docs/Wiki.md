@@ -77,3 +77,8 @@
 - **Date:** 2025-09-24
 - **Change:** Replaced free-form profile fields with curated lookup selectors for skills, interests, availability, and location. The backend now seeds Indian-centric reference data for these lookups, exposes authenticated endpoints to fetch cascaded state/city lists, and persists selections alongside optional custom skills or interests.
 - **Impact:** Volunteers and other members update their profiles faster with consistent terminology, coordinators can filter against normalized data, and deployments automatically receive the seeded options without manual database scripts.
+
+## Profile editor primary action buttons
+- **Date:** 2025-09-25
+- **Change:** Promoted the custom skill and interest buttons on the volunteer profile editor to use the primary button style and documented the expectation in the volunteer frontend guidelines.
+- **Impact:** The calls-to-action to add new skills or interests now stand out visually, guiding members to enrich their profiles without hunting for the controls.
