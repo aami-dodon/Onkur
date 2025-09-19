@@ -1,7 +1,6 @@
 const { randomUUID } = require('crypto');
 const pool = require('../common/db');
 const { ensureSchema: ensureSponsorSchema } = require('../sponsors/sponsor.repository');
-const { ensureSchema: ensureEventSchema } = require('../volunteer-journey/volunteerJourney.repository');
 
 const VALID_STATUSES = ['PENDING', 'APPROVED', 'REJECTED'];
 
@@ -44,7 +43,6 @@ function mapMediaRow(row) {
 }
 
 const schemaPromise = (async () => {
-  await ensureEventSchema();
   await pool.query(`
     CREATE TABLE IF NOT EXISTS event_media (
       id UUID PRIMARY KEY,
@@ -77,13 +75,7 @@ const schemaPromise = (async () => {
   await pool.query(`ALTER TABLE event_media ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ NULL`);
   await pool.query(`ALTER TABLE event_media ADD COLUMN IF NOT EXISTS approved_by UUID NULL REFERENCES users(id) ON DELETE SET NULL`);
   await pool.query(`ALTER TABLE event_media ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
-  try {
-    await pool.query(`ALTER TABLE event_media ALTER COLUMN tags SET DATA TYPE JSONB USING tags::JSONB`);
-  } catch (error) {
-    if (!/kw_using/i.test(error.message || '')) {
-      throw error;
-    }
-  }
+  await pool.query(`ALTER TABLE event_media ALTER COLUMN tags SET DATA TYPE JSONB USING tags::JSONB`);
   await pool.query(`
     ALTER TABLE event_media
     DROP CONSTRAINT IF EXISTS event_media_status_check

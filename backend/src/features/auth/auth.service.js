@@ -8,7 +8,6 @@ const {
   findUserById,
   listUsers,
   replaceUserRoles,
-  updateUserActiveState,
   recordAuditLog,
   revokeToken,
   isTokenRevoked,
@@ -77,14 +76,6 @@ function toPublicUser(user) {
         : user.email_verified_at || null,
     createdAt:
       user.created_at instanceof Date ? user.created_at.toISOString() : user.created_at,
-    updatedAt:
-      user.updated_at instanceof Date ? user.updated_at.toISOString() : user.updated_at || null,
-    isActive: user.is_active !== false,
-    deactivatedAt:
-      user.deactivated_at instanceof Date
-        ? user.deactivated_at.toISOString()
-        : user.deactivated_at || null,
-    deactivatedReason: user.deactivated_reason || null,
   };
 }
 
@@ -206,8 +197,6 @@ async function login({ email, password }) {
     await recordAuditLog({
       actorId: user.id,
       action: 'auth.login.failure',
-      entityType: 'user',
-      entityId: user.id,
       metadata: { email, reason: 'invalid_password' },
     });
     throw createHttpError(401, 'Invalid credentials');
@@ -217,30 +206,14 @@ async function login({ email, password }) {
     await recordAuditLog({
       actorId: user.id,
       action: 'auth.login.failure',
-      entityType: 'user',
-      entityId: user.id,
       metadata: { email, reason: 'email_not_verified' },
     });
     throw createHttpError(403, 'Please verify your email before logging in.');
   }
 
-  if (user.is_active === false) {
-    await recordAuditLog({
-      actorId: user.id,
-      action: 'auth.login.failure',
-      entityType: 'user',
-      entityId: user.id,
-      before: { isActive: false },
-      metadata: { email, reason: 'account_inactive' },
-    });
-    throw createHttpError(403, 'This account has been deactivated. Contact an administrator.');
-  }
-
   await recordAuditLog({
     actorId: user.id,
     action: 'auth.login.success',
-    entityType: 'user',
-    entityId: user.id,
     metadata: { email: user.email, roles: user.roles || [] },
   });
 
@@ -398,10 +371,6 @@ function normalizeRolesInput(input) {
 }
 
 async function assignRole({ actorId, userId, roles }) {
-  const existing = await findUserById(userId);
-  if (!existing) {
-    throw createHttpError(404, 'User not found');
-  }
   const normalizedRoles = Array.from(
     new Set(
       normalizeRolesInput(roles)
@@ -417,57 +386,17 @@ async function assignRole({ actorId, userId, roles }) {
   }
 
   const user = await replaceUserRoles({ userId, roles: orderedRoles });
+  if (!user) {
+    throw createHttpError(404, 'User not found');
+  }
 
   await recordAuditLog({
     actorId,
     action: 'auth.role.change',
-    entityType: 'user',
-    entityId: user.id,
-    before: { roles: existing.roles || [], primaryRole: existing.role },
-    after: { roles: user.roles || [], primaryRole: user.role },
+    metadata: { userId: user.id, roles: user.roles || [] },
   });
 
   return toPublicUserWithProfile(user);
-}
-
-async function updateUserActivation({ actorId, userId, isActive, reason = null }) {
-  if (typeof isActive !== 'boolean') {
-    throw createHttpError(400, 'isActive must be provided as a boolean');
-  }
-  const existing = await findUserById(userId);
-  if (!existing) {
-    throw createHttpError(404, 'User not found');
-  }
-
-  if ((existing.is_active !== false) === isActive) {
-    return toPublicUserWithProfile(existing);
-  }
-
-  const updated = await updateUserActiveState({ userId, isActive, reason });
-
-  await recordAuditLog({
-    actorId,
-    action: isActive ? 'auth.user.reactivate' : 'auth.user.deactivate',
-    entityType: 'user',
-    entityId: userId,
-    before: {
-      isActive: existing.is_active !== false,
-      deactivatedAt:
-        existing.deactivated_at instanceof Date
-          ? existing.deactivated_at.toISOString()
-          : existing.deactivated_at || null,
-    },
-    after: {
-      isActive: updated.is_active !== false,
-      deactivatedAt:
-        updated.deactivated_at instanceof Date
-          ? updated.deactivated_at.toISOString()
-          : updated.deactivated_at || null,
-    },
-    metadata: reason ? { reason } : {},
-  });
-
-  return toPublicUserWithProfile(updated);
 }
 
 module.exports = {
@@ -478,7 +407,6 @@ module.exports = {
   getProfile,
   listAllUsers,
   assignRole,
-  updateUserActivation,
   verifyEmail,
   ROLES,
 };

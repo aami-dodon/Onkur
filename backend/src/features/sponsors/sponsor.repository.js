@@ -1,6 +1,5 @@
 const { randomUUID } = require('crypto');
 const pool = require('../common/db');
-const { ensureSchema: ensureEventSchema } = require('../volunteer-journey/volunteerJourney.repository');
 
 const VALID_PROFILE_STATUSES = ['PENDING', 'APPROVED', 'DECLINED'];
 const VALID_SPONSORSHIP_TYPES = ['FUNDS', 'IN_KIND'];
@@ -71,7 +70,6 @@ function mapSponsorshipRow(row) {
 }
 
 const schemaPromise = (async () => {
-  await ensureEventSchema();
   await pool.query(`
     CREATE TABLE IF NOT EXISTS sponsor_profiles (
       user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
