@@ -8,7 +8,11 @@ Onkur is a sustainability-driven volunteering platform that helps communities co
 
 ## Mobile Layout Screenshots
 
-![Onkur mobile layout 1](docs/Mobile-1.png) ![Onkur mobile layout 2](docs/Mobile-2.png)
+<p align="center">
+  <img src="docs/Mobile-1.png" alt="Mobile 1" width="400"/>
+  <img src="docs/Mobile-2.png" alt="Mobile 2" width="400"/>
+</p>
+
 
 ## Table of contents
 
