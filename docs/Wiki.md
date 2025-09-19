@@ -183,4 +183,9 @@
 - **Change:** Swapped the dashboard back to Google Fonts, loading Inter and Nunito weights through `<link>` tags that request latin subsets with `display=swap` while removing the bundled WOFF2 assets and `fonts.css` entrypoint.
 - **Impact:** The build avoids binary font commits while still shipping non-blocking typography with the lighter latin-focused families the UI expects.
 
+## Landing LCP fallback removal
+- **Date:** 2025-10-03
+- **Change:** Inlined the public `HomePage` in `App.jsx` instead of lazy loading it so first impressions avoid the Suspense spinner and the hero content can render with the initial bundle.
+- **Impact:** Largest Contentful Paint on the marketing home now depends on the first script payload alone, eliminating the extra network hop that pushed GTmetrix LCP near 5.5 seconds.
+
 
