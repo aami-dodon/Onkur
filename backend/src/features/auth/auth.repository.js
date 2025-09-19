@@ -16,7 +16,11 @@ const schemaPromise = (async () => {
       email_normalized TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL CHECK (role = ANY(ARRAY[${roleCheckArray}]::TEXT[])),
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      deactivated_at TIMESTAMPTZ NULL,
+      deactivated_reason TEXT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       email_verified_at TIMESTAMPTZ NULL
     )
   `);
@@ -24,6 +28,32 @@ const schemaPromise = (async () => {
   await pool.query(`
     ALTER TABLE users
     ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ NULL
+  `);
+
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  `);
+
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE
+  `);
+
+  await pool.query(`
+    UPDATE users
+    SET is_active = TRUE
+    WHERE is_active IS NULL
+  `);
+
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS deactivated_at TIMESTAMPTZ NULL
+  `);
+
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS deactivated_reason TEXT NULL
   `);
 
   await pool.query(`
@@ -47,9 +77,33 @@ const schemaPromise = (async () => {
       id UUID PRIMARY KEY,
       actor_id UUID NULL REFERENCES users(id) ON DELETE SET NULL,
       action TEXT NOT NULL,
+      entity_type TEXT NULL,
+      entity_id TEXT NULL,
+      before JSONB NULL,
+      after JSONB NULL,
       metadata JSONB NOT NULL DEFAULT '{}'::JSONB,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `);
+
+  await pool.query(`
+    ALTER TABLE audit_logs
+    ADD COLUMN IF NOT EXISTS entity_type TEXT NULL
+  `);
+
+  await pool.query(`
+    ALTER TABLE audit_logs
+    ADD COLUMN IF NOT EXISTS entity_id TEXT NULL
+  `);
+
+  await pool.query(`
+    ALTER TABLE audit_logs
+    ADD COLUMN IF NOT EXISTS before JSONB NULL
+  `);
+
+  await pool.query(`
+    ALTER TABLE audit_logs
+    ADD COLUMN IF NOT EXISTS after JSONB NULL
   `);
 
   await pool.query(`
@@ -77,6 +131,10 @@ const schemaPromise = (async () => {
 
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON audit_logs (actor_id)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs (entity_type, entity_id)
   `);
 
   await pool.query(`
@@ -126,9 +184,29 @@ async function createUser({ name, email, passwordHash, roles }) {
     await client.query('BEGIN');
     const result = await client.query(
       `
-        INSERT INTO users (id, name, email, email_normalized, password_hash, role)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING id, name, email, role, created_at, email_verified_at, email_normalized, password_hash
+        INSERT INTO users (
+          id,
+          name,
+          email,
+          email_normalized,
+          password_hash,
+          role,
+          is_active
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, TRUE)
+        RETURNING
+          id,
+          name,
+          email,
+          role,
+          created_at,
+          updated_at,
+          email_verified_at,
+          email_normalized,
+          password_hash,
+          is_active,
+          deactivated_at,
+          deactivated_reason
       `,
       [id, name, email, normalizedEmail, passwordHash, primaryRole]
     );
@@ -155,7 +233,23 @@ async function findUserByEmail(email) {
   await ensureSchema();
   const normalizedEmail = email.toLowerCase();
   const result = await pool.query(
-    `SELECT id, name, email, email_normalized, password_hash, role, created_at, email_verified_at FROM users WHERE email_normalized = $1`,
+    `
+      SELECT
+        id,
+        name,
+        email,
+        email_normalized,
+        password_hash,
+        role,
+        created_at,
+        updated_at,
+        email_verified_at,
+        is_active,
+        deactivated_at,
+        deactivated_reason
+      FROM users
+      WHERE email_normalized = $1
+    `,
     [normalizedEmail]
   );
   const user = result.rows[0] || null;
@@ -168,7 +262,23 @@ async function findUserByEmail(email) {
 async function findUserById(id) {
   await ensureSchema();
   const result = await pool.query(
-    `SELECT id, name, email, email_normalized, password_hash, role, created_at, email_verified_at FROM users WHERE id = $1`,
+    `
+      SELECT
+        id,
+        name,
+        email,
+        email_normalized,
+        password_hash,
+        role,
+        created_at,
+        updated_at,
+        email_verified_at,
+        is_active,
+        deactivated_at,
+        deactivated_reason
+      FROM users
+      WHERE id = $1
+    `,
     [id]
   );
   const user = result.rows[0] || null;
@@ -181,7 +291,21 @@ async function findUserById(id) {
 async function listUsers() {
   await ensureSchema();
   const result = await pool.query(
-    `SELECT id, name, email, role, created_at, email_verified_at FROM users ORDER BY created_at DESC`
+    `
+      SELECT
+        id,
+        name,
+        email,
+        role,
+        created_at,
+        updated_at,
+        email_verified_at,
+        is_active,
+        deactivated_at,
+        deactivated_reason
+      FROM users
+      ORDER BY created_at DESC
+    `
   );
   const users = result.rows;
   if (users.length === 0) {
@@ -236,7 +360,19 @@ async function replaceUserRoles({ userId, roles }) {
         UPDATE users
         SET role = $2
         WHERE id = $1
-        RETURNING id, name, email, role, created_at, email_verified_at, email_normalized, password_hash
+        RETURNING
+          id,
+          name,
+          email,
+          role,
+          created_at,
+          updated_at,
+          email_verified_at,
+          email_normalized,
+          password_hash,
+          is_active,
+          deactivated_at,
+          deactivated_reason
       `,
       [userId, primaryRole]
     );
@@ -264,16 +400,71 @@ async function replaceUserRoles({ userId, roles }) {
   }
 }
 
-async function recordAuditLog({ actorId = null, action, metadata = {} }) {
+async function updateUserActiveState({ userId, isActive, reason = null }) {
+  await ensureSchema();
+  const activeFlag = Boolean(isActive);
+  const normalizedReason = reason ? String(reason).trim() || null : null;
+  const result = await pool.query(
+    `
+      UPDATE users
+      SET
+        is_active = $2,
+        deactivated_at = CASE WHEN $2 = FALSE THEN NOW() ELSE NULL END,
+        deactivated_reason = CASE WHEN $2 = FALSE THEN $3 ELSE NULL END,
+        updated_at = NOW()
+      WHERE id = $1
+      RETURNING
+        id,
+        name,
+        email,
+        role,
+        created_at,
+        updated_at,
+        email_verified_at,
+        email_normalized,
+        password_hash,
+        is_active,
+        deactivated_at,
+        deactivated_reason
+    `,
+    [userId, activeFlag, normalizedReason]
+  );
+  const user = result.rows[0] || null;
+  if (!user) {
+    return null;
+  }
+  return attachRoles(user);
+}
+
+async function recordAuditLog({
+  actorId = null,
+  action,
+  entityType = null,
+  entityId = null,
+  before = null,
+  after = null,
+  metadata = {},
+}) {
   await ensureSchema();
   const id = randomUUID();
   const metadataJson = JSON.stringify(metadata || {});
+  const beforeJson = before === undefined || before === null ? null : JSON.stringify(before);
+  const afterJson = after === undefined || after === null ? null : JSON.stringify(after);
   await pool.query(
     `
-      INSERT INTO audit_logs (id, actor_id, action, metadata)
-      VALUES ($1, $2, $3, $4::jsonb)
+      INSERT INTO audit_logs (
+        id,
+        actor_id,
+        action,
+        entity_type,
+        entity_id,
+        before,
+        after,
+        metadata
+      )
+      VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb)
     `,
-    [id, actorId, action, metadataJson]
+    [id, actorId, action, entityType, entityId, beforeJson, afterJson, metadataJson]
   );
 }
 
@@ -392,6 +583,7 @@ module.exports = {
   listUsers,
   replaceUserRoles,
   recordAuditLog,
+  updateUserActiveState,
   revokeToken,
   isTokenRevoked,
   pruneExpiredTokens,

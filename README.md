@@ -38,6 +38,12 @@ Onkur is a mobile-first volunteering platform rooted in sustainability and commu
 - Event and gallery experiences that surface approved sponsor logos and contributions for every supported event.
 - Automated impact reports summarizing volunteer hours, gallery views, and ROI metrics delivered to sponsor inboxes.
 
+### Phase 6 – Admin Oversight (Complete)
+- Unified admin console with moderation queues for events, sponsor applications, and gallery submissions backed by audit logs.
+- Approval, rejection, and role management workflows that record before/after snapshots and notify stakeholders automatically.
+- Account governance tools to deactivate or reactivate members alongside role assignments.
+- Operational reporting dashboard with volunteer engagement, sponsor ROI, and moderation throughput metrics plus CSV/Excel exports.
+
 Consult the living [product wiki](docs/Wiki.md) for design rationale, API schemas, and rollout notes for each phase.
 
 ---
