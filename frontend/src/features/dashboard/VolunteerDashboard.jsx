@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import DashboardCard from './DashboardCard';
 import { useAuth } from '../auth/AuthContext';
 import useDocumentTitle from '../../lib/useDocumentTitle';
-import ProfileEditor from '../volunteer/ProfileEditor';
 import EventDiscovery from '../volunteer/EventDiscovery';
 import HoursTracker from '../volunteer/HoursTracker';
 import {
@@ -10,7 +9,6 @@ import {
   fetchVolunteerHours,
   fetchEvents,
   fetchMySignups,
-  updateVolunteerProfile,
   signupForEvent,
   logVolunteerHours,
 } from '../volunteer/api';
@@ -32,7 +30,6 @@ export default function VolunteerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dashboard, setDashboard] = useState(null);
-  const [profile, setProfile] = useState(null);
   const [hoursSummary, setHoursSummary] = useState(null);
   const [signups, setSignups] = useState([]);
   const [events, setEvents] = useState([]);
@@ -72,7 +69,6 @@ export default function VolunteerDashboard() {
     const data = await fetchVolunteerDashboard(activeToken);
     if (!active) return;
     setDashboard(data);
-    setProfile(data.profile);
   }
 
   async function refreshHours(activeToken = token, active = true) {
@@ -104,13 +100,6 @@ export default function VolunteerDashboard() {
       }
     }
   }
-
-  const handleProfileSave = async (payload) => {
-    const updated = await updateVolunteerProfile(token, payload);
-    setProfile(updated);
-    setDashboard((prev) => (prev ? { ...prev, profile: updated } : prev));
-    return updated;
-  };
 
   const handleEventSignup = async (eventId) => {
     const result = await signupForEvent(token, eventId);
@@ -147,12 +136,7 @@ export default function VolunteerDashboard() {
         </p>
       ) : null}
       <DashboardCard
-        title="Profile & availability"
-        description="Keep your skills and availability current so coordinators can match you to the best opportunities."
-      >
-        <ProfileEditor profile={profile} onSave={handleProfileSave} />
-      </DashboardCard>
-      <DashboardCard
+        className="md:col-span-full"
         title="Upcoming commitments"
         description={
           upcomingEvents.length
