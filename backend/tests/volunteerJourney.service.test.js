@@ -1,12 +1,6 @@
 const { newDb } = require('pg-mem');
 const { randomUUID } = require('crypto');
 
-jest.mock('utils/logger', () => ({
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-}));
-
 describe('volunteerJourney.service', () => {
   let pool;
   let authService;
@@ -27,20 +21,25 @@ describe('volunteerJourney.service', () => {
     const pg = db.adapters.createPg();
     pool = new pg.Pool();
 
-    jest.doMock('features/common/db', () => pool);
+    jest.doMock('../src/features/common/db', () => pool);
+    jest.doMock('../src/utils/logger', () => ({
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    }));
     emailServiceMock = {
       sendTemplatedEmail: jest.fn().mockResolvedValue(null),
     };
-    jest.doMock('features/email/email.service', () => emailServiceMock);
-    jest.doMock('features/auth/email.service', () => ({
+    jest.doMock('../src/features/email/email.service', () => emailServiceMock);
+    jest.doMock('../src/features/auth/email.service', () => ({
       sendVerificationEmail: jest.fn().mockResolvedValue(null),
       sendWelcomeEmail: jest.fn().mockResolvedValue(null),
     }));
 
-    authService = require('features/auth/auth.service');
-    volunteerService = require('features/volunteer-journey/volunteerJourney.service');
-    repository = require('features/volunteer-journey/volunteerJourney.repository');
-    ({ seedVolunteerProfileLookups: seedLookups } = require('features/volunteer-journey/profile.bootstrap'));
+    authService = require('../src/features/auth/auth.service');
+    volunteerService = require('../src/features/volunteer-journey/volunteerJourney.service');
+    repository = require('../src/features/volunteer-journey/volunteerJourney.repository');
+    ({ seedVolunteerProfileLookups: seedLookups } = require('../src/features/volunteer-journey/profile.bootstrap'));
 
     await seedLookups();
   });

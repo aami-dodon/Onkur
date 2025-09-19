@@ -1,15 +1,15 @@
 services:
   backend:
-    build: ./src/backend
+    build: ./backend
     env_file:
-      - ./src/backend/.env
+      - ./backend/.env
     ports:
       - "1011:5000"
     restart: unless-stopped
   frontend:
-    build: ./src/frontend
+    build: ./frontend
     env_file:
-      - ./src/frontend/.env
+      - ./frontend/.env
     ports:
       - "1010:5173"
     restart: unless-stopped
