@@ -77,3 +77,8 @@
 - **Date:** 2025-09-23
 - **Change:** Extended the profile completion call-to-action to event manager and sponsor dashboards, centralizing the UI so each role reuses the same visual pattern while customizing motivational copy.
 - **Impact:** Coordinators and partners now receive tailored encouragement to complete their profiles, improving trust with volunteers and giving the team better context for recognition efforts.
+
+## Sponsor & manager profile CTA data fix
+- **Date:** 2025-09-23
+- **Change:** Updated the auth service to include volunteer profile payloads in public user responses so sponsor and event manager dashboards can measure completion progress immediately after login.
+- **Impact:** Non-volunteer roles now see the profile completion prompts that were previously scoped to volunteers, keeping the cross-role guidance consistent.

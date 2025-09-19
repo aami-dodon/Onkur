@@ -21,6 +21,9 @@ const {
 const { sendVerificationEmail, sendWelcomeEmail } = require('./email.service');
 const { ROLES, DEFAULT_ROLE } = require('./constants');
 const { sortRolesByPriority, determinePrimaryRole } = require('./role.helpers');
+const {
+  getProfile: getVolunteerProfileForUser,
+} = require('../volunteer-journey/volunteerJourney.service');
 
 const config = require('../../config');
 
@@ -73,6 +76,16 @@ function toPublicUser(user) {
     createdAt:
       user.created_at instanceof Date ? user.created_at.toISOString() : user.created_at,
   };
+}
+
+async function toPublicUserWithProfile(user) {
+  const baseUser = toPublicUser(user);
+  if (!baseUser || !user?.id) {
+    return baseUser;
+  }
+
+  const profile = await getVolunteerProfileForUser(user.id);
+  return { ...baseUser, profile };
 }
 
 function createHttpError(statusCode, message) {
@@ -142,7 +155,7 @@ async function signup({ name, email, password, roles }) {
   }
 
   return {
-    user: toPublicUser(user),
+    user: await toPublicUserWithProfile(user),
     requiresEmailVerification: true,
     verification: verification
       ? {
@@ -198,7 +211,7 @@ async function login({ email, password }) {
   });
 
   const tokenBundle = await issueTokenBundle(user);
-  return { user: toPublicUser(user), ...tokenBundle };
+  return { user: await toPublicUserWithProfile(user), ...tokenBundle };
 }
 
 async function verifyEmail({ token }) {
@@ -229,7 +242,7 @@ async function verifyEmail({ token }) {
     await markVerificationTokenUsed({ tokenId: tokenRecord.id });
     await deleteVerificationTokensForUser({ userId: user.id, exceptTokenId: tokenRecord.id });
     return {
-      user: toPublicUser(user),
+      user: await toPublicUserWithProfile(user),
       alreadyVerified: true,
       message: 'Email already verified. You can log in now.',
     };
@@ -255,7 +268,7 @@ async function verifyEmail({ token }) {
   }
 
   return {
-    user: toPublicUser(updatedUser),
+    user: await toPublicUserWithProfile(updatedUser),
     message: 'Your email has been verified. You can now log in.',
   };
 }
@@ -329,7 +342,7 @@ async function getProfile(userId) {
   if (!user) {
     throw createHttpError(404, 'User not found');
   }
-  return toPublicUser(user);
+  return toPublicUserWithProfile(user);
 }
 
 async function listAllUsers() {
@@ -376,7 +389,7 @@ async function assignRole({ actorId, userId, roles }) {
     metadata: { userId: user.id, roles: user.roles || [] },
   });
 
-  return toPublicUser(user);
+  return toPublicUserWithProfile(user);
 }
 
 module.exports = {
