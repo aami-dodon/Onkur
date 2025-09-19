@@ -173,5 +173,9 @@
 - **Change:** Added a Vite HTML transform that injects `crossorigin="anonymous"` on the dev client preload and entry module scripts while updating `index.html` to mark the root bundle with the same attribute.
 - **Impact:** Cloudflare Rocket Loader now reuses the preload for `@vite/client` without warning about credential mode mismatches, keeping browser consoles clean during development.
 
+## CSS delivery optimizations
+- **Date:** 2025-10-03
+- **Change:** Moved Google Font loading from a CSS `@import` into `<link>` tags within `index.html` and introduced cssnano into the PostCSS pipeline so production builds ship minified stylesheets.
+- **Impact:** The dashboard avoids render-blocking stylesheet imports while trimming roughly 2KB from the compiled CSS bundle, improving page load performance.
 
 
