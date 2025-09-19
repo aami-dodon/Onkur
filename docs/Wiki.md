@@ -1,5 +1,10 @@
 # Onkur Change Log
 
+## Event report downloads stay in app
+- **Date:** 2025-10-04
+- **Change:** Converted the event report export into an authenticated blob download so managers save CSVs without opening new tabs, and replaced the volunteer guidance CTA with an in-app link to avoid full page reloads.
+- **Impact:** Event managers can grab analytics without context switches while volunteers jump to the events hub instantly with client-side routing.
+
 ## Desktop navigation parity
 - **Date:** 2025-09-18
 - **Change:** Introduced a desktop header navigation that mirrors the mobile bottom menu, centralized the navigation config, and wired menu items to new `/app/events`, `/app/gallery`, and `/app/profile` routes.

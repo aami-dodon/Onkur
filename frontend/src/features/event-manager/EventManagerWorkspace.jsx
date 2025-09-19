@@ -68,7 +68,12 @@ export default function EventManagerWorkspace() {
   const [assignmentState, setAssignmentState] = useState({ status: 'idle', message: '' });
   const [attendanceState, setAttendanceState] = useState({});
   const [report, setReport] = useState(null);
-  const [reportState, setReportState] = useState({ status: 'idle', error: '' });
+  const [reportState, setReportState] = useState({
+    status: 'idle',
+    error: '',
+    downloadStatus: 'idle',
+    downloadError: '',
+  });
   const [lookups, setLookups] = useState({
     categories: [],
     states: [],
@@ -478,13 +483,75 @@ export default function EventManagerWorkspace() {
 
   const handleReport = async () => {
     if (!selectedId) return;
-    setReportState({ status: 'loading', error: '' });
+    setReportState((prev) => ({ ...prev, status: 'loading', error: '' }));
     try {
       const response = await apiRequest(`/api/manager/events/${selectedId}/report`, authHeaders);
       setReport(response.report);
-      setReportState({ status: 'success', error: '' });
+      setReportState((prev) => ({ ...prev, status: 'success', error: '' }));
     } catch (error) {
-      setReportState({ status: 'error', error: error.message || 'Unable to generate report' });
+      setReportState((prev) => ({
+        ...prev,
+        status: 'error',
+        error: error.message || 'Unable to generate report',
+      }));
+    }
+  };
+
+  const handleReportDownload = async () => {
+    if (!selectedId) return;
+    if (!token) {
+      setReportState((prev) => ({
+        ...prev,
+        downloadStatus: 'error',
+        downloadError: 'Authentication required to download reports.',
+      }));
+      return;
+    }
+
+    setReportState((prev) => ({ ...prev, downloadStatus: 'loading', downloadError: '' }));
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/manager/events/${selectedId}/report?format=csv`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type') || '';
+        let message = 'Unable to download report';
+        if (contentType.includes('application/json')) {
+          const payload = await response.json();
+          if (payload && payload.error) {
+            message = payload.error;
+          }
+        } else {
+          const text = await response.text();
+          if (text) {
+            message = text;
+          }
+        }
+        throw new Error(message);
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `event-${selectedId}-report.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      setReportState((prev) => ({ ...prev, downloadStatus: 'success' }));
+    } catch (error) {
+      setReportState((prev) => ({
+        ...prev,
+        downloadStatus: 'error',
+        downloadError: error.message || 'Unable to download report',
+      }));
     }
   };
 
@@ -1006,29 +1073,43 @@ export default function EventManagerWorkspace() {
                 <div className="rounded-xl border border-brand-forest/10 bg-brand-sand/40 p-4">
                   <h4 className="m-0 text-sm font-semibold uppercase tracking-wide text-brand-forest">Impact report</h4>
                   <div className="mt-3 flex flex-col gap-2 text-xs text-brand-muted">
-                    <button type="button" className="btn-primary" onClick={handleReport} disabled={reportState.status === 'loading'}>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={handleReport}
+                      disabled={reportState.status === 'loading'}
+                    >
                       {reportState.status === 'loading' ? 'Crunching numbers…' : 'Generate summary'}
                     </button>
                     {reportState.status === 'error' ? (
                       <span className="text-xs text-red-600">{reportState.error}</span>
                     ) : null}
-                    {report ? (
-                      <div className="rounded-lg bg-white/80 p-3 text-xs text-brand-muted">
-                        <p className="m-0 font-semibold text-brand-forest">{report.event.title}</p>
-                        <p className="m-0">Signups: {report.totals.totalSignups}</p>
-                        <p className="m-0">Checked in: {report.totals.totalCheckedIn}</p>
-                        <p className="m-0">Attendance rate: {report.totals.attendanceRate}%</p>
-                        <p className="m-0">Total hours: {report.totals.totalHours}</p>
-                        <a
-                          className="mt-2 inline-flex items-center gap-1 text-brand-green"
-                          href={`${API_BASE}/api/manager/events/${selectedId}/report?format=csv`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Download CSV
-                        </a>
-                      </div>
+                    <button
+                      type="button"
+                      className="mt-2 inline-flex items-center gap-1 text-brand-green"
+                      onClick={handleReportDownload}
+                      disabled={reportState.downloadStatus === 'loading'}
+                    >
+                      {reportState.downloadStatus === 'loading' ? 'Downloading…' : 'Download CSV'}
+                    </button>
+                    {reportState.downloadStatus === 'error' ? (
+                      <span className="text-xs text-red-600">{reportState.downloadError}</span>
                     ) : null}
+                    {reportState.downloadStatus === 'success' ? (
+                      <span className="text-xs font-semibold text-brand-green">Report downloaded.</span>
+                    ) : null}
+                      {report ? (
+                        <div className="rounded-lg bg-white/80 p-3 text-xs text-brand-muted">
+                          <p className="m-0 font-semibold text-brand-forest">{report.event.title}</p>
+                          <p className="m-0">Signups: {report.totals.totalSignups}</p>
+                          <p className="m-0">Checked in: {report.totals.totalCheckedIn}</p>
+                          <p className="m-0">Attendance rate: {report.totals.attendanceRate}%</p>
+                          <p className="m-0">Total hours: {report.totals.totalHours}</p>
+                          <p className="m-0 text-[11px] text-brand-forest">
+                            CSV downloads include these metrics plus timestamps and attendee details.
+                          </p>
+                        </div>
+                      ) : null}
                   </div>
                 </div>
               </aside>
