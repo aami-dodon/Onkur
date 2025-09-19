@@ -1,216 +1,269 @@
-import { useEffect, useMemo, useState } from 'react';
-import DashboardCard from './DashboardCard';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import useDocumentTitle from '../../lib/useDocumentTitle';
-
-function formatRole(role) {
-  return role
-    .toLowerCase()
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
+import AdminOverviewCards from '../admin/AdminOverviewCards';
+import ModerationQueues from '../admin/ModerationQueues';
+import UserManagementPanel from '../admin/UserManagementPanel';
+import ReportingPanel from '../admin/ReportingPanel';
+import {
+  fetchModerationQueue,
+  approveEntity,
+  rejectEntity,
+  patchUser,
+  fetchOverview,
+  exportAdminData,
+} from '../admin/api';
 
 export default function AdminDashboard() {
-  const { roles, fetchUsers, assignRole } = useAuth();
+  const { token, roles, fetchUsers } = useAuth();
+  const [overview, setOverview] = useState(null);
+  const [overviewState, setOverviewState] = useState({ status: 'idle', error: '' });
+  const [queueType, setQueueType] = useState('events');
+  const [queueState, setQueueState] = useState({ status: 'idle', error: '', data: { items: [] } });
+  const [notes, setNotes] = useState({});
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ userId: '', roles: [] });
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [userState, setUserState] = useState({ status: 'idle', error: '', message: '' });
+  const [userForm, setUserForm] = useState({ userId: '', roles: [], isActive: true });
+  const [exportState, setExportState] = useState({ entity: '', format: 'csv', status: 'idle', error: '' });
+  const [exportFormat, setExportFormat] = useState('csv');
   useDocumentTitle('Onkur | Operations center 🌿');
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const fetched = await fetchUsers();
-        if (active) {
-          setUsers(fetched);
-        }
-      } catch (err) {
-        if (active) {
-          setError(err.message || 'Unable to load users');
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [fetchUsers]);
-
-  useEffect(() => {
-    if (!roles.length) {
-      return;
-    }
-    setForm((prev) => {
-      if (prev.roles.length) {
-        const filtered = prev.roles.filter((role) => roles.includes(role));
-        return { ...prev, roles: filtered.length ? filtered : [roles[0]] };
-      }
-      return { ...prev, roles: [roles[0]] };
-    });
-  }, [roles]);
 
   const roleOptions = useMemo(() => roles, [roles]);
 
-  const handleAssign = async (event) => {
-    event.preventDefault();
-    setMessage('');
-    setError('');
+  const loadOverview = useCallback(async () => {
+    if (!token) return;
+    setOverviewState({ status: 'loading', error: '' });
+    try {
+      const response = await fetchOverview({ token });
+      setOverview(response.overview || null);
+      setOverviewState({ status: 'success', error: '' });
+    } catch (error) {
+      setOverviewState({ status: 'error', error: error.message || 'Unable to load overview' });
+    }
+  }, [token]);
 
-    if (!form.userId || !form.roles.length) {
-      setError('Select a user and at least one role');
+  const loadQueue = useCallback(
+    async (typeToLoad = queueType) => {
+      if (!token) return;
+      setQueueState((prev) => ({ ...prev, status: 'loading', error: '' }));
+      try {
+        const data = await fetchModerationQueue({ token, type: typeToLoad });
+        setQueueState({ status: 'success', error: '', data });
+      } catch (error) {
+        setQueueState({ status: 'error', error: error.message || 'Unable to load moderation queue', data: { items: [] } });
+      }
+    },
+    [queueType, token]
+  );
+
+  const loadUsers = useCallback(async () => {
+    if (!fetchUsers) return;
+    setUserState((prev) => ({ ...prev, status: 'loading', error: '', message: '' }));
+    try {
+      const fetched = await fetchUsers();
+      setUsers(Array.isArray(fetched) ? fetched : []);
+      setUserState((prev) => ({ ...prev, status: 'idle' }));
+    } catch (error) {
+      setUserState({ status: 'error', error: error.message || 'Unable to load users', message: '' });
+    }
+  }, [fetchUsers]);
+
+  useEffect(() => {
+    if (!token) {
       return;
     }
+    loadOverview();
+    loadQueue(queueType);
+    loadUsers();
+  }, [token, loadOverview, loadQueue, loadUsers, queueType]);
 
-    try {
-      const updated = await assignRole({ userId: form.userId, roles: form.roles });
-      setUsers((prev) => prev.map((entry) => (entry.id === updated.id ? updated : entry)));
-      setMessage(`Updated roles to ${updated.roles.map((role) => formatRole(role)).join(', ')}.`);
-    } catch (err) {
-      setError(err.message || 'Unable to update role');
+  useEffect(() => {
+    if (!roleOptions.length) {
+      return;
     }
-  };
-
-  const handleUserChange = (event) => {
-    const userId = event.target.value;
-    const selectedUser = users.find((entry) => entry.id === userId);
-    setForm({
-      userId,
-      roles: selectedUser && Array.isArray(selectedUser.roles) && selectedUser.roles.length ? selectedUser.roles : roleOptions.slice(0, 1),
+    setUserForm((prev) => {
+      if (!prev.roles.length) {
+        return { ...prev, roles: [roleOptions[0]], isActive: true };
+      }
+      const filtered = prev.roles.filter((role) => roleOptions.includes(role));
+      return { ...prev, roles: filtered.length ? filtered : [roleOptions[0]] };
     });
-  };
+  }, [roleOptions]);
 
-  const toggleRole = (role) => {
-    setForm((prev) => {
-      const hasRole = prev.roles.includes(role);
-      const nextRoles = hasRole ? prev.roles.filter((entry) => entry !== role) : [...prev.roles, role];
-      return { ...prev, roles: nextRoles };
-    });
-  };
+  const handleNoteChange = useCallback((id, value) => {
+    setNotes((prev) => ({ ...prev, [id]: value }));
+  }, []);
+
+  const handleTypeChange = useCallback(
+    (nextType) => {
+      setQueueType(nextType);
+      setNotes({});
+      loadQueue(nextType);
+    },
+    [loadQueue]
+  );
+
+  const handleApprove = useCallback(
+    async (entityType, entityId) => {
+      if (!token) return;
+      try {
+        await approveEntity({ token, entityType, entityId });
+        setNotes((prev) => {
+          const next = { ...prev };
+          delete next[entityId];
+          return next;
+        });
+        await Promise.all([loadQueue(entityType), loadOverview()]);
+      } catch (error) {
+        setQueueState((prev) => ({ ...prev, error: error.message || 'Unable to approve item' }));
+      }
+    },
+    [token, loadQueue, loadOverview]
+  );
+
+  const handleReject = useCallback(
+    async (entityType, entityId, note) => {
+      if (!token) return;
+      try {
+        await rejectEntity({ token, entityType, entityId, note });
+        setNotes((prev) => {
+          const next = { ...prev };
+          delete next[entityId];
+          return next;
+        });
+        await Promise.all([loadQueue(entityType), loadOverview()]);
+      } catch (error) {
+        setQueueState((prev) => ({ ...prev, error: error.message || 'Unable to reject item' }));
+      }
+    },
+    [token, loadQueue, loadOverview]
+  );
+
+  const handleFormChange = useCallback(
+    (changes) => {
+      setUserState((prev) => ({ ...prev, message: '', error: prev.status === 'error' ? prev.error : '' }));
+      setUserForm((prev) => {
+        if (Object.prototype.hasOwnProperty.call(changes, 'userId')) {
+          const selected = users.find((entry) => entry.id === changes.userId);
+          return {
+            userId: changes.userId,
+            roles:
+              selected && Array.isArray(selected.roles) && selected.roles.length
+                ? selected.roles
+                : roleOptions.length
+                ? [roleOptions[0]]
+                : [],
+            isActive: selected ? selected.isActive !== false : true,
+          };
+        }
+        return { ...prev, ...changes };
+      });
+    },
+    [roleOptions, users]
+  );
+
+  const handleUserSubmit = useCallback(
+    async (event) => {
+      event.preventDefault();
+      if (!userForm.userId || !userForm.roles.length) {
+        setUserState({ status: 'error', error: 'Select a user and at least one role', message: '' });
+        return;
+      }
+      if (!token) {
+        setUserState({ status: 'error', error: 'Authentication required', message: '' });
+        return;
+      }
+      setUserState({ status: 'loading', error: '', message: '' });
+      try {
+        const response = await patchUser({
+          token,
+          userId: userForm.userId,
+          roles: userForm.roles,
+          isActive: userForm.isActive,
+        });
+        const updated = response.user;
+        setUsers((prev) => prev.map((entry) => (entry.id === updated.id ? { ...entry, ...updated } : entry)));
+        setUserState({ status: 'idle', error: '', message: 'User updated successfully.' });
+        loadOverview();
+      } catch (error) {
+        setUserState({ status: 'error', error: error.message || 'Unable to update user', message: '' });
+      }
+    },
+    [token, userForm, loadOverview]
+  );
+
+  const handleExport = useCallback(
+    async (entity, formatOverride) => {
+      if (!token) return;
+      const formatToUse = formatOverride || exportFormat || 'csv';
+      setExportState({ entity, format: formatToUse, status: 'loading', error: '' });
+      try {
+        const { blob, filename } = await exportAdminData({ token, entity, format: formatToUse });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const fallbackName = `onkur-${entity}-${Date.now()}.${formatToUse === 'excel' ? 'xls' : 'csv'}`;
+        link.download = filename || fallbackName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        setExportState({ entity: '', format: formatToUse, status: 'idle', error: '' });
+      } catch (error) {
+        setExportState({ entity: '', format: formatToUse, status: 'error', error: error.message || 'Export failed' });
+      }
+    },
+    [token, exportFormat]
+  );
+
+  const handleFormatChange = useCallback((value) => {
+    setExportFormat(value);
+    setExportState((prev) => ({ ...prev, format: value }));
+  }, []);
 
   return (
     <div className="grid gap-5 md:[grid-template-columns:repeat(auto-fit,minmax(320px,1fr))]">
       <header className="flex flex-col gap-2 md:col-span-full">
         <h2 className="m-0 font-display text-2xl font-semibold text-brand-forest">Operations center 🌿</h2>
         <p className="m-0 text-sm text-brand-muted sm:text-base">
-          Manage the health of the Onkur ecosystem, assign roles, and monitor authentication signals.
+          Review submissions, steer sponsorships, and keep the community roster current.
         </p>
       </header>
 
-      <DashboardCard
-        title="Authentication signals"
-        description="Quick pulse on signups and login performance. Detailed analytics arrive with the metrics service."
-      >
-        <ul className="list-disc space-y-1.5 pl-5 text-sm text-brand-muted">
-          <li>
-            Signups today: <strong className="text-brand-forest">0</strong>
-          </li>
-          <li>
-            Login success rate: <strong className="text-brand-forest">100%</strong> (initial baseline)
-          </li>
-          <li>
-            Auth error rate: <strong className="text-brand-forest">0%</strong> (monitor via audit log)
-          </li>
-        </ul>
-      </DashboardCard>
+      <AdminOverviewCards
+        overview={overview}
+        loading={overviewState.status === 'loading'}
+        error={overviewState.error}
+      />
 
-      <DashboardCard
-        title="Assign roles"
-        description="Elevate trusted community members into managers or sponsors. Admins guard access for now."
-      >
-        <form onSubmit={handleAssign} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-semibold text-brand-muted" htmlFor="userId">
-              Select user
-            </label>
-            <select
-              id="userId"
-              name="userId"
-              value={form.userId}
-              onChange={handleUserChange}
-              className="w-full rounded-md border border-brand-green/40 bg-white/90 px-3 py-3 text-base shadow-sm transition focus:border-brand-green focus:outline-none focus:ring-2 focus:ring-brand-green/40"
-            >
-              <option value="">Choose a user</option>
-              {users.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name} · {entry.email}
-                </option>
-              ))}
-            </select>
-          </div>
-          <fieldset className="flex flex-col gap-3 rounded-md border border-brand-green/30 bg-brand-sand/20 px-3 py-3">
-            <legend className="px-2 text-xs font-semibold uppercase tracking-[0.2em] text-brand-muted">
-              Roles
-            </legend>
-            {roleOptions.map((role) => {
-              const inputId = `admin-role-${role.toLowerCase()}`;
-              const checked = form.roles.includes(role);
-              return (
-                <label key={role} htmlFor={inputId} className="flex items-center justify-between gap-3 rounded-md border border-brand-green/40 bg-white/80 px-3 py-2">
-                  <span className="text-sm font-medium text-brand-forest">{formatRole(role)}</span>
-                  <input
-                    id={inputId}
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggleRole(role)}
-                    className="h-4 w-4 rounded border-brand-green text-brand-green focus:ring-brand-green"
-                  />
-                </label>
-              );
-            })}
-          </fieldset>
-          {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
-          {message ? <p className="text-sm font-semibold text-brand-green">{message}</p> : null}
-          <button type="submit" className="btn-primary">
-            Assign role
-          </button>
-        </form>
-      </DashboardCard>
+      <ModerationQueues
+        type={queueType}
+        queue={queueState.data}
+        notes={notes}
+        onTypeChange={handleTypeChange}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        onNoteChange={handleNoteChange}
+        loading={queueState.status === 'loading'}
+        error={queueState.error}
+      />
 
-      <DashboardCard
-        title="Community directory"
-        description="A quick overview of everyone with access today. Search and filters are on the roadmap."
-        className="md:col-span-full"
-      >
-        {loading ? (
-          <p className="m-0 text-sm text-brand-muted">Loading members…</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
-              <thead className="bg-brand-sky/20 text-brand-muted">
-                <tr>
-                  <th className="px-3 py-2 text-left font-semibold">Name</th>
-                  <th className="px-3 py-2 text-left font-semibold">Email</th>
-                  <th className="px-3 py-2 text-left font-semibold">Role</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((entry, index) => (
-                  <tr key={entry.id} className={index % 2 === 0 ? 'bg-white' : 'bg-brand-green/5'}>
-                    <td className="px-3 py-2 text-brand-forest">{entry.name}</td>
-                    <td className="px-3 py-2 text-brand-forest">{entry.email}</td>
-                    <td className="px-3 py-2 text-brand-forest">
-                      {Array.isArray(entry.roles) && entry.roles.length
-                        ? entry.roles.map((role) => formatRole(role)).join(', ')
-                        : formatRole(entry.role)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {users.length === 0 ? (
-              <p className="mt-3 text-sm text-brand-muted">No members yet. Start by inviting volunteers.</p>
-            ) : null}
-          </div>
-        )}
-      </DashboardCard>
+      <UserManagementPanel
+        users={users}
+        roles={roleOptions}
+        form={userForm}
+        onFormChange={handleFormChange}
+        onSubmit={handleUserSubmit}
+        state={userState}
+        onRefresh={loadUsers}
+      />
+
+      <ReportingPanel
+        onExport={handleExport}
+        exportState={exportState}
+        format={exportFormat}
+        onFormatChange={handleFormatChange}
+      />
     </div>
   );
 }

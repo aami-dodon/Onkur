@@ -16,6 +16,7 @@ const schemaPromise = (async () => {
       email_normalized TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL CHECK (role = ANY(ARRAY[${roleCheckArray}]::TEXT[])),
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       email_verified_at TIMESTAMPTZ NULL
     )
@@ -24,6 +25,11 @@ const schemaPromise = (async () => {
   await pool.query(`
     ALTER TABLE users
     ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ NULL
+  `);
+
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE
   `);
 
   await pool.query(`
@@ -47,7 +53,11 @@ const schemaPromise = (async () => {
       id UUID PRIMARY KEY,
       actor_id UUID NULL REFERENCES users(id) ON DELETE SET NULL,
       action TEXT NOT NULL,
-      metadata JSONB NOT NULL DEFAULT '{}'::JSONB,
+      entity_type TEXT NULL,
+      entity_id UUID NULL,
+      before JSONB NULL,
+      after JSONB NULL,
+      metadata JSONB NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
@@ -77,6 +87,19 @@ const schemaPromise = (async () => {
 
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON audit_logs (actor_id)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs (entity_type, entity_id)
+  `);
+
+  await pool.query(`
+    ALTER TABLE audit_logs
+    ADD COLUMN IF NOT EXISTS entity_type TEXT NULL,
+    ADD COLUMN IF NOT EXISTS entity_id UUID NULL,
+    ADD COLUMN IF NOT EXISTS before JSONB NULL,
+    ADD COLUMN IF NOT EXISTS after JSONB NULL,
+    ADD COLUMN IF NOT EXISTS metadata JSONB NULL
   `);
 
   await pool.query(`
@@ -128,7 +151,7 @@ async function createUser({ name, email, passwordHash, roles }) {
       `
         INSERT INTO users (id, name, email, email_normalized, password_hash, role)
         VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING id, name, email, role, created_at, email_verified_at, email_normalized, password_hash
+        RETURNING id, name, email, role, created_at, email_verified_at, email_normalized, password_hash, is_active
       `,
       [id, name, email, normalizedEmail, passwordHash, primaryRole]
     );
@@ -155,7 +178,7 @@ async function findUserByEmail(email) {
   await ensureSchema();
   const normalizedEmail = email.toLowerCase();
   const result = await pool.query(
-    `SELECT id, name, email, email_normalized, password_hash, role, created_at, email_verified_at FROM users WHERE email_normalized = $1`,
+    `SELECT id, name, email, email_normalized, password_hash, role, created_at, email_verified_at, is_active FROM users WHERE email_normalized = $1`,
     [normalizedEmail]
   );
   const user = result.rows[0] || null;
@@ -168,7 +191,7 @@ async function findUserByEmail(email) {
 async function findUserById(id) {
   await ensureSchema();
   const result = await pool.query(
-    `SELECT id, name, email, email_normalized, password_hash, role, created_at, email_verified_at FROM users WHERE id = $1`,
+    `SELECT id, name, email, email_normalized, password_hash, role, created_at, email_verified_at, is_active FROM users WHERE id = $1`,
     [id]
   );
   const user = result.rows[0] || null;
@@ -181,7 +204,7 @@ async function findUserById(id) {
 async function listUsers() {
   await ensureSchema();
   const result = await pool.query(
-    `SELECT id, name, email, role, created_at, email_verified_at FROM users ORDER BY created_at DESC`
+    `SELECT id, name, email, role, created_at, email_verified_at, is_active FROM users ORDER BY created_at DESC`
   );
   const users = result.rows;
   if (users.length === 0) {
@@ -236,7 +259,7 @@ async function replaceUserRoles({ userId, roles }) {
         UPDATE users
         SET role = $2
         WHERE id = $1
-        RETURNING id, name, email, role, created_at, email_verified_at, email_normalized, password_hash
+        RETURNING id, name, email, role, created_at, email_verified_at, email_normalized, password_hash, is_active
       `,
       [userId, primaryRole]
     );
@@ -264,16 +287,65 @@ async function replaceUserRoles({ userId, roles }) {
   }
 }
 
-async function recordAuditLog({ actorId = null, action, metadata = {} }) {
+async function setUserActiveStatus({ userId, isActive }) {
+  await ensureSchema();
+  const result = await pool.query(
+    `
+      UPDATE users
+      SET is_active = $2
+      WHERE id = $1
+      RETURNING id, name, email, email_normalized, password_hash, role, created_at, email_verified_at, is_active
+    `,
+    [userId, Boolean(isActive)]
+  );
+  const user = result.rows[0] || null;
+  if (!user) {
+    return null;
+  }
+  return attachRoles(user);
+}
+
+function serializeSnapshot(snapshot) {
+  if (snapshot === undefined || snapshot === null) {
+    return null;
+  }
+  try {
+    return JSON.stringify(snapshot);
+  } catch (error) {
+    logger.warn('Failed to serialize audit snapshot', { error: error.message });
+    return null;
+  }
+}
+
+async function recordAuditLog({
+  actorId = null,
+  action,
+  entityType = null,
+  entityId = null,
+  before = null,
+  after = null,
+  metadata = null,
+}) {
   await ensureSchema();
   const id = randomUUID();
-  const metadataJson = JSON.stringify(metadata || {});
+  const beforeJson = serializeSnapshot(before);
+  const afterJson = serializeSnapshot(after ?? metadata ?? {});
+  const metadataJson = metadata && after === null ? serializeSnapshot(metadata) : null;
   await pool.query(
     `
-      INSERT INTO audit_logs (id, actor_id, action, metadata)
-      VALUES ($1, $2, $3, $4::jsonb)
+      INSERT INTO audit_logs (id, actor_id, action, entity_type, entity_id, before, after, metadata)
+      VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb)
     `,
-    [id, actorId, action, metadataJson]
+    [
+      id,
+      actorId,
+      action,
+      entityType,
+      entityId || null,
+      beforeJson,
+      afterJson,
+      metadataJson,
+    ]
   );
 }
 
@@ -378,7 +450,7 @@ async function markEmailVerified({ userId }) {
       UPDATE users
       SET email_verified_at = COALESCE(email_verified_at, NOW())
       WHERE id = $1
-      RETURNING id, name, email, email_normalized, password_hash, role, created_at, email_verified_at
+      RETURNING id, name, email, email_normalized, password_hash, role, created_at, email_verified_at, is_active
     `,
     [userId]
   );
@@ -391,6 +463,7 @@ module.exports = {
   findUserById,
   listUsers,
   replaceUserRoles,
+  setUserActiveStatus,
   recordAuditLog,
   revokeToken,
   isTokenRevoked,

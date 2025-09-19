@@ -452,6 +452,10 @@ function mapEvent(event) {
       ? event.requiredAvailability
       : [],
     isOnline: Boolean(event.isOnline ?? event.is_online),
+    approvalStatus: event.approvalStatus || event.approval_status || 'PENDING',
+    approvalNote: event.approvalNote || event.approval_note || null,
+    approvalDecidedAt: toIso(event.approvalDecidedAt || event.approval_decided_at),
+    approvalDecidedBy: event.approvalDecidedBy || event.approval_decided_by || null,
   };
 }
 
@@ -616,6 +620,12 @@ async function publishEvent(eventId, actor) {
   }
   if (event.status === 'COMPLETED') {
     throw Object.assign(new Error('Completed events cannot be republished'), { statusCode: 400 });
+  }
+
+  if ((event.approvalStatus || event.approval_status || 'PENDING') !== 'APPROVED') {
+    throw Object.assign(new Error('Admin approval is required before publishing this event'), {
+      statusCode: 403,
+    });
   }
 
   const updated = await setEventStatus(eventId, 'PUBLISHED');

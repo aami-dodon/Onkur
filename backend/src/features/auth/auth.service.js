@@ -69,6 +69,7 @@ function toPublicUser(user) {
     email: user.email,
     role: primaryRole || null,
     roles,
+    isActive: user.is_active !== false,
     emailVerified: Boolean(user.email_verified_at),
     emailVerifiedAt:
       user.email_verified_at instanceof Date
@@ -117,6 +118,22 @@ function normalizeSignupRoles(roles) {
   return sortRolesByPriority(unique);
 }
 
+function toAuditUserSnapshot(user) {
+  if (!user) {
+    return null;
+  }
+  const roles = Array.isArray(user.roles) && user.roles.length ? sortRolesByPriority(user.roles) : undefined;
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role || null,
+    roles: roles || undefined,
+    isActive: user.is_active !== false,
+    emailVerified: Boolean(user.email_verified_at),
+  };
+}
+
 async function signup({ name, email, password, roles }) {
   if (!name || !email || !password) {
     throw createHttpError(400, 'Name, email, and password are required');
@@ -139,7 +156,9 @@ async function signup({ name, email, password, roles }) {
   await recordAuditLog({
     actorId: user.id,
     action: 'auth.signup',
-    metadata: { email: user.email, roles: user.roles || [] },
+    entityType: 'user',
+    entityId: user.id,
+    after: toAuditUserSnapshot(user),
   });
 
   let verification;
@@ -187,7 +206,9 @@ async function login({ email, password }) {
     await recordAuditLog({
       actorId: null,
       action: 'auth.login.failure',
-      metadata: { email, reason: 'user_not_found' },
+      entityType: 'user',
+      entityId: null,
+      after: { email, success: false, reason: 'user_not_found' },
     });
     throw createHttpError(401, 'Invalid credentials');
   }
@@ -197,16 +218,34 @@ async function login({ email, password }) {
     await recordAuditLog({
       actorId: user.id,
       action: 'auth.login.failure',
-      metadata: { email, reason: 'invalid_password' },
+      entityType: 'user',
+      entityId: user.id,
+      before: toAuditUserSnapshot(user),
+      after: { email: user.email, success: false, reason: 'invalid_password' },
     });
     throw createHttpError(401, 'Invalid credentials');
+  }
+
+  if (user.is_active === false) {
+    await recordAuditLog({
+      actorId: user.id,
+      action: 'auth.login.failure',
+      entityType: 'user',
+      entityId: user.id,
+      before: toAuditUserSnapshot(user),
+      after: { email: user.email, success: false, reason: 'account_inactive' },
+    });
+    throw createHttpError(403, 'This account has been deactivated. Reach out to the admin team to restore access.');
   }
 
   if (!user.email_verified_at) {
     await recordAuditLog({
       actorId: user.id,
       action: 'auth.login.failure',
-      metadata: { email, reason: 'email_not_verified' },
+      entityType: 'user',
+      entityId: user.id,
+      before: toAuditUserSnapshot(user),
+      after: { email: user.email, success: false, reason: 'email_not_verified' },
     });
     throw createHttpError(403, 'Please verify your email before logging in.');
   }
@@ -214,7 +253,10 @@ async function login({ email, password }) {
   await recordAuditLog({
     actorId: user.id,
     action: 'auth.login.success',
-    metadata: { email: user.email, roles: user.roles || [] },
+    entityType: 'user',
+    entityId: user.id,
+    before: toAuditUserSnapshot(user),
+    after: { email: user.email, success: true, roles: user.roles || [] },
   });
 
   const tokenBundle = await issueTokenBundle(user);
@@ -262,7 +304,10 @@ async function verifyEmail({ token }) {
   await recordAuditLog({
     actorId: updatedUser.id,
     action: 'auth.email.verify',
-    metadata: { email: updatedUser.email },
+    entityType: 'user',
+    entityId: updatedUser.id,
+    before: toAuditUserSnapshot(user),
+    after: toAuditUserSnapshot(updatedUser),
   });
 
   try {
@@ -291,7 +336,9 @@ async function logout({ jti, expiresAt, actorId }) {
   await recordAuditLog({
     actorId: actorId || null,
     action: 'auth.logout',
-    metadata: { jti },
+    entityType: 'session',
+    entityId: null,
+    after: { jti, revokedAt: new Date().toISOString() },
   });
 }
 
@@ -385,15 +432,20 @@ async function assignRole({ actorId, userId, roles }) {
     throw createHttpError(400, 'At least one valid role is required');
   }
 
-  const user = await replaceUserRoles({ userId, roles: orderedRoles });
-  if (!user) {
+  const existing = await findUserById(userId);
+  if (!existing) {
     throw createHttpError(404, 'User not found');
   }
+
+  const user = await replaceUserRoles({ userId, roles: orderedRoles });
 
   await recordAuditLog({
     actorId,
     action: 'auth.role.change',
-    metadata: { userId: user.id, roles: user.roles || [] },
+    entityType: 'user',
+    entityId: user.id,
+    before: toAuditUserSnapshot(existing),
+    after: toAuditUserSnapshot(user),
   });
 
   return toPublicUserWithProfile(user);

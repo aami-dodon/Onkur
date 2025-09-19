@@ -184,6 +184,11 @@ he app boots under the CDN.
 - **Change:** Introduced the sponsor workflow end to end: sponsors apply for approval, admins moderate applications, approved sponsors pledge funds or in-kind support to events, and dashboards surface live sponsorships with ROI-ready metrics and impact reports.
 - **Impact:** Sponsors gain a dedicated workspace to support events, see their logos across event and gallery experiences, and receive automated summaries of volunteer hours, attendance, and gallery visibility tied to their contributions.
 
+## Phase 6 admin oversight
+- **Date:** 2025-10-08
+- **Change:** Delivered a comprehensive admin console with moderation queues for events, sponsors, and gallery media; approval/rejection APIs that log before/after snapshots; user management to toggle roles and deactivate accounts; and downloadable reports with CSV/Excel output plus refreshed metrics tiles.
+- **Impact:** Admins can govern the entire platform from one screen, keep audit trails for every action, notify submitters automatically, and download system-wide datasets for compliance or analytics without touching the database.
+
 
 ## Sponsor event discovery guardrails
 - **Date:** 2025-10-02

@@ -15,6 +15,25 @@ function normalizeConfigValue(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function toAuditSnapshot(user) {
+  if (!user) {
+    return null;
+  }
+  const roles = Array.isArray(user.roles) && user.roles.length
+    ? user.roles
+    : user.role
+    ? [user.role]
+    : [];
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role || null,
+    roles,
+    emailVerified: Boolean(user.email_verified_at),
+  };
+}
+
 async function ensureAdminUser() {
   const configuredName = normalizeConfigValue(config.admin?.name);
   const configuredEmail = normalizeConfigValue(config.admin?.email).toLowerCase();
@@ -45,7 +64,10 @@ async function ensureAdminUser() {
       await recordAuditLog({
         actorId: existing.id,
         action: "auth.bootstrap.admin.promote",
-        metadata: { email: existing.email, roles: updatedUser?.roles || desiredRoles },
+        entityType: "user",
+        entityId: existing.id,
+        before: toAuditSnapshot(existing),
+        after: toAuditSnapshot(updatedUser),
       });
       logger.info("Admin bootstrap: ensured existing user has ADMIN role", { email: configuredEmail });
     } else {
@@ -72,7 +94,9 @@ async function ensureAdminUser() {
   await recordAuditLog({
     actorId: adminUser.id,
     action: "auth.bootstrap.admin.created",
-    metadata: { email: adminUser.email },
+    entityType: "user",
+    entityId: adminUser.id,
+    after: toAuditSnapshot(adminUser),
   });
 
   logger.info("Admin bootstrap: created default admin user", { email: configuredEmail });
