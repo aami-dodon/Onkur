@@ -77,6 +77,11 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   server: {
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      Pragma: 'no-cache',
+      Expires: '0',
+    },
     proxy: {
       '/api': 'http://localhost:5000', // Proxy API requests to backend
     },
