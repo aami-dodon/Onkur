@@ -18,7 +18,10 @@ export function calculateProfileProgress(profile) {
     },
     {
       label: 'Add your home base or region',
-      complete: Boolean(profile.location && profile.location.trim().length),
+      complete: Boolean(
+        (profile.stateCode && profile.citySlug) ||
+          (profile.location && profile.location.trim().length)
+      ),
     },
     {
       label: 'Introduce yourself with a short bio',

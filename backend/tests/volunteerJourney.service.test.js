@@ -7,6 +7,7 @@ describe('volunteerJourney.service', () => {
   let volunteerService;
   let emailServiceMock;
   let repository;
+  let seedLookups;
 
   beforeEach(async () => {
     jest.resetModules();
@@ -38,6 +39,9 @@ describe('volunteerJourney.service', () => {
     authService = require('../src/features/auth/auth.service');
     volunteerService = require('../src/features/volunteer-journey/volunteerJourney.service');
     repository = require('../src/features/volunteer-journey/volunteerJourney.repository');
+    ({ seedVolunteerProfileLookups: seedLookups } = require('../src/features/volunteer-journey/profile.bootstrap'));
+
+    await seedLookups();
   });
 
   afterEach(() => {
@@ -88,19 +92,27 @@ describe('volunteerJourney.service', () => {
       userId: volunteer.id,
       skills: ['Tree Planting', 'tree planting', 'Community Outreach'],
       interests: ['Forests', 'Education'],
-      availability: 'Weekends',
-      location: ' Pune ',
+      availability: 'weekends',
+      stateCode: 'MH',
+      citySlug: 'mh-pune',
       bio: 'Ready to help nurture our urban forests.',
     });
 
     expect(updated.skills).toEqual(['tree planting', 'community outreach']);
     expect(updated.interests).toEqual(['forests', 'education']);
-    expect(updated.availability).toBe('Weekends');
-    expect(updated.location).toBe('Pune');
+    expect(updated.availability).toBe('weekends');
+    expect(updated.availabilityLabel).toBe('Weekends');
+    expect(updated.stateCode).toBe('MH');
+    expect(updated.stateName).toBe('Maharashtra');
+    expect(updated.citySlug).toBe('mh-pune');
+    expect(updated.cityName).toBe('Pune');
+    expect(updated.location).toBe('Pune, Maharashtra');
 
     const profile = await volunteerService.getProfile(volunteer.id);
     expect(profile.skills).toEqual(updated.skills);
     expect(profile.interests).toEqual(updated.interests);
+    expect(profile.stateCode).toBe('MH');
+    expect(profile.citySlug).toBe('mh-pune');
   });
 
   test('event signup enforces uniqueness and capacity while sending confirmation email', async () => {
