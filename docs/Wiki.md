@@ -168,4 +168,10 @@
 - **Impact:** Initial page loads download smaller JavaScript payloads while subsequent navigation streams feature-specific code, aligning the dashboard with GTmetrix recommendations for minification, unused code removal, and bundle splitting.
 
 
+## Rocket Loader preload credential alignment
+- **Date:** 2025-10-02
+- **Change:** Added a Vite HTML transform that injects `crossorigin="anonymous"` on the dev client preload and entry module scripts while updating `index.html` to mark the root bundle with the same attribute.
+- **Impact:** Cloudflare Rocket Loader now reuses the preload for `@vite/client` without warning about credential mode mismatches, keeping browser consoles clean during development.
+
+
 
