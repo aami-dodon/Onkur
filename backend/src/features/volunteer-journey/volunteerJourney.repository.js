@@ -100,6 +100,15 @@ const schemaPromise = (async () => {
   );
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS event_categories (
+      value TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS events (
       id UUID PRIMARY KEY,
       title TEXT NOT NULL,
@@ -123,12 +132,54 @@ const schemaPromise = (async () => {
   await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS requirements TEXT NULL`);
   await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ NULL`);
   await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ NULL`);
+  await pool.query(`ALTER TABLE events ALTER COLUMN location DROP NOT NULL`);
   await pool.query(`ALTER TABLE events ALTER COLUMN status SET DEFAULT 'DRAFT'`);
   await pool.query(`UPDATE events SET status = UPPER(status) WHERE status IS NOT NULL AND status <> UPPER(status)`);
   await pool.query(`ALTER TABLE events DROP CONSTRAINT IF EXISTS events_status_check`);
   await pool.query(
     `ALTER TABLE events ADD CONSTRAINT events_status_check CHECK (status = ANY(ARRAY['DRAFT','PUBLISHED','CANCELLED','COMPLETED']::TEXT[]))`,
   );
+
+  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS category_value TEXT NULL`);
+  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS location_state_code TEXT NULL`);
+  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS location_city_slug TEXT NULL`);
+  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS is_online BOOLEAN NOT NULL DEFAULT FALSE`);
+  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS required_skills TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]`);
+  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS required_interests TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]`);
+  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS required_availability TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]`);
+  await pool.query(
+    `ALTER TABLE events ADD CONSTRAINT events_category_value_fkey FOREIGN KEY (category_value) REFERENCES event_categories(value) ON DELETE SET NULL`
+  );
+  await pool.query(
+    `ALTER TABLE events ADD CONSTRAINT events_state_code_fkey FOREIGN KEY (location_state_code) REFERENCES indian_states(code) ON DELETE SET NULL`
+  );
+  await pool.query(
+    `ALTER TABLE events ADD CONSTRAINT events_city_slug_fkey FOREIGN KEY (location_city_slug) REFERENCES indian_cities(slug) ON DELETE SET NULL`
+  );
+
+  const existingCategories = await pool.query(
+    `SELECT DISTINCT category FROM events WHERE category IS NOT NULL AND category <> ''`
+  );
+  for (const row of existingCategories.rows) {
+    const categoryLabel = row.category;
+    const value = toNameSlug(categoryLabel);
+    if (!value) {
+      continue;
+    }
+    await pool.query(
+      `
+        INSERT INTO event_categories (value, label, updated_at)
+        VALUES ($1, $2, NOW())
+        ON CONFLICT (value)
+        DO UPDATE SET label = EXCLUDED.label, updated_at = NOW()
+      `,
+      [value, categoryLabel],
+    );
+    await pool.query(
+      `UPDATE events SET category_value = $1 WHERE category = $2 AND (category_value IS NULL OR category_value = '')`,
+      [value, categoryLabel],
+    );
+  }
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS event_signups (

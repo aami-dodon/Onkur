@@ -15,7 +15,18 @@ const {
   generateEventReport,
   getEventDetail,
   getUserContact,
+  listEventCategories,
+  findEventCategory,
+  upsertEventCategory,
 } = require('./eventManagement.repository');
+const {
+  listSkillOptions,
+  listInterestOptions,
+  listAvailabilityOptions,
+  listStates,
+  findStateByCode,
+  findCityBySlug,
+} = require('../volunteer-journey/volunteerJourney.repository');
 
 function toIso(value) {
   if (!value) return null;
@@ -45,12 +56,74 @@ function ensureCapacity(value) {
   return Math.round(num);
 }
 
+function toNameSlug(name) {
+  return String(name || '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function normalizeStringArray(input) {
+  if (!input) {
+    return [];
+  }
+  const list = Array.isArray(input) ? input : [input];
+  const cleaned = list
+    .map((value) => String(value || '').trim())
+    .filter(Boolean);
+  return [...new Set(cleaned)];
+}
+
+function toBooleanFlag(value) {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'number') {
+    return value !== 0;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    return ['true', '1', 'yes', 'on'].includes(normalized);
+  }
+  return false;
+}
+
+function describeLocation(event) {
+  if (!event) {
+    return 'Location to be announced';
+  }
+  const online = toBooleanFlag(event.isOnline ?? event.is_online);
+  if (online) {
+    return event.location || 'Online event';
+  }
+  const parts = [];
+  if (event.location) {
+    parts.push(event.location);
+  }
+  if (event.cityName && !parts.includes(event.cityName)) {
+    parts.push(event.cityName);
+  }
+  if (event.stateName && !parts.includes(event.stateName)) {
+    parts.push(event.stateName);
+  }
+  const summary = parts.filter(Boolean).join(', ');
+  return summary || 'Location to be announced';
+}
+
 function normalizeEventPayload(payload = {}) {
   const title = String(payload.title || '').trim();
   const description = String(payload.description || '').trim();
-  const category = String(payload.category || '').trim();
+  const categoryLabel = String(
+    payload.categoryLabel || payload.category_label || payload.category || '',
+  ).trim();
+  const categoryValue = String(
+    payload.categoryValue || payload.category_value || payload.categoryOption?.value || '',
+  ).trim();
   const theme = payload.theme ? String(payload.theme).trim() : null;
-  const location = String(payload.location || '').trim();
+  const locationNote = String(
+    payload.locationNote || payload.location_note || payload.location || payload.venue || '',
+  ).trim();
   const requirements = payload.requirements ? String(payload.requirements).trim() : null;
 
   if (!title) {
@@ -58,12 +131,6 @@ function normalizeEventPayload(payload = {}) {
   }
   if (!description) {
     throw Object.assign(new Error('Description is required'), { statusCode: 400 });
-  }
-  if (!category) {
-    throw Object.assign(new Error('Category is required'), { statusCode: 400 });
-  }
-  if (!location) {
-    throw Object.assign(new Error('Location is required'), { statusCode: 400 });
   }
 
   const dateStart = parseDate(payload.dateStart || payload.date_start, 'Start date');
@@ -73,18 +140,41 @@ function normalizeEventPayload(payload = {}) {
     throw Object.assign(new Error('End date must be after the start date'), { statusCode: 400 });
   }
 
+  const isOnline = toBooleanFlag(payload.isOnline ?? payload.is_online);
+  const stateCode = String(payload.stateCode || payload.state_code || '').trim().toUpperCase();
+  const citySlug = String(payload.citySlug || payload.city_slug || '').trim();
+  if (!isOnline) {
+    if (!stateCode) {
+      throw Object.assign(new Error('State is required for in-person events'), { statusCode: 400 });
+    }
+    if (!citySlug) {
+      throw Object.assign(new Error('City is required for in-person events'), { statusCode: 400 });
+    }
+  }
+
   const capacity = ensureCapacity(payload.capacity);
 
   return {
     title,
     description,
-    category,
+    categoryInput: {
+      value: categoryValue || null,
+      label: categoryLabel,
+    },
     theme,
     dateStart,
     dateEnd,
-    location,
+    locationNote: locationNote || null,
+    isOnline,
+    stateCode: stateCode || null,
+    citySlug: citySlug || null,
     capacity,
     requirements,
+    requiredSkills: normalizeStringArray(payload.requiredSkills || payload.skills),
+    requiredInterests: normalizeStringArray(payload.requiredInterests || payload.interests),
+    requiredAvailability: normalizeStringArray(
+      payload.requiredAvailability || payload.availability,
+    ),
   };
 }
 
@@ -98,13 +188,122 @@ function mapEvent(event) {
     completedAt: toIso(event.completedAt || event.completed_at),
     createdAt: toIso(event.createdAt || event.created_at),
     updatedAt: toIso(event.updatedAt || event.updated_at),
+    requiredSkills: Array.isArray(event.requiredSkills) ? event.requiredSkills : [],
+    requiredInterests: Array.isArray(event.requiredInterests) ? event.requiredInterests : [],
+    requiredAvailability: Array.isArray(event.requiredAvailability)
+      ? event.requiredAvailability
+      : [],
+    isOnline: Boolean(event.isOnline ?? event.is_online),
+  };
+}
+
+async function resolveCategory(categoryInput = {}) {
+  const value = categoryInput.value ? String(categoryInput.value).trim() : '';
+  const label = categoryInput.label ? String(categoryInput.label).trim() : '';
+
+  if (value) {
+    const existing = await findEventCategory(value);
+    if (existing) {
+      if (label && existing.label !== label) {
+        const updated = await upsertEventCategory({ value: existing.value, label });
+        return updated;
+      }
+      return existing;
+    }
+    if (!label) {
+      throw Object.assign(new Error('Selected category is no longer available'), {
+        statusCode: 400,
+      });
+    }
+    const ensured = await upsertEventCategory({ value, label });
+    return ensured;
+  }
+
+  if (!label) {
+    throw Object.assign(new Error('Category is required'), { statusCode: 400 });
+  }
+
+  const slug = toNameSlug(label);
+  if (!slug) {
+    throw Object.assign(new Error('Category is required'), { statusCode: 400 });
+  }
+
+  const ensured = await upsertEventCategory({ value: slug, label });
+  return ensured;
+}
+
+async function resolveLocation({ isOnline, stateCode, citySlug, locationNote }) {
+  if (isOnline) {
+    const note = locationNote || 'Online event';
+    return {
+      isOnline: true,
+      stateCode: null,
+      citySlug: null,
+      locationText: note,
+    };
+  }
+
+  const normalizedState = String(stateCode || '').trim().toUpperCase();
+  const normalizedCity = String(citySlug || '').trim();
+
+  const stateRecord = await findStateByCode(normalizedState);
+  if (!stateRecord) {
+    throw Object.assign(new Error('Selected state was not found'), { statusCode: 400 });
+  }
+
+  const cityRecord = await findCityBySlug(normalizedCity);
+  if (!cityRecord || cityRecord.state_code !== stateRecord.code) {
+    throw Object.assign(new Error('Selected city was not found in the chosen state'), {
+      statusCode: 400,
+    });
+  }
+
+  const fallbackLocation = `${cityRecord.name}, ${stateRecord.name}`;
+
+  return {
+    isOnline: false,
+    stateCode: stateRecord.code,
+    citySlug: cityRecord.slug,
+    locationText: locationNote || fallbackLocation,
   };
 }
 
 async function createEventDraft({ payload, actor }) {
   const normalized = normalizeEventPayload(payload);
-  const event = await createEvent({ ...normalized, createdBy: actor?.id || null });
-  logger.info('Event draft created', { eventId: event.id, createdBy: actor?.id || null });
+  const category = await resolveCategory(normalized.categoryInput);
+  const location = await resolveLocation({
+    isOnline: normalized.isOnline,
+    stateCode: normalized.stateCode,
+    citySlug: normalized.citySlug,
+    locationNote: normalized.locationNote,
+  });
+
+  const event = await createEvent({
+    title: normalized.title,
+    description: normalized.description,
+    category: category.label,
+    categoryValue: category.value,
+    theme: normalized.theme,
+    dateStart: normalized.dateStart,
+    dateEnd: normalized.dateEnd,
+    location: location.locationText,
+    stateCode: location.stateCode,
+    citySlug: location.citySlug,
+    isOnline: location.isOnline,
+    capacity: normalized.capacity,
+    requirements: normalized.requirements,
+    requiredSkills: normalized.requiredSkills,
+    requiredInterests: normalized.requiredInterests,
+    requiredAvailability: normalized.requiredAvailability,
+    createdBy: actor?.id || null,
+  });
+
+  logger.info('Event draft created', {
+    eventId: event.id,
+    createdBy: actor?.id || null,
+    categoryValue: category.value,
+    isOnline: location.isOnline,
+  });
   return mapEvent(event);
 }
 
@@ -114,8 +313,36 @@ async function updateEventDetails(eventId, payload) {
     throw Object.assign(new Error('Event not found'), { statusCode: 404 });
   }
   const normalized = normalizeEventPayload({ ...existing, ...payload });
-  const event = await updateEvent(eventId, normalized);
-  logger.info('Event updated', { eventId });
+  const category = await resolveCategory(normalized.categoryInput);
+  const location = await resolveLocation({
+    isOnline: normalized.isOnline,
+    stateCode: normalized.stateCode,
+    citySlug: normalized.citySlug,
+    locationNote: normalized.locationNote,
+  });
+  const event = await updateEvent(eventId, {
+    title: normalized.title,
+    description: normalized.description,
+    category: category.label,
+    categoryValue: category.value,
+    theme: normalized.theme,
+    dateStart: normalized.dateStart,
+    dateEnd: normalized.dateEnd,
+    location: location.locationText,
+    stateCode: location.stateCode,
+    citySlug: location.citySlug,
+    isOnline: location.isOnline,
+    capacity: normalized.capacity,
+    requirements: normalized.requirements,
+    requiredSkills: normalized.requiredSkills,
+    requiredInterests: normalized.requiredInterests,
+    requiredAvailability: normalized.requiredAvailability,
+  });
+  logger.info('Event updated', {
+    eventId,
+    categoryValue: category.value,
+    isOnline: location.isOnline,
+  });
   return mapEvent(event);
 }
 
@@ -135,16 +362,16 @@ async function publishEvent(eventId, actor) {
 
   if (actor?.email) {
     try {
-      await sendTemplatedEmail({
-        to: actor.email,
-        subject: `Your event "${updated.title}" is now live`,
-        heading: 'Event published successfully',
-        bodyLines: [
-          `Great news, ${actor.name?.split(' ')[0] || 'there'}!`,
-          `Your event <strong>${updated.title}</strong> has been published and is now visible to volunteers.`,
-          `Capacity: ${updated.capacity} · Location: ${updated.location}`,
-        ],
-      });
+          await sendTemplatedEmail({
+            to: actor.email,
+            subject: `Your event "${updated.title}" is now live`,
+            heading: 'Event published successfully',
+            bodyLines: [
+              `Great news, ${actor.name?.split(' ')[0] || 'there'}!`,
+              `Your event <strong>${updated.title}</strong> has been published and is now visible to volunteers.`,
+              `Capacity: ${updated.capacity} · Location: ${describeLocation(updated)}`,
+            ],
+          });
     } catch (error) {
       logger.warn('Failed to send publish confirmation email', {
         eventId,
@@ -207,7 +434,7 @@ async function assignVolunteersToTasks(eventId, assignments, actor) {
           bodyLines: [
             `Hi ${assignment.volunteerName?.split(' ')[0] || 'there'},`,
             `You've been assigned to <strong>${assignment.taskTitle}</strong> for ${event.title}.`,
-            `Location: ${event.location}`,
+            `Location: ${describeLocation(event)}`,
             `Shift window: ${toIso(event.dateStart)} → ${toIso(event.dateEnd)}`,
           ],
         });
@@ -296,6 +523,30 @@ async function getEventOverview(eventId) {
   };
 }
 
+async function getEventLookups() {
+  const [categoryRows, skillRows, interestRows, availabilityRows, stateRows] = await Promise.all([
+    listEventCategories(),
+    listSkillOptions(),
+    listInterestOptions(),
+    listAvailabilityOptions(),
+    listStates(),
+  ]);
+
+  return {
+    categories: categoryRows.map((row) => ({ value: row.value, label: row.label })),
+    skills: skillRows.map((row) => ({ value: row.value, label: row.label })),
+    interests: interestRows.map((row) => ({ value: row.value, label: row.label })),
+    availability: availabilityRows.map((row) => ({ value: row.value, label: row.label })),
+    states: stateRows.map((row) => ({ value: row.code, label: row.name })),
+  };
+}
+
+async function createEventCategory(label) {
+  const category = await resolveCategory({ label });
+  logger.info('Event category saved', { categoryValue: category.value });
+  return category;
+}
+
 module.exports = {
   createEventDraft,
   updateEventDetails,
@@ -310,4 +561,6 @@ module.exports = {
   getEventSignups,
   buildReport,
   getEventOverview,
+  getEventLookups,
+  createEventCategory,
 };
