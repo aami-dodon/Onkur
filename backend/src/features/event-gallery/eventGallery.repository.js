@@ -1,5 +1,6 @@
 const { randomUUID } = require('crypto');
 const pool = require('../common/db');
+const { ensureSchema: ensureSponsorSchema } = require('../sponsors/sponsor.repository');
 
 const VALID_STATUSES = ['PENDING', 'APPROVED', 'REJECTED'];
 
@@ -439,19 +440,21 @@ async function isVolunteerForEvent(eventId, userId) {
 
 async function listSponsors() {
   await ensureSchema();
+  await ensureSponsorSchema();
   const result = await pool.query(
     `
-      SELECT DISTINCT u.id, u.name, u.email
-      FROM users u
-      JOIN user_roles ur ON ur.user_id = u.id
-      WHERE ur.role = 'SPONSOR'
-      ORDER BY u.name ASC
+      SELECT sp.user_id AS id, sp.org_name AS name, u.email, sp.logo_url
+      FROM sponsor_profiles sp
+      JOIN users u ON u.id = sp.user_id
+      WHERE sp.status = 'APPROVED'
+      ORDER BY sp.org_name ASC
     `,
   );
   return result.rows.map((row) => ({
     id: row.id,
     name: row.name,
     email: row.email,
+    logoUrl: row.logo_url || null,
   }));
 }
 

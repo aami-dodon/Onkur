@@ -68,6 +68,26 @@ export default function PublicGalleryPage() {
                 {event.mediaCount} photos · {event.theme || 'Community impact'}
               </p>
               <p className="m-0 text-sm text-brand-muted">{event.location || 'Across our communities'}</p>
+              {Array.isArray(event.sponsors) && event.sponsors.length ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {event.sponsors.slice(0, 3).map((sponsor) => (
+                    <span
+                      key={sponsor.sponsorId || sponsor.orgName}
+                      className="inline-flex items-center gap-2 rounded-full bg-brand-sand px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-forest"
+                    >
+                      {sponsor.logoUrl ? (
+                        <img src={sponsor.logoUrl} alt={sponsor.orgName} className="h-5 w-5 rounded-full object-cover" />
+                      ) : null}
+                      {sponsor.orgName}
+                    </span>
+                  ))}
+                  {event.sponsors.length > 3 ? (
+                    <span className="rounded-full bg-brand-sand px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-forest">
+                      +{event.sponsors.length - 3}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
             </button>
           ))}
         </div>

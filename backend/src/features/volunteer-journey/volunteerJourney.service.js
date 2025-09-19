@@ -1,6 +1,7 @@
 const logger = require('../../utils/logger');
 const { sendTemplatedEmail } = require('../email/email.service');
 const { findUserById } = require('../auth/auth.repository');
+const { attachApprovedSponsors, attachSponsorPerspective } = require('../sponsors/sponsor.service');
 const {
   getVolunteerProfile,
   upsertVolunteerProfile,
@@ -189,6 +190,8 @@ function mapEventRow(event) {
     availableSlots,
     isFull: availableSlots <= 0,
     isRegistered: Boolean(event.is_registered),
+    sponsors: Array.isArray(event.sponsors) ? event.sponsors : [],
+    mySponsorship: event.mySponsorship || null,
   };
 }
 
@@ -423,7 +426,9 @@ async function getCitiesForState(stateCode) {
 }
 
 async function browseEvents(filters = {}, { userId = null } = {}) {
-  const events = await listPublishedEvents(filters, { forUserId: userId });
+  let events = await listPublishedEvents(filters, { forUserId: userId });
+  events = await attachApprovedSponsors(events);
+  events = await attachSponsorPerspective({ events, sponsorId: userId });
   return events.map((event) => {
     const mapped = mapEventRow(event);
     if (userId) {

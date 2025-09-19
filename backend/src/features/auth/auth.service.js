@@ -24,6 +24,7 @@ const { sortRolesByPriority, determinePrimaryRole } = require('./role.helpers');
 const {
   getProfile: getVolunteerProfileForUser,
 } = require('../volunteer-journey/volunteerJourney.service');
+const { findSponsorProfile } = require('../sponsors/sponsor.repository');
 
 const config = require('../../config');
 
@@ -83,9 +84,15 @@ async function toPublicUserWithProfile(user) {
   if (!baseUser || !user?.id) {
     return baseUser;
   }
-
-  const profile = await getVolunteerProfileForUser(user.id);
-  return { ...baseUser, profile };
+  const [volunteerProfile, sponsorProfile] = await Promise.all([
+    getVolunteerProfileForUser(user.id),
+    findSponsorProfile(user.id).catch(() => null),
+  ]);
+  return {
+    ...baseUser,
+    profile: volunteerProfile,
+    sponsorProfile,
+  };
 }
 
 function createHttpError(statusCode, message) {

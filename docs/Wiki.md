@@ -150,3 +150,9 @@
 
 
 
+## Phase 5 sponsor partnerships
+- **Date:** 2025-10-01
+- **Change:** Introduced the sponsor workflow end to end: sponsors apply for approval, admins moderate applications, approved sponsors pledge funds or in-kind support to events, and dashboards surface live sponsorships with ROI-ready metrics and impact reports.
+- **Impact:** Sponsors gain a dedicated workspace to support events, see their logos across event and gallery experiences, and receive automated summaries of volunteer hours, attendance, and gallery visibility tied to their contributions.
+
+

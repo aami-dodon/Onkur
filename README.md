@@ -32,6 +32,12 @@ Onkur is a mobile-first volunteering platform rooted in sustainability and commu
 - Public `/gallery` showcase that spotlights approved events, tracks per-event views, and celebrates tagged sponsors alongside community highlights.
 - MinIO/S3-backed storage with graceful inline fallback plus transactional emails to notify contributors and sponsors when galleries go live.
 
+### Phase 5 – Sponsor Partnerships (Complete)
+- Sponsor registration and approval workflow that promotes verified organizations into the sponsor role.
+- Sponsor dashboard to manage organization profiles, pledge funds or in-kind support, and review live sponsorships.
+- Event and gallery experiences that surface approved sponsor logos and contributions for every supported event.
+- Automated impact reports summarizing volunteer hours, gallery views, and ROI metrics delivered to sponsor inboxes.
+
 Consult the living [product wiki](docs/Wiki.md) for design rationale, API schemas, and rollout notes for each phase.
 
 ---
