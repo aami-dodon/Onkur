@@ -109,3 +109,8 @@
 - **Change:** Hardened the volunteer journey bootstrapper to check for foreign key constraints before adding them to the `events` table so schema setup can run multiple times without raising duplicate constraint errors.
 - **Impact:** Local development and container restarts no longer crash during startup when the lookup seeding runs after the schema has already been upgraded.
 
+## Event creation placeholder alignment
+- **Date:** 2025-09-27
+- **Change:** Fixed the event creation repository insert statement to provide parameter placeholders for every column so the database receives the required availability and creator values alongside the draft status default.
+- **Impact:** Event managers can save drafts without encountering the "INSERT has more target columns than expressions" error.
+
