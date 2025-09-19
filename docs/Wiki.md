@@ -1,13 +1,5 @@
 # Onkur Change Log
 
-## Role journey landing guides
-- **Date:** 2025-09-27
-- **Change:** Added dedicated `/journeys/:role` pages that expand the pre-login "Discover their journey" call-to-action with
-  role-specific stories, feature highlights, and direct signup prompts. The signup form now honors an optional `role`
-  query parameter to preselect the suggested role.
-- **Impact:** Prospective volunteers, event managers, sponsors, and admins can explore how Onkur supports their workflows
-  and jump straight into registration paths tuned to their interests.
-
 ## Desktop navigation parity
 - **Date:** 2025-09-18
 - **Change:** Introduced a desktop header navigation that mirrors the mobile bottom menu, centralized the navigation config, and wired menu items to new `/app/events`, `/app/gallery`, and `/app/profile` routes.
