@@ -12,3 +12,4 @@ These notes apply to files under `frontend/src/features/volunteer/`.
 - When surfacing guidance CTAs (like the events hub link), apply `self-start` alongside `btn-primary` so the button keeps its standard width instead of stretching edge-to-edge.
 - Provide "Leave event" affordances alongside signup actions, keep them styled as bordered secondary buttons, and surface inline feedback that clears when new data loads.
 - Guard sponsor metadata like arrays and call-to-action handlers before rendering so volunteer and sponsor dashboards stay resilient when APIs omit optional fields.
+- Route internal navigation with `<Link>` so volunteer CTAs avoid full page reloads or redirect flashes.

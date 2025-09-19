@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 function formatHours(value) {
   if (!value) return '0';
@@ -150,9 +151,9 @@ export default function HoursTracker({ summary, signups, onLogHours }) {
             <p className="m-0">
               Join an event to log your time. Head to the events hub to browse opportunities and RSVP.
             </p>
-            <a className="btn-primary self-start" href="/app/events">
+            <Link className="btn-primary self-start" to="/app/events">
               Explore events
-            </a>
+            </Link>
           </div>
         )}
       </section>

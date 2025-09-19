@@ -8,3 +8,4 @@ These notes apply to files within `frontend/src/features/event-manager/`.
 - When surfacing metrics, accompany numeric values with short descriptive labels for clarity on small screens.
 - Source event creation lookups (categories, skills, interests, availability, state/city cascades) from the dedicated manager
   endpoints so options stay in sync with backend seeds—avoid hard-coded lists.
+- Trigger report downloads with authenticated fetches and blob saves instead of opening new tabs or relying on `target="_blank"` links.
