@@ -1,5 +1,12 @@
 # Onkur Change Log
 
+## Direct main bundle loading
+- **Date:** 2025-10-04
+- **Change:** Updated the frontend entry script to load `src/main.js` directly, replaced the JSX entry module with a JavaScript
+  module to avoid redirects, and refreshed the Vite HTML transform so Rocket Loader keeps the correct crossorigin attributes.
+- **Impact:** Browsers now request the dashboard bundle without following `main.jsx` detours, trimming an extra roundtrip when t
+he app boots under the CDN.
+
 ## Event report downloads stay in app
 - **Date:** 2025-10-04
 - **Change:** Converted the event report export into an authenticated blob download so managers save CSVs without opening new tabs, and replaced the volunteer guidance CTA with an in-app link to avoid full page reloads.

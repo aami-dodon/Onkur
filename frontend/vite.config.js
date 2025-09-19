@@ -63,7 +63,7 @@ const ensureCrossoriginPlugin = {
 
       let transformed = html;
       transformed = addCrossoriginToScript(transformed, '/@vite/client');
-      transformed = addCrossoriginToScript(transformed, '/src/main.jsx');
+      transformed = addCrossoriginToScript(transformed, '/src/main.js');
       transformed = addCrossoriginToLink(transformed, '/@vite/client');
 
       return transformed;
