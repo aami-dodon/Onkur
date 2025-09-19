@@ -1,6 +1,6 @@
 const { randomUUID } = require('crypto');
 const sharp = require('sharp');
-const { fileTypeFromBuffer } = require('file-type');
+let fileTypeModulePromise;
 const config = require('../../config');
 const logger = require('../../utils/logger');
 const minioClient = require('../common/minio');
@@ -126,6 +126,10 @@ async function processImageBuffer(file) {
     throw Object.assign(new Error('Photo must be 10MB or smaller'), { statusCode: 400 });
   }
 
+  if (!fileTypeModulePromise) {
+    fileTypeModulePromise = import('file-type');
+  }
+  const { fileTypeFromBuffer } = await fileTypeModulePromise;
   const detected = await fileTypeFromBuffer(file.buffer);
   if (!detected || !ALLOWED_MIME_TYPES.has(detected.mime)) {
     throw Object.assign(new Error('Only JPEG, PNG, WebP, or HEIC images are supported'), { statusCode: 415 });

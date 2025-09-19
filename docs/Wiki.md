@@ -131,3 +131,10 @@
 - **Impact:** Onkur can showcase event impact through rich, mobile-first visuals. Volunteers and managers highlight participants and sponsors, admins guard quality, sponsors are alerted when featured, and visitors explore live galleries with quick load times.
 
 
+## Event gallery runtime compatibility
+- **Date:** 2025-09-29
+- **Change:** Updated the gallery upload service to lazy-load the `file-type` detector through an ES module import so Node 20 resolves the dependency without triggering the "No exports main defined" error during startup.
+- **Impact:** Backend containers boot cleanly again, keeping gallery moderation, uploads, and notifications online for admins and event teams.
+
+
+
