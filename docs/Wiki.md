@@ -104,3 +104,8 @@
 - **Change:** Event creation now schedules branded emails to every volunteer and sponsor in the background, tailoring the message, CTA, and impact notes when their profile skills, interests, availability, or location align with the opportunity.
 - **Impact:** Event managers publish without waiting on email dispatch while volunteers and sponsors receive timely, personalized nudges that highlight why the event matters to them.
 
+## Idempotent event lookup constraints
+- **Date:** 2025-09-27
+- **Change:** Hardened the volunteer journey bootstrapper to check for foreign key constraints before adding them to the `events` table so schema setup can run multiple times without raising duplicate constraint errors.
+- **Impact:** Local development and container restarts no longer crash during startup when the lookup seeding runs after the schema has already been upgraded.
+

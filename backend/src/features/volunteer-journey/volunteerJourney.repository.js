@@ -9,6 +9,16 @@ function toNameSlug(name) {
     .replace(/^-+|-+$/g, '');
 }
 
+async function ensureConstraint(constraintName, tableName, definitionSql) {
+  const existing = await pool.query(
+    `SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = $1 AND table_name = $2`,
+    [constraintName, tableName],
+  );
+  if (!existing.rowCount) {
+    await pool.query(definitionSql);
+  }
+}
+
 const schemaPromise = (async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS volunteer_profiles (
@@ -147,13 +157,19 @@ const schemaPromise = (async () => {
   await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS required_skills TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]`);
   await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS required_interests TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]`);
   await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS required_availability TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]`);
-  await pool.query(
+  await ensureConstraint(
+    'events_category_value_fkey',
+    'events',
     `ALTER TABLE events ADD CONSTRAINT events_category_value_fkey FOREIGN KEY (category_value) REFERENCES event_categories(value) ON DELETE SET NULL`
   );
-  await pool.query(
+  await ensureConstraint(
+    'events_state_code_fkey',
+    'events',
     `ALTER TABLE events ADD CONSTRAINT events_state_code_fkey FOREIGN KEY (location_state_code) REFERENCES indian_states(code) ON DELETE SET NULL`
   );
-  await pool.query(
+  await ensureConstraint(
+    'events_city_slug_fkey',
+    'events',
     `ALTER TABLE events ADD CONSTRAINT events_city_slug_fkey FOREIGN KEY (location_city_slug) REFERENCES indian_cities(slug) ON DELETE SET NULL`
   );
 
