@@ -2,6 +2,7 @@ const { randomUUID } = require('crypto');
 const pool = require('../common/db');
 const { ensureSchema: ensureSponsorSchema } = require('../sponsors/sponsor.repository');
 const { ensureSchema: ensureVolunteerSchema } = require('../volunteer-journey/volunteerJourney.repository');
+const { resolveMediaUrl } = require('./storageUrl');
 
 const VALID_STATUSES = ['PENDING', 'APPROVED', 'REJECTED'];
 
@@ -25,7 +26,7 @@ function mapMediaRow(row) {
     eventId: row.event_id,
     uploaderId: row.uploader_id,
     storageKey: row.storage_key,
-    url: row.url,
+    url: resolveMediaUrl({ storageKey: row.storage_key, persistedUrl: row.url }),
     mimeType: row.mime_type,
     fileSize: Number(row.file_size || 0),
     width: row.width ? Number(row.width) : null,

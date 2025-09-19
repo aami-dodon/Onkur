@@ -1,3 +1,8 @@
+# Dynamic gallery URL resolution
+- **Date:** 2025-10-13
+- **Change:** Introduced a shared gallery storage URL helper that always rebuilds public media links from the live MinIO/S3 configuration and wired repository mappers to consume it while keeping inline fallbacks intact.
+- **Impact:** Updating `MINIO_ENDPOINT`, port, or TLS settings now retroactively adjusts previously uploaded gallery image URLs without backfilling the database, ensuring legacy media keeps working after storage host changes.
+
 # Onkur Change Log
 
 ## Dev server cache headers for React integrity
