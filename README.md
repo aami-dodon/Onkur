@@ -2,6 +2,15 @@
 
 Onkur is a sustainability-driven volunteering platform that helps communities coordinate events, celebrate impact stories, and nurture sponsor partnerships. The repository contains an Express + PostgreSQL API (`backend/`) and a Vite + React client (`frontend/`). This refresh aligns the project with shared conventions, automated quality checks, and documentation so teams can steward the forest together.
 
+## Demo
+
+A live demo is available here: [Demo App](https://onkur.dodon.in)
+
+**Important notes**
+- The demo server may be offline at times (it is rebuilt daily).
+- **All data is reset once per day** — do not use it for important storage.
+- The demo is provided for evaluation and testing purposes only.
+
 ## Landing Page
 
 ![Onkur landing page](docs/Web-Onkur.png)
