@@ -1,11 +1,14 @@
 import { Link } from 'react-router-dom';
 
+import { useAuth } from '../auth/AuthContext';
 import { NAV_ITEMS } from './navConfig';
 
 export default function BottomNav({ active }) {
+  const { logout } = useAuth();
+
   return (
     <nav
-      className="sticky bottom-0 left-0 right-0 grid grid-cols-4 gap-2 border-t border-brand-green/15 bg-white/95 px-3 py-2 shadow-[0_-6px_18px_rgba(47,133,90,0.12)] backdrop-blur-sm md:hidden"
+      className="sticky bottom-0 left-0 right-0 grid grid-cols-5 gap-2 border-t border-brand-green/15 bg-white/95 px-3 py-2 shadow-[0_-6px_18px_rgba(47,133,90,0.12)] backdrop-blur-sm md:hidden"
       aria-label="Primary"
     >
       {NAV_ITEMS.map((item) => {
@@ -28,6 +31,16 @@ export default function BottomNav({ active }) {
           </Link>
         );
       })}
+      <button
+        type="button"
+        className="flex flex-col items-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold text-brand-muted transition hover:text-brand-green focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-green/60"
+        onClick={logout}
+      >
+        <span aria-hidden="true" className="text-base">
+          ⏻
+        </span>
+        Log out
+      </button>
     </nav>
   );
 }
