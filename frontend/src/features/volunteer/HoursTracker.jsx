@@ -93,20 +93,25 @@ export default function HoursTracker({ summary, signups, onLogHours }) {
         <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-semibold text-brand-forest">Event</span>
-            <select
-              className="rounded-lg border border-brand-forest/20 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-green focus:outline-none"
-              name="eventId"
-              value={form.eventId}
-              onChange={handleChange}
-            >
-              {!upcomingOptions.length ? <option value="">Join an event to log your time</option> : null}
-              {upcomingOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.title}
-                  {option.isUpcoming ? ' (upcoming)' : ''}
-                </option>
-              ))}
-            </select>
+            {upcomingOptions.length ? (
+              <select
+                className="rounded-lg border border-brand-forest/20 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-green focus:outline-none"
+                name="eventId"
+                value={form.eventId}
+                onChange={handleChange}
+              >
+                {upcomingOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.title}
+                    {option.isUpcoming ? ' (upcoming)' : ''}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="m-0 rounded-lg border border-dashed border-brand-forest/30 bg-white px-3 py-2 text-sm text-brand-muted">
+                Join an event to log your time.
+              </p>
+            )}
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-semibold text-brand-forest">Hours completed</span>
