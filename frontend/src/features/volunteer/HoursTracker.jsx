@@ -77,6 +77,7 @@ export default function HoursTracker({ summary, signups, onLogHours }) {
 
   const totalHours = formatHours(summary?.totalHours || 0);
   const earnedBadges = summary?.badges?.filter((badge) => badge.earned).length || 0;
+  const hasEligibleEvents = upcomingOptions.length > 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -90,7 +91,8 @@ export default function HoursTracker({ summary, signups, onLogHours }) {
 
       <section className="flex flex-col gap-3">
         <h4 className="m-0 text-base font-semibold text-brand-forest">Log new hours</h4>
-        <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
+        {hasEligibleEvents ? (
+          <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-semibold text-brand-forest">Event</span>
             <select
@@ -99,7 +101,6 @@ export default function HoursTracker({ summary, signups, onLogHours }) {
               value={form.eventId}
               onChange={handleChange}
             >
-              {!upcomingOptions.length ? <option value="">Join an event to log your time</option> : null}
               {upcomingOptions.map((option) => (
                 <option key={option.id} value={option.id}>
                   {option.title}
@@ -140,10 +141,20 @@ export default function HoursTracker({ summary, signups, onLogHours }) {
               {status.message}
             </p>
           ) : null}
-          <button type="submit" className="btn-primary" disabled={submitting || !upcomingOptions.length}>
+          <button type="submit" className="btn-primary" disabled={submitting}>
             {submitting ? 'Saving…' : 'Log hours'}
           </button>
         </form>
+        ) : (
+          <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-brand-forest/30 bg-brand-ivory p-4 text-sm text-brand-muted">
+            <p className="m-0">
+              Join an event to log your time. Head to the events hub to browse opportunities and RSVP.
+            </p>
+            <a className="btn-primary self-start" href="/app/events">
+              Explore events
+            </a>
+          </div>
+        )}
       </section>
 
       <section className="flex flex-col gap-3">

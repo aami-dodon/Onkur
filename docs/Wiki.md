@@ -83,7 +83,19 @@
 - **Change:** Promoted the custom skill and interest buttons on the volunteer profile editor to use the primary button style and documented the expectation in the volunteer frontend guidelines.
 - **Impact:** The calls-to-action to add new skills or interests now stand out visually, guiding members to enrich their profiles without hunting for the controls.
 
+
 ## Event manager lookup-driven event logging
 - **Date:** 2025-09-26
 - **Change:** Event drafting now relies on reference data: categories persist to a new `event_categories` table, state/city fields reference the Indian lookup tables, an `isOnline` flag drives mode-specific validation, and optional skill/interest/availability arrays capture ideal volunteers. The manager workspace fetches these lookups, offers inline category creation, and reshapes the form/UI to surface online mode and location chips.
 - **Impact:** Managers log events with consistent taxonomy, can flag virtual sessions, and share richer expectations with volunteers without duplicating reference data or free-form text.
+
+## Hours logging requires event participation
+- **Date:** 2025-09-25
+- **Change:** Updated the volunteer hours tracker to hide the logging form when a volunteer has not joined any events, replacing it with guidance to explore the events hub. Documented the pattern in the volunteer frontend guidelines.
+- **Impact:** Volunteers understand they must RSVP to an event before logging time and are directed to the appropriate place to do so, preventing empty submissions.
+
+## Volunteer events CTA width refinement
+- **Date:** 2025-09-25
+- **Change:** Adjusted the volunteer hours tracker events hub link to use a self-starting primary button so the CTA renders at its standard width instead of stretching across the card. Added the expectation to the volunteer frontend guidelines.
+- **Impact:** Volunteers see a tidy guidance card that matches other dashboard buttons while still drawing attention to the events hub when they need to join an opportunity before logging hours.
+
