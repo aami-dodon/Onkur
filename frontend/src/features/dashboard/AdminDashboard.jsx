@@ -13,6 +13,8 @@ import {
   fetchOverview,
   exportAdminData,
 } from '../admin/api';
+import ImpactAnalyticsPanel from '../admin/ImpactAnalyticsPanel';
+import { fetchImpactAnalytics, exportImpactAnalytics } from '../impact/impactApi';
 
 export default function AdminDashboard() {
   const { token, roles, fetchUsers } = useAuth();
@@ -26,6 +28,9 @@ export default function AdminDashboard() {
   const [userForm, setUserForm] = useState({ userId: '', roles: [], isActive: true });
   const [exportState, setExportState] = useState({ entity: '', format: 'csv', status: 'idle', error: '' });
   const [exportFormat, setExportFormat] = useState('csv');
+  const [impactAnalytics, setImpactAnalytics] = useState(null);
+  const [impactState, setImpactState] = useState({ status: 'idle', error: '' });
+  const [impactExportState, setImpactExportState] = useState({ status: 'idle', error: '' });
   useDocumentTitle('Onkur | Operations center 🌿');
 
   const roleOptions = useMemo(() => roles, [roles]);
@@ -39,6 +44,18 @@ export default function AdminDashboard() {
       setOverviewState({ status: 'success', error: '' });
     } catch (error) {
       setOverviewState({ status: 'error', error: error.message || 'Unable to load overview' });
+    }
+  }, [token]);
+
+  const loadImpactAnalytics = useCallback(async () => {
+    if (!token) return;
+    setImpactState({ status: 'loading', error: '' });
+    try {
+      const response = await fetchImpactAnalytics({ token });
+      setImpactAnalytics(response.overview || null);
+      setImpactState({ status: 'success', error: '' });
+    } catch (error) {
+      setImpactState({ status: 'error', error: error.message || 'Unable to load impact analytics' });
     }
   }, [token]);
 
@@ -75,7 +92,8 @@ export default function AdminDashboard() {
     loadOverview();
     loadQueue(queueType);
     loadUsers();
-  }, [token, loadOverview, loadQueue, loadUsers, queueType]);
+    loadImpactAnalytics();
+  }, [token, loadOverview, loadQueue, loadUsers, loadImpactAnalytics, queueType]);
 
   useEffect(() => {
     if (!roleOptions.length) {
@@ -113,12 +131,12 @@ export default function AdminDashboard() {
           delete next[entityId];
           return next;
         });
-        await Promise.all([loadQueue(entityType), loadOverview()]);
+        await Promise.all([loadQueue(entityType), loadOverview(), loadImpactAnalytics()]);
       } catch (error) {
         setQueueState((prev) => ({ ...prev, error: error.message || 'Unable to approve item' }));
       }
     },
-    [token, loadQueue, loadOverview]
+    [token, loadQueue, loadOverview, loadImpactAnalytics]
   );
 
   const handleReject = useCallback(
@@ -131,12 +149,12 @@ export default function AdminDashboard() {
           delete next[entityId];
           return next;
         });
-        await Promise.all([loadQueue(entityType), loadOverview()]);
+        await Promise.all([loadQueue(entityType), loadOverview(), loadImpactAnalytics()]);
       } catch (error) {
         setQueueState((prev) => ({ ...prev, error: error.message || 'Unable to reject item' }));
       }
     },
-    [token, loadQueue, loadOverview]
+    [token, loadQueue, loadOverview, loadImpactAnalytics]
   );
 
   const handleFormChange = useCallback(
@@ -216,6 +234,25 @@ export default function AdminDashboard() {
     [token, exportFormat]
   );
 
+  const handleImpactExport = useCallback(async () => {
+    if (!token) return;
+    setImpactExportState({ status: 'loading', error: '' });
+    try {
+      const { blob, filename } = await exportImpactAnalytics({ token });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename || `onkur-impact-analytics-${Date.now()}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setImpactExportState({ status: 'idle', error: '' });
+    } catch (error) {
+      setImpactExportState({ status: 'error', error: error.message || 'Unable to export analytics' });
+    }
+  }, [token]);
+
   const handleFormatChange = useCallback((value) => {
     setExportFormat(value);
     setExportState((prev) => ({ ...prev, format: value }));
@@ -256,6 +293,15 @@ export default function AdminDashboard() {
         onSubmit={handleUserSubmit}
         state={userState}
         onRefresh={loadUsers}
+      />
+
+      <ImpactAnalyticsPanel
+        metrics={impactAnalytics}
+        state={impactState}
+        onRefresh={loadImpactAnalytics}
+        onExport={handleImpactExport}
+        exporting={impactExportState.status === 'loading'}
+        exportError={impactExportState.error}
       />
 
       <ReportingPanel

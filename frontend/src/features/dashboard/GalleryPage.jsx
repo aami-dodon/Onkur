@@ -7,6 +7,7 @@ import MediaUploadForm from '../event-gallery/MediaUploadForm';
 import EventGalleryViewer from '../event-gallery/EventGalleryViewer';
 import ModerationQueue from '../event-gallery/ModerationQueue';
 import { fetchGalleryEvents } from '../event-gallery/galleryApi';
+import ImpactStoryComposer from '../impact/ImpactStoryComposer';
 import DashboardCard from './DashboardCard';
 import { determinePrimaryRole, normalizeRoles } from './roleUtils';
 
@@ -66,11 +67,20 @@ export default function GalleryPage({ role, roles = [] }) {
   const [galleryStatus, setGalleryStatus] = useState({ state: 'idle', message: '' });
   const [selectedEventId, setSelectedEventId] = useState('');
   const [refreshSignal, setRefreshSignal] = useState(0);
+  const [storyCount, setStoryCount] = useState(0);
 
   useDocumentTitle('Onkur | Gallery');
 
   const canUpload = useMemo(
     () => normalizedRoles.includes('VOLUNTEER') || normalizedRoles.includes('EVENT_MANAGER'),
+    [normalizedRoles],
+  );
+
+  const canSubmitStory = useMemo(
+    () =>
+      normalizedRoles.some((roleName) =>
+        ['VOLUNTEER', 'EVENT_MANAGER', 'SPONSOR', 'ADMIN'].includes(roleName),
+      ),
     [normalizedRoles],
   );
 
@@ -142,6 +152,14 @@ export default function GalleryPage({ role, roles = [] }) {
     [loadGalleryEvents],
   );
 
+  const handleStorySubmitted = useCallback(() => {
+    setRefreshSignal((value) => value + 1);
+  }, [setRefreshSignal]);
+
+  const handleStoriesLoaded = useCallback((stories = []) => {
+    setStoryCount(Array.isArray(stories) ? stories.length : 0);
+  }, []);
+
   const viewerEvents = useMemo(() => galleryEvents.filter((event) => event && event.id), [galleryEvents]);
   const isAdmin = normalizedRoles.includes('ADMIN');
 
@@ -154,6 +172,17 @@ export default function GalleryPage({ role, roles = [] }) {
 
       {canUpload ? (
         <MediaUploadForm token={token} events={uploadableEvents} onUploaded={handleUploaded} />
+      ) : null}
+
+      {canSubmitStory && selectedEventId ? (
+        <div className="flex flex-col gap-2">
+          <ImpactStoryComposer eventId={selectedEventId} token={token} onSubmitted={handleStorySubmitted} />
+          <p className="m-0 text-xs text-brand-muted">
+            {storyCount
+              ? `${storyCount} approved impact stor${storyCount === 1 ? 'y' : 'ies'} featured for this event.`
+              : 'No approved impact stories yet—yours could be the first!'}
+          </p>
+        </div>
       ) : null}
 
       <DashboardCard
@@ -181,7 +210,12 @@ export default function GalleryPage({ role, roles = [] }) {
           {galleryStatus.state === 'error' ? (
             <p className="text-sm text-red-600">{galleryStatus.message}</p>
           ) : null}
-          <EventGalleryViewer eventId={selectedEventId} token={token} refreshSignal={refreshSignal} />
+          <EventGalleryViewer
+            eventId={selectedEventId}
+            token={token}
+            refreshSignal={refreshSignal}
+            onStoriesLoaded={handleStoriesLoaded}
+          />
         </div>
       </DashboardCard>
 
