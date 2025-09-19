@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiRequest, API_BASE } from '../../lib/apiClient';
 import { useAuth } from '../auth/AuthContext';
+import useReferenceData from '../../lib/useReferenceData';
 
 function formatDate(value) {
   if (!value) return 'TBD';
@@ -45,6 +46,14 @@ export default function EventManagerWorkspace() {
   const [attendanceState, setAttendanceState] = useState({});
   const [report, setReport] = useState(null);
   const [reportState, setReportState] = useState({ status: 'idle', error: '' });
+  const { data: referenceData, status: referenceStatus } = useReferenceData();
+
+  const locationOptions = referenceData?.locations || [];
+  const locationSuggestions = useMemo(
+    () => locationOptions.map((option) => option.label),
+    [locationOptions],
+  );
+  const referenceReady = referenceStatus === 'success';
 
   const authHeaders = useMemo(
     () => ({ token }),
@@ -375,11 +384,23 @@ export default function EventManagerWorkspace() {
             <input
               required
               name="location"
+              type="text"
               className="rounded-lg border border-brand-forest/20 bg-brand-sand/30 px-3 py-2 text-sm shadow-sm focus:border-brand-green focus:outline-none"
               value={form.location}
               onChange={handleFormChange}
-              placeholder="123 River Street park entrance"
+              placeholder="City, region, or virtual"
+              list={locationSuggestions.length ? 'event-location-suggestions' : undefined}
             />
+            {locationSuggestions.length ? (
+              <datalist id="event-location-suggestions">
+                {locationSuggestions.map((label) => (
+                  <option key={label} value={label} />
+                ))}
+              </datalist>
+            ) : null}
+            {!referenceReady ? (
+              <span className="text-xs text-brand-muted">Loading location suggestions…</span>
+            ) : null}
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-semibold text-brand-forest">Starts</span>
@@ -426,7 +447,11 @@ export default function EventManagerWorkspace() {
             />
           </label>
           <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-            <button type="submit" className="btn-primary" disabled={createState.status === 'loading'}>
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={createState.status === 'loading'}
+            >
               {createState.status === 'loading' ? 'Saving…' : 'Save draft'}
             </button>
             {createState.message ? (

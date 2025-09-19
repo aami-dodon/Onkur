@@ -8,3 +8,5 @@ These instructions apply to files within `backend/src/features/volunteer-journey
 - Ensure new queries remain friendly to the in-memory `pg-mem` test harness (avoid Postgres-only syntax outside common SQL).
 - Keep reminder scheduler changes behind the `NODE_ENV!=='test'` guard. When adjusting intervals, ensure timers call `unref()` so background jobs do not block Node process shutdown.
 - When adding or updating routes, remember the router mounts at `/api`; define paths like `/me/profile` rather than duplicating the prefix.
+
+- Rely on the reference-data service for validating structured profile fields (skills, interests, availability) and for sanitizing free-text locations so the catalogue remains a shared suggestion list without blocking unexpected cities.

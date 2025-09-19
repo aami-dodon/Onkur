@@ -7,3 +7,5 @@ These notes apply to files under `frontend/src/features/volunteer/`.
 - Surfaces that mutate backend data should display inline success and error states rather than relying on alerts.
 - When wiring new flows into the dashboard, reuse the shared refresh helpers so profile, signup, and hours panels stay in sync a
   fter mutations.
+
+- Pull shared lookup options (skills, interests, availability, location) via the `useReferenceData` hook so volunteers interact with the same curated catalogue as event managers. Treat the location list as suggestions only—inputs remain free text.
