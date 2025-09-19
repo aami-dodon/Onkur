@@ -21,6 +21,7 @@ const {
   listSponsors,
   findMediaById,
 } = require('./eventGallery.repository');
+const { buildStorageUrl } = require('./storageUrl');
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10MB
 const ALLOWED_MIME_TYPES = new Map([
@@ -160,16 +161,6 @@ async function processImageBuffer(file) {
   };
 }
 
-function buildStorageUrl({ bucket, key }) {
-  const { endPoint, port, useSSL } = config.minio || {};
-  if (!endPoint || !bucket) {
-    return null;
-  }
-  const protocol = useSSL ? 'https' : 'http';
-  const portPart = port && ![80, 443].includes(Number(port)) ? `:${port}` : '';
-  return `${protocol}://${endPoint}${portPart}/${bucket}/${key}`;
-}
-
 async function storeImage({ eventId, buffer, mimeType, extension }) {
   const { bucket, endPoint, accessKey, secretKey } = config.minio || {};
   const storageKey = `events/${eventId}/media/${randomUUID()}.${extension}`;
@@ -188,7 +179,7 @@ async function storeImage({ eventId, buffer, mimeType, extension }) {
       'Content-Type': mimeType,
       'Cache-Control': 'public, max-age=31536000, immutable',
     });
-    const url = buildStorageUrl({ bucket, key: storageKey }) || storageKey;
+    const url = buildStorageUrl({ key: storageKey }) || storageKey;
     return { storageKey, url, provider: 'object-store' };
   } catch (error) {
     logger.warn('Falling back to inline media storage after MinIO upload failed', {
