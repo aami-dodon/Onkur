@@ -131,11 +131,6 @@ const schemaPromise = (async () => {
       capacity INTEGER NOT NULL CHECK (capacity > 0),
       requirements TEXT NULL,
       status TEXT NOT NULL DEFAULT 'DRAFT',
-      approval_status TEXT NOT NULL DEFAULT 'APPROVED',
-      approval_reason TEXT NULL,
-      approved_at TIMESTAMPTZ NULL,
-      approved_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
-      submitted_at TIMESTAMPTZ NULL,
       created_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
       published_at TIMESTAMPTZ NULL,
       completed_at TIMESTAMPTZ NULL,
@@ -149,21 +144,11 @@ const schemaPromise = (async () => {
   await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ NULL`);
   await pool.query(`ALTER TABLE events ALTER COLUMN location DROP NOT NULL`);
   await pool.query(`ALTER TABLE events ALTER COLUMN status SET DEFAULT 'DRAFT'`);
-  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS approval_status TEXT NOT NULL DEFAULT 'APPROVED'`);
-  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS approval_reason TEXT NULL`);
-  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ NULL`);
-  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS approved_by UUID NULL REFERENCES users(id) ON DELETE SET NULL`);
-  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ NULL`);
   await pool.query(`UPDATE events SET status = UPPER(status) WHERE status IS NOT NULL AND status <> UPPER(status)`);
   await pool.query(`ALTER TABLE events DROP CONSTRAINT IF EXISTS events_status_check`);
   await pool.query(
     `ALTER TABLE events ADD CONSTRAINT events_status_check CHECK (status = ANY(ARRAY['DRAFT','PUBLISHED','CANCELLED','COMPLETED']::TEXT[]))`,
   );
-  await pool.query(`ALTER TABLE events DROP CONSTRAINT IF EXISTS events_approval_status_check`);
-  await pool.query(
-    `ALTER TABLE events ADD CONSTRAINT events_approval_status_check CHECK (approval_status = ANY(ARRAY['PENDING','APPROVED','REJECTED']::TEXT[]))`
-  );
-  await pool.query(`UPDATE events SET approval_status = 'APPROVED' WHERE approval_status IS NULL`);
 
   await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS category_value TEXT NULL`);
   await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS location_state_code TEXT NULL`);
@@ -187,13 +172,6 @@ const schemaPromise = (async () => {
     'events',
     `ALTER TABLE events ADD CONSTRAINT events_city_slug_fkey FOREIGN KEY (location_city_slug) REFERENCES indian_cities(slug) ON DELETE SET NULL`
   );
-  await ensureConstraint(
-    'events_approved_by_fkey',
-    'events',
-    `ALTER TABLE events ADD CONSTRAINT events_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL`
-  );
-
-  await pool.query(`CREATE INDEX IF NOT EXISTS idx_events_approval_status ON events (approval_status)`);
 
   const existingCategories = await pool.query(
     `SELECT DISTINCT category FROM events WHERE category IS NOT NULL AND category <> ''`
@@ -543,7 +521,7 @@ async function findCityBySlug(slug) {
 
 async function listPublishedEvents({ category, location, theme, date }, { forUserId = null } = {}) {
   await ensureSchema();
-  const conditions = ["e.status = 'PUBLISHED'", "e.approval_status = 'APPROVED'"];
+  const conditions = ["e.status = 'PUBLISHED'"];
   const values = [];
 
   if (category) {
@@ -582,12 +560,8 @@ async function listPublishedEvents({ category, location, theme, date }, { forUse
       e.location,
       e.capacity,
       e.status,
-      e.approval_status,
       e.created_at,
       e.updated_at,
-      e.submitted_at,
-      e.approved_at,
-      e.approval_reason,
       COALESCE(sc.signup_count, 0) AS signup_count
     FROM events e
     LEFT JOIN (
@@ -634,10 +608,6 @@ async function findEventById(eventId) {
         e.location,
         e.capacity,
         e.status,
-        e.approval_status,
-        e.approved_at,
-        e.submitted_at,
-        e.approval_reason,
         e.created_at,
         e.updated_at,
         COALESCE(sc.signup_count, 0) AS signup_count
@@ -685,10 +655,6 @@ async function createEventSignup({ eventId, userId }) {
 
     if (event.status !== 'PUBLISHED') {
       throw Object.assign(new Error('Event is not open for registration'), { statusCode: 400 });
-    }
-
-    if (event.approval_status && event.approval_status !== 'APPROVED' && event.submitted_at) {
-      throw Object.assign(new Error('Event is awaiting administrator approval'), { statusCode: 403 });
     }
 
     const existing = await client.query(

@@ -446,11 +446,6 @@ function mapEvent(event) {
     completedAt: toIso(event.completedAt || event.completed_at),
     createdAt: toIso(event.createdAt || event.created_at),
     updatedAt: toIso(event.updatedAt || event.updated_at),
-    approvalStatus: event.approvalStatus || event.approval_status || null,
-    approvalReason: event.approvalReason || event.approval_reason || null,
-    approvedAt: toIso(event.approvedAt || event.approved_at),
-    submittedAt: toIso(event.submittedAt || event.submitted_at),
-    approvedBy: event.approvedBy || event.approved_by || null,
     requiredSkills: Array.isArray(event.requiredSkills) ? event.requiredSkills : [],
     requiredInterests: Array.isArray(event.requiredInterests) ? event.requiredInterests : [],
     requiredAvailability: Array.isArray(event.requiredAvailability)
@@ -627,29 +622,16 @@ async function publishEvent(eventId, actor) {
 
   if (actor?.email) {
     try {
-      const awaitingApproval = updated.approvalStatus !== 'APPROVED';
-      const heading = awaitingApproval ? 'Event submitted for review' : 'Event published successfully';
-      const bodyLines = awaitingApproval
-        ? [
-            `Hi ${actor.name?.split(' ')[0] || 'there'},`,
-            `Your event <strong>${updated.title}</strong> has been submitted to the admin team for review.`,
-            'We will notify you as soon as it is approved and visible to volunteers.',
-            `Capacity: ${updated.capacity} · Location: ${describeLocation(updated)}`,
-          ]
-        : [
-            `Great news, ${actor.name?.split(' ')[0] || 'there'}!`,
-            `Your event <strong>${updated.title}</strong> has been published and is now visible to volunteers.`,
-            `Capacity: ${updated.capacity} · Location: ${describeLocation(updated)}`,
-          ];
-      const subject = awaitingApproval
-        ? `Your event "${updated.title}" is awaiting approval`
-        : `Your event "${updated.title}" is now live`;
-      await sendTemplatedEmail({
-        to: actor.email,
-        subject,
-        heading,
-        bodyLines,
-      });
+          await sendTemplatedEmail({
+            to: actor.email,
+            subject: `Your event "${updated.title}" is now live`,
+            heading: 'Event published successfully',
+            bodyLines: [
+              `Great news, ${actor.name?.split(' ')[0] || 'there'}!`,
+              `Your event <strong>${updated.title}</strong> has been published and is now visible to volunteers.`,
+              `Capacity: ${updated.capacity} · Location: ${describeLocation(updated)}`,
+            ],
+          });
     } catch (error) {
       logger.warn('Failed to send publish confirmation email', {
         eventId,
