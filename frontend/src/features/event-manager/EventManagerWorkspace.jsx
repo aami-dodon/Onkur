@@ -18,16 +18,40 @@ function summarize(text, max = 160) {
   return `${text.slice(0, max - 1)}…`;
 }
 
+function describeLocation(event) {
+  if (!event) return 'TBD';
+  if (event.isOnline) {
+    return event.location || 'Online event';
+  }
+  const parts = [];
+  if (event.location) {
+    parts.push(event.location);
+  }
+  if (event.cityName && !parts.includes(event.cityName)) {
+    parts.push(event.cityName);
+  }
+  if (event.stateName && !parts.includes(event.stateName)) {
+    parts.push(event.stateName);
+  }
+  return parts.filter(Boolean).join(', ') || 'TBD';
+}
+
 const initialForm = {
   title: '',
   description: '',
-  category: '',
+  categoryValue: '',
   theme: '',
   dateStart: '',
   dateEnd: '',
-  location: '',
+  stateCode: '',
+  citySlug: '',
+  isOnline: false,
+  venue: '',
   capacity: 10,
   requirements: '',
+  skills: [],
+  interests: [],
+  availability: [],
 };
 
 export default function EventManagerWorkspace() {
@@ -45,14 +69,44 @@ export default function EventManagerWorkspace() {
   const [attendanceState, setAttendanceState] = useState({});
   const [report, setReport] = useState(null);
   const [reportState, setReportState] = useState({ status: 'idle', error: '' });
+  const [lookups, setLookups] = useState({
+    categories: [],
+    states: [],
+    skills: [],
+    interests: [],
+    availability: [],
+  });
+  const [lookupsState, setLookupsState] = useState({ status: 'idle', error: '' });
+  const [cities, setCities] = useState([]);
+  const [citiesStateCode, setCitiesStateCode] = useState('');
+  const [newCategory, setNewCategory] = useState('');
+  const [categoryState, setCategoryState] = useState({ status: 'idle', message: '' });
 
   const authHeaders = useMemo(
     () => ({ token }),
     [token],
   );
 
+  const skillMap = useMemo(
+    () => new Map((lookups.skills || []).map((item) => [item.value, item.label])),
+    [lookups.skills],
+  );
+  const interestMap = useMemo(
+    () => new Map((lookups.interests || []).map((item) => [item.value, item.label])),
+    [lookups.interests],
+  );
+  const availabilityMap = useMemo(
+    () => new Map((lookups.availability || []).map((item) => [item.value, item.label])),
+    [lookups.availability],
+  );
+  const cityOptions = useMemo(
+    () => (form.stateCode && citiesStateCode === form.stateCode ? cities : []),
+    [form.stateCode, citiesStateCode, cities],
+  );
+
   useEffect(() => {
     if (token) {
+      loadLookups();
       refreshEvents();
     }
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -98,6 +152,38 @@ export default function EventManagerWorkspace() {
     }
   }
 
+  async function loadLookups() {
+    setLookupsState({ status: 'loading', error: '' });
+    try {
+      const response = await apiRequest('/api/manager/events/lookups', authHeaders);
+      setLookups({
+        categories: response.categories || [],
+        states: response.states || [],
+        skills: response.skills || [],
+        interests: response.interests || [],
+        availability: response.availability || [],
+      });
+      setLookupsState({ status: 'success', error: '' });
+    } catch (error) {
+      setLookupsState({ status: 'error', error: error.message || 'Unable to load lookups' });
+    }
+  }
+
+  async function loadCities(stateCode) {
+    if (!stateCode) {
+      setCities([]);
+      setCitiesStateCode('');
+      return;
+    }
+    setCitiesStateCode(stateCode);
+    try {
+      const response = await apiRequest(`/api/profile/states/${stateCode}/cities`, authHeaders);
+      setCities(response.cities || []);
+    } catch (error) {
+      setCities([]);
+    }
+  }
+
   const availableVolunteers = useMemo(() => {
     if (!detail?.signups) return [];
     return detail.signups.map((signup) => ({
@@ -121,7 +207,41 @@ export default function EventManagerWorkspace() {
   const totalMinutes = detail?.event?.totalMinutes || 0;
 
   const handleFormChange = (event) => {
-    const { name, value } = event.target;
+    const { name, value, type, checked, multiple, options } = event.target;
+
+    if (name === 'stateCode') {
+      setForm((prev) => ({ ...prev, stateCode: value, citySlug: '' }));
+      loadCities(value);
+      return;
+    }
+
+    if (name === 'isOnline') {
+      setForm((prev) => ({
+        ...prev,
+        isOnline: checked,
+        stateCode: checked ? '' : prev.stateCode,
+        citySlug: checked ? '' : prev.citySlug,
+      }));
+      if (checked) {
+        setCities([]);
+        setCitiesStateCode('');
+      }
+      return;
+    }
+
+    if (multiple) {
+      const selected = Array.from(options)
+        .filter((option) => option.selected)
+        .map((option) => option.value);
+      setForm((prev) => ({ ...prev, [name]: selected }));
+      return;
+    }
+
+    if (type === 'checkbox') {
+      setForm((prev) => ({ ...prev, [name]: checked }));
+      return;
+    }
+
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -129,9 +249,26 @@ export default function EventManagerWorkspace() {
     event.preventDefault();
     setCreateState({ status: 'loading', message: '' });
     try {
+      const selectedCategory = lookups.categories.find(
+        (item) => item.value === form.categoryValue,
+      );
       const payload = {
-        ...form,
+        title: form.title,
+        description: form.description,
+        categoryValue: form.categoryValue,
+        categoryLabel: selectedCategory?.label || '',
+        theme: form.theme,
+        dateStart: form.dateStart,
+        dateEnd: form.dateEnd,
+        isOnline: form.isOnline,
+        stateCode: form.isOnline ? null : form.stateCode,
+        citySlug: form.isOnline ? null : form.citySlug,
+        locationNote: form.venue,
         capacity: Number(form.capacity) || 1,
+        requirements: form.requirements,
+        requiredSkills: form.skills,
+        requiredInterests: form.interests,
+        requiredAvailability: form.availability,
       };
       const response = await apiRequest('/api/manager/events', {
         ...authHeaders,
@@ -140,6 +277,8 @@ export default function EventManagerWorkspace() {
       });
       setCreateState({ status: 'success', message: 'Draft saved' });
       setForm(initialForm);
+      setCities([]);
+      setCitiesStateCode('');
       await refreshEvents();
       if (response?.event?.id) {
         setSelectedId(response.event.id);
@@ -147,6 +286,38 @@ export default function EventManagerWorkspace() {
       }
     } catch (error) {
       setCreateState({ status: 'error', message: error.message || 'Unable to create event' });
+    }
+  };
+
+  const handleAddCategory = async (event) => {
+    event.preventDefault();
+    const label = newCategory.trim();
+    if (!label) {
+      setCategoryState({ status: 'error', message: 'Enter a category name' });
+      return;
+    }
+    setCategoryState({ status: 'loading', message: '' });
+    try {
+      const response = await apiRequest('/api/manager/events/categories', {
+        ...authHeaders,
+        method: 'POST',
+        body: { label },
+      });
+      const category = response.category;
+      if (category) {
+        setLookups((prev) => {
+          const existing = (prev.categories || []).filter((item) => item.value !== category.value);
+          const next = [...existing, category].sort((a, b) => a.label.localeCompare(b.label));
+          return { ...prev, categories: next };
+        });
+        setForm((prev) => ({ ...prev, categoryValue: category.value }));
+        setCategoryState({ status: 'success', message: 'Category added' });
+        setNewCategory('');
+      } else {
+        setCategoryState({ status: 'error', message: 'Unable to add category' });
+      }
+    } catch (error) {
+      setCategoryState({ status: 'error', message: error.message || 'Unable to add category' });
     }
   };
 
@@ -327,6 +498,11 @@ export default function EventManagerWorkspace() {
           </p>
         </header>
         <form className="grid gap-3 sm:[grid-template-columns:repeat(2,minmax(0,1fr))]" onSubmit={handleCreate}>
+          {lookupsState.status === 'error' ? (
+            <p className="sm:col-span-2 m-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+              {lookupsState.error}
+            </p>
+          ) : null}
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-semibold text-brand-forest">Title</span>
             <input
@@ -340,15 +516,53 @@ export default function EventManagerWorkspace() {
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-semibold text-brand-forest">Category</span>
-            <input
+            <select
               required
-              name="category"
-              className="rounded-lg border border-brand-forest/20 bg-brand-sand/30 px-3 py-2 text-sm shadow-sm focus:border-brand-green focus:outline-none"
-              value={form.category}
+              name="categoryValue"
+              className="rounded-lg border border-brand-forest/20 bg-brand-sand/30 px-3 py-2 text-sm focus:border-brand-green focus:outline-none"
+              value={form.categoryValue}
               onChange={handleFormChange}
-              placeholder="Cleanup, planting, education"
-            />
+              disabled={lookupsState.status === 'loading'}
+            >
+              <option value="" disabled>
+                Select a category
+              </option>
+              {(lookups.categories || []).map((category) => (
+                <option key={category.value} value={category.value}>
+                  {category.label}
+                </option>
+              ))}
+            </select>
           </label>
+          <div className="sm:col-span-2 flex flex-col gap-1 text-sm">
+            <span className="font-semibold text-brand-forest">Need a new category?</span>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                name="newCategory"
+                value={newCategory}
+                onChange={(event) => setNewCategory(event.target.value)}
+                placeholder="Tree planting, donation drive, workshop"
+                className="w-full rounded-lg border border-brand-forest/20 bg-brand-sand/30 px-3 py-2 text-sm shadow-sm focus:border-brand-green focus:outline-none"
+              />
+              <button
+                type="button"
+                className="btn-secondary whitespace-nowrap"
+                onClick={handleAddCategory}
+                disabled={categoryState.status === 'loading'}
+              >
+                {categoryState.status === 'loading' ? 'Adding…' : 'Add category'}
+              </button>
+            </div>
+            {categoryState.message ? (
+              <span
+                className={`text-xs font-semibold ${
+                  categoryState.status === 'error' ? 'text-red-600' : 'text-brand-green'
+                }`}
+              >
+                {categoryState.message}
+              </span>
+            ) : null}
+          </div>
           <label className="flex flex-col gap-1 text-sm sm:col-span-2">
             <span className="font-semibold text-brand-forest">Description</span>
             <textarea
@@ -370,15 +584,66 @@ export default function EventManagerWorkspace() {
               placeholder="Biodiversity, youth, climate"
             />
           </label>
+          <div className="flex flex-col gap-1 text-sm">
+            <span className="font-semibold text-brand-forest">Event mode</span>
+            <label className="flex items-center gap-2 rounded-lg border border-brand-forest/20 bg-white px-3 py-2 text-sm text-brand-forest shadow-sm">
+              <input
+                type="checkbox"
+                name="isOnline"
+                checked={form.isOnline}
+                onChange={handleFormChange}
+                className="h-4 w-4 accent-brand-green"
+              />
+              <span>Online event</span>
+            </label>
+            <p className="m-0 text-xs text-brand-muted">Uncheck to plan an in-person gathering.</p>
+          </div>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold text-brand-forest">Location</span>
+            <span className="font-semibold text-brand-forest">State</span>
+            <select
+              name="stateCode"
+              value={form.stateCode}
+              onChange={handleFormChange}
+              disabled={form.isOnline || lookupsState.status === 'loading'}
+              className="rounded-lg border border-brand-forest/20 bg-brand-sand/30 px-3 py-2 text-sm focus:border-brand-green focus:outline-none"
+            >
+              <option value="">
+                {form.isOnline ? 'Not required for online events' : 'Select a state'}
+              </option>
+              {(lookups.states || []).map((state) => (
+                <option key={state.value} value={state.value}>
+                  {state.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-semibold text-brand-forest">City</span>
+            <select
+              name="citySlug"
+              value={form.citySlug}
+              onChange={handleFormChange}
+              disabled={form.isOnline || !form.stateCode}
+              className="rounded-lg border border-brand-forest/20 bg-brand-sand/30 px-3 py-2 text-sm focus:border-brand-green focus:outline-none"
+            >
+              <option value="">
+                {form.isOnline ? 'Not required for online events' : 'Select a city'}
+              </option>
+              {cityOptions.map((city) => (
+                <option key={city.value} value={city.value}>
+                  {city.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+            <span className="font-semibold text-brand-forest">Venue details (optional)</span>
             <input
-              required
-              name="location"
-              className="rounded-lg border border-brand-forest/20 bg-brand-sand/30 px-3 py-2 text-sm shadow-sm focus:border-brand-green focus:outline-none"
-              value={form.location}
+              name="venue"
+              value={form.venue}
               onChange={handleFormChange}
               placeholder="123 River Street park entrance"
+              className="rounded-lg border border-brand-forest/20 bg-brand-sand/30 px-3 py-2 text-sm shadow-sm focus:border-brand-green focus:outline-none"
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
@@ -409,6 +674,7 @@ export default function EventManagerWorkspace() {
               required
               type="number"
               min="1"
+              inputMode="numeric"
               name="capacity"
               className="rounded-lg border border-brand-forest/20 bg-brand-sand/30 px-3 py-2 text-sm shadow-sm focus:border-brand-green focus:outline-none"
               value={form.capacity}
@@ -424,6 +690,55 @@ export default function EventManagerWorkspace() {
               onChange={handleFormChange}
               placeholder="Safety notes, attire, supplies to bring"
             />
+          </label>
+          <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+            <span className="font-semibold text-brand-forest">Ideal skills (optional)</span>
+            <select
+              multiple
+              name="skills"
+              value={form.skills}
+              onChange={handleFormChange}
+              className="rounded-lg border border-brand-forest/20 bg-brand-sand/30 px-3 py-2 text-sm focus:border-brand-green focus:outline-none"
+            >
+              {(lookups.skills || []).map((skill) => (
+                <option key={skill.value} value={skill.value}>
+                  {skill.label}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-brand-muted">Select one or more focus skills that will help this event thrive.</span>
+          </label>
+          <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+            <span className="font-semibold text-brand-forest">Interest focus (optional)</span>
+            <select
+              multiple
+              name="interests"
+              value={form.interests}
+              onChange={handleFormChange}
+              className="rounded-lg border border-brand-forest/20 bg-brand-sand/30 px-3 py-2 text-sm focus:border-brand-green focus:outline-none"
+            >
+              {(lookups.interests || []).map((interest) => (
+                <option key={interest.value} value={interest.value}>
+                  {interest.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+            <span className="font-semibold text-brand-forest">Helpful availability windows (optional)</span>
+            <select
+              multiple
+              name="availability"
+              value={form.availability}
+              onChange={handleFormChange}
+              className="rounded-lg border border-brand-forest/20 bg-brand-sand/30 px-3 py-2 text-sm focus:border-brand-green focus:outline-none"
+            >
+              {(lookups.availability || []).map((slot) => (
+                <option key={slot.value} value={slot.value}>
+                  {slot.label}
+                </option>
+              ))}
+            </select>
           </label>
           <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
             <button type="submit" className="btn-primary" disabled={createState.status === 'loading'}>
@@ -474,6 +789,10 @@ export default function EventManagerWorkspace() {
                   <div>
                     <dt className="font-semibold text-brand-forest">Starts</dt>
                     <dd className="m-0">{formatDate(event.dateStart)}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-brand-forest">Location</dt>
+                    <dd className="m-0">{describeLocation(event)}</dd>
                   </div>
                   <div>
                     <dt className="font-semibold text-brand-forest">Signups</dt>
@@ -553,6 +872,14 @@ export default function EventManagerWorkspace() {
                       <dt className="font-medium text-brand-forest">Status</dt>
                       <dd className="m-0 uppercase text-xs font-semibold text-brand-green">{detail.event.status}</dd>
                     </div>
+                    <div className="flex flex-col gap-1">
+                      <dt className="font-medium text-brand-forest">Location</dt>
+                      <dd className="m-0 text-sm text-brand-muted">{describeLocation(detail.event)}</dd>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <dt className="font-medium text-brand-forest">Mode</dt>
+                      <dd className="m-0">{detail.event.isOnline ? 'Online' : 'In person'}</dd>
+                    </div>
                     <div className="flex items-center justify-between">
                       <dt className="font-medium text-brand-forest">Capacity</dt>
                       <dd className="m-0">{detail.event.capacity}</dd>
@@ -574,6 +901,51 @@ export default function EventManagerWorkspace() {
                     <p className="mt-3 rounded-lg bg-white/70 p-3 text-xs text-brand-muted">
                       <span className="font-semibold text-brand-forest">Requirements:</span> {detail.event.requirements}
                     </p>
+                  ) : null}
+                  {detail.event.requiredSkills?.length ? (
+                    <div className="mt-3 flex flex-col gap-2 text-xs">
+                      <span className="font-semibold uppercase tracking-wide text-brand-forest">Skills highlighted</span>
+                      <div className="flex flex-wrap gap-2">
+                        {detail.event.requiredSkills.map((skill) => (
+                          <span
+                            key={skill}
+                            className="rounded-full bg-white px-3 py-1 font-medium text-brand-forest shadow-sm"
+                          >
+                            {skillMap.get(skill) || skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  {detail.event.requiredInterests?.length ? (
+                    <div className="mt-3 flex flex-col gap-2 text-xs">
+                      <span className="font-semibold uppercase tracking-wide text-brand-forest">Interest focus</span>
+                      <div className="flex flex-wrap gap-2">
+                        {detail.event.requiredInterests.map((interest) => (
+                          <span
+                            key={interest}
+                            className="rounded-full bg-white px-3 py-1 font-medium text-brand-forest shadow-sm"
+                          >
+                            {interestMap.get(interest) || interest}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  {detail.event.requiredAvailability?.length ? (
+                    <div className="mt-3 flex flex-col gap-2 text-xs">
+                      <span className="font-semibold uppercase tracking-wide text-brand-forest">Preferred availability</span>
+                      <div className="flex flex-wrap gap-2">
+                        {detail.event.requiredAvailability.map((slot) => (
+                          <span
+                            key={slot}
+                            className="rounded-full bg-white px-3 py-1 font-medium text-brand-forest shadow-sm"
+                          >
+                            {availabilityMap.get(slot) || slot}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   ) : null}
                 </div>
 

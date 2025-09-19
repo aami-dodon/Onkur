@@ -20,12 +20,23 @@ function mapEventRow(row) {
     title: row.title,
     description: row.description,
     category: row.category,
+    categoryValue: row.category_value || null,
+    categoryLabel: row.category_label || row.category || null,
     theme: row.theme,
     dateStart: toIso(row.date_start),
     dateEnd: toIso(row.date_end),
     location: row.location,
+    locationNote: row.location,
+    stateCode: row.location_state_code || null,
+    stateName: row.state_name || null,
+    citySlug: row.location_city_slug || null,
+    cityName: row.city_name || null,
+    isOnline: Boolean(row.is_online),
     capacity: row.capacity,
     requirements: row.requirements || '',
+    requiredSkills: Array.isArray(row.required_skills) ? row.required_skills : [],
+    requiredInterests: Array.isArray(row.required_interests) ? row.required_interests : [],
+    requiredAvailability: Array.isArray(row.required_availability) ? row.required_availability : [],
     status: row.status,
     createdBy: row.created_by || null,
     publishedAt: toIso(row.published_at),
@@ -57,33 +68,65 @@ async function createEvent({
   title,
   description,
   category,
+  categoryValue = null,
   theme = null,
   dateStart,
   dateEnd,
   location,
+  stateCode = null,
+  citySlug = null,
+  isOnline = false,
   capacity,
   requirements = null,
+  requiredSkills = [],
+  requiredInterests = [],
+  requiredAvailability = [],
   createdBy = null,
 }) {
   await ensureSchema();
   const id = randomUUID();
-  const result = await pool.query(
+  await pool.query(
     `
       INSERT INTO events (
         id,
         title,
         description,
         category,
+        category_value,
         theme,
         date_start,
         date_end,
         location,
+        location_state_code,
+        location_city_slug,
+        is_online,
         capacity,
         requirements,
+        required_skills,
+        required_interests,
+        required_availability,
         status,
         created_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'DRAFT', $11)
+      VALUES (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
+        $9,
+        $10,
+        $11,
+        $12,
+        $13,
+        $14,
+        $15,
+        'DRAFT',
+        $16
+      )
       RETURNING *
     `,
     [
@@ -91,16 +134,23 @@ async function createEvent({
       title,
       description,
       category,
+      categoryValue,
       theme,
       dateStart,
       dateEnd,
       location,
+      stateCode,
+      citySlug,
+      isOnline,
       capacity,
       requirements,
+      requiredSkills,
+      requiredInterests,
+      requiredAvailability,
       createdBy,
     ],
   );
-  return mapEventRow(result.rows[0]);
+  return findEventById(id);
 }
 
 async function updateEvent(eventId, updates = {}) {
@@ -111,12 +161,19 @@ async function updateEvent(eventId, updates = {}) {
     ['title', 'title'],
     ['description', 'description'],
     ['category', 'category'],
+    ['categoryValue', 'category_value'],
     ['theme', 'theme'],
     ['dateStart', 'date_start'],
     ['dateEnd', 'date_end'],
     ['location', 'location'],
+    ['stateCode', 'location_state_code'],
+    ['citySlug', 'location_city_slug'],
+    ['isOnline', 'is_online'],
     ['capacity', 'capacity'],
     ['requirements', 'requirements'],
+    ['requiredSkills', 'required_skills'],
+    ['requiredInterests', 'required_interests'],
+    ['requiredAvailability', 'required_availability'],
   ]);
 
   for (const [key, column] of allowed.entries()) {
@@ -127,30 +184,27 @@ async function updateEvent(eventId, updates = {}) {
   }
 
   if (!fields.length) {
-    const current = await pool.query('SELECT * FROM events WHERE id = $1', [eventId]);
-    const row = current.rows[0];
-    if (!row) {
+    const existing = await findEventById(eventId);
+    if (!existing) {
       throw Object.assign(new Error('Event not found'), { statusCode: 404 });
     }
-    return mapEventRow(row);
+    return existing;
   }
 
   values.push(eventId);
-  const result = await pool.query(
+  await pool.query(
     `
       UPDATE events
       SET ${fields.join(', ')}, updated_at = NOW()
       WHERE id = $${fields.length + 1}
-      RETURNING *
     `,
     values,
   );
-
-  if (!result.rows[0]) {
+  const fresh = await findEventById(eventId);
+  if (!fresh) {
     throw Object.assign(new Error('Event not found'), { statusCode: 404 });
   }
-
-  return mapEventRow(result.rows[0]);
+  return fresh;
 }
 
 async function setEventStatus(eventId, status) {
@@ -189,10 +243,16 @@ async function findEventById(eventId, { client = pool } = {}) {
     `
       SELECT
         e.*,
+        cat.label AS category_label,
+        s.name AS state_name,
+        c.name AS city_name,
         COALESCE(signups.count, 0) AS signup_count,
         COALESCE(att.checked_in, 0) AS checked_in_count,
         COALESCE(hours.total_minutes, 0) AS total_minutes
       FROM events e
+      LEFT JOIN event_categories cat ON cat.value = e.category_value
+      LEFT JOIN indian_states s ON s.code = e.location_state_code
+      LEFT JOIN indian_cities c ON c.slug = e.location_city_slug
       LEFT JOIN (
         SELECT event_id, COUNT(*)::INT AS count
         FROM event_signups
@@ -222,10 +282,16 @@ async function listEventsForManager(managerId) {
     `
       SELECT
         e.*,
+        cat.label AS category_label,
+        s.name AS state_name,
+        c.name AS city_name,
         COALESCE(signups.count, 0) AS signup_count,
         COALESCE(att.checked_in, 0) AS checked_in_count,
         COALESCE(hours.total_minutes, 0) AS total_minutes
       FROM events e
+      LEFT JOIN event_categories cat ON cat.value = e.category_value
+      LEFT JOIN indian_states s ON s.code = e.location_state_code
+      LEFT JOIN indian_cities c ON c.slug = e.location_city_slug
       LEFT JOIN (
         SELECT event_id, COUNT(*)::INT AS count
         FROM event_signups
@@ -678,6 +744,36 @@ async function getEventDetail(eventId) {
   };
 }
 
+async function listEventCategories() {
+  await ensureSchema();
+  const result = await pool.query(`SELECT value, label FROM event_categories ORDER BY label ASC`);
+  return result.rows;
+}
+
+async function findEventCategory(value) {
+  if (!value) {
+    return null;
+  }
+  await ensureSchema();
+  const result = await pool.query(`SELECT value, label FROM event_categories WHERE value = $1`, [value]);
+  return result.rows[0] || null;
+}
+
+async function upsertEventCategory({ value, label }) {
+  await ensureSchema();
+  const result = await pool.query(
+    `
+      INSERT INTO event_categories (value, label)
+      VALUES ($1, $2)
+      ON CONFLICT (value)
+      DO UPDATE SET label = EXCLUDED.label, updated_at = NOW()
+      RETURNING value, label
+    `,
+    [value, label],
+  );
+  return result.rows[0];
+}
+
 module.exports = {
   createEvent,
   updateEvent,
@@ -694,4 +790,7 @@ module.exports = {
   generateEventReport,
   getEventDetail,
   withTransaction,
+  listEventCategories,
+  findEventCategory,
+  upsertEventCategory,
 };

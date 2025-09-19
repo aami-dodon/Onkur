@@ -14,6 +14,8 @@ const {
   getEventSignups,
   buildReport,
   getEventOverview,
+  getEventLookups,
+  createEventCategory,
 } = require('./eventManagement.service');
 
 const router = express.Router();
@@ -22,6 +24,30 @@ const managerOnly = authorizeRoles('EVENT_MANAGER', 'ADMIN');
 const uuidPattern = /^[0-9a-fA-F-]{36}$/;
 
 router.use(authOnly, managerOnly);
+
+router.get('/events/lookups', async (req, res) => {
+  try {
+    const lookups = await getEventLookups();
+    res.json(lookups);
+  } catch (error) {
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message });
+  }
+});
+
+router.post('/events/categories', async (req, res) => {
+  try {
+    const label = String(req.body?.label || '').trim();
+    if (!label) {
+      return res.status(400).json({ error: 'Category label is required' });
+    }
+    const category = await createEventCategory(label);
+    res.status(201).json({ category });
+  } catch (error) {
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message });
+  }
+});
 
 router.get('/events', async (req, res) => {
   try {

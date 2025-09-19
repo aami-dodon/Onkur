@@ -82,3 +82,8 @@
 - **Date:** 2025-09-25
 - **Change:** Promoted the custom skill and interest buttons on the volunteer profile editor to use the primary button style and documented the expectation in the volunteer frontend guidelines.
 - **Impact:** The calls-to-action to add new skills or interests now stand out visually, guiding members to enrich their profiles without hunting for the controls.
+
+## Event manager lookup-driven event logging
+- **Date:** 2025-09-26
+- **Change:** Event drafting now relies on reference data: categories persist to a new `event_categories` table, state/city fields reference the Indian lookup tables, an `isOnline` flag drives mode-specific validation, and optional skill/interest/availability arrays capture ideal volunteers. The manager workspace fetches these lookups, offers inline category creation, and reshapes the form/UI to surface online mode and location chips.
+- **Impact:** Managers log events with consistent taxonomy, can flag virtual sessions, and share richer expectations with volunteers without duplicating reference data or free-form text.
