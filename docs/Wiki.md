@@ -1,5 +1,10 @@
 # Onkur Change Log
 
+## Layout Suspense loader overlay
+- **Date:** 2025-10-06
+- **Change:** Wrapped the layout content area in its own `Suspense` boundary that renders the shared `LoadingScreen` and adjusted the loader container sizing so route-to-route navigation always presents an inline progress indicator without collapsing the spinner.
+- **Impact:** Volunteers, sponsors, and admins now see immediate feedback when navigating between dashboard sections, confirming their interactions while lazy-loaded routes stream in.
+
 ## React dedupe for hook stability
 - **Date:** 2025-10-05
 - **Change:** Configured Vite to deduplicate `react` and `react-dom` module resolution so the dev server and production build alw
