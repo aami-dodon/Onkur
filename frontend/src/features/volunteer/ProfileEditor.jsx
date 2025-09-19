@@ -260,7 +260,7 @@ export default function ProfileEditor({
             />
             <button
               type="button"
-              className="btn-secondary"
+              className="btn-primary"
               onClick={() => handleAddCustom('skills', customSkill, setCustomSkill)}
             >
               Add skill
@@ -310,7 +310,7 @@ export default function ProfileEditor({
             />
             <button
               type="button"
-              className="btn-secondary"
+              className="btn-primary"
               onClick={() => handleAddCustom('interests', customInterest, setCustomInterest)}
             >
               Add interest
