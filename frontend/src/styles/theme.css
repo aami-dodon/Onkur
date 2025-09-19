@@ -180,6 +180,10 @@
     @apply mt-auto font-semibold text-brand-green;
   }
 
+  .role-card__cta a {
+    @apply inline-flex items-center gap-1 text-current no-underline transition hover:text-brand-forest hover:underline;
+  }
+
   .role-card--leaf::before,
   .role-card--sun::before,
   .role-card--wave::before,
