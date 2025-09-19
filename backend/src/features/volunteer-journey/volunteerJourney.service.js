@@ -1,14 +1,6 @@
 const logger = require('../../utils/logger');
 const { sendTemplatedEmail } = require('../email/email.service');
 const {
-  normalizeSkills,
-  normalizeInterests,
-  normalizeAvailability,
-  normalizeLocation,
-  getAvailabilityLabel,
-  getLocationLabel,
-} = require('../reference-data/referenceData.service');
-const {
   getVolunteerProfile,
   upsertVolunteerProfile,
   listPublishedEvents,
@@ -48,6 +40,31 @@ const BADGES = [
 
 let reminderInterval = null;
 
+function normalizeStringArray(value) {
+  if (!value) {
+    return [];
+  }
+  const input = Array.isArray(value)
+    ? value
+    : String(value)
+        .split(',')
+        .map((segment) => segment.trim());
+  const seen = new Set();
+  const result = [];
+  input.forEach((item) => {
+    if (item === null || item === undefined) {
+      return;
+    }
+    const normalized = String(item).trim().toLowerCase();
+    if (!normalized || seen.has(normalized)) {
+      return;
+    }
+    seen.add(normalized);
+    result.push(normalized);
+  });
+  return result;
+}
+
 function sanitizeText(value) {
   if (value === null || value === undefined) {
     return null;
@@ -74,26 +91,18 @@ function mapProfileRow(row, fallbackUserId) {
       skills: [],
       interests: [],
       availability: '',
-      availabilityLabel: '',
       location: '',
-      locationLabel: '',
       bio: '',
       createdAt: null,
       updatedAt: null,
     };
   }
-  const normalizedSkills = normalizeSkills(row.skills);
-  const normalizedInterests = normalizeInterests(row.interests);
-  const availabilityValue = row.availability || '';
-  const locationValue = normalizeLocation(row.location || '');
   return {
     userId: row.user_id,
-    skills: normalizedSkills,
-    interests: normalizedInterests,
-    availability: availabilityValue,
-    availabilityLabel: getAvailabilityLabel(availabilityValue),
-    location: locationValue,
-    locationLabel: getLocationLabel(locationValue),
+    skills: Array.isArray(row.skills) ? row.skills : [],
+    interests: Array.isArray(row.interests) ? row.interests : [],
+    availability: row.availability || '',
+    location: row.location || '',
     bio: row.bio || '',
     createdAt: toIsoOrNull(row.created_at),
     updatedAt: toIsoOrNull(row.updated_at),
@@ -104,7 +113,6 @@ function mapEventRow(event) {
   const signupCount = Number(event.signup_count || 0);
   const hasAvailable = event.available_slots !== undefined && event.available_slots !== null;
   const availableSlots = hasAvailable ? Number(event.available_slots) : Math.max(event.capacity - signupCount, 0);
-  const locationValue = normalizeLocation(event.location || '');
   return {
     id: event.id,
     title: event.title,
@@ -113,8 +121,7 @@ function mapEventRow(event) {
     theme: event.theme,
     dateStart: toIsoOrNull(event.date_start),
     dateEnd: toIsoOrNull(event.date_end),
-    location: getLocationLabel(locationValue),
-    locationValue,
+    location: event.location,
     capacity: event.capacity,
     requirements: event.requirements || '',
     status: event.status,
@@ -129,7 +136,6 @@ function mapSignupRow(row) {
   const signupCount = Number(row.signup_count || 0);
   const hasAvailable = row.available_slots !== undefined && row.available_slots !== null;
   const availableSlots = hasAvailable ? Number(row.available_slots) : Math.max(row.capacity - signupCount, 0);
-  const eventLocation = normalizeLocation(row.location || '');
   const assignments = Array.isArray(row.assignments)
     ? row.assignments.map((assignment) => ({
         assignmentId: assignment.assignmentId,
@@ -166,8 +172,7 @@ function mapSignupRow(row) {
       theme: row.theme,
       dateStart: toIsoOrNull(row.date_start),
       dateEnd: toIsoOrNull(row.date_end),
-      location: getLocationLabel(eventLocation),
-      locationValue: eventLocation,
+      location: row.location,
       capacity: row.capacity,
       requirements: row.requirements || '',
       signupCount,
@@ -247,18 +252,18 @@ async function getProfile(userId) {
 }
 
 async function updateProfile({ userId, skills, interests, availability, location, bio }) {
-  const normalizedSkills = normalizeSkills(skills);
-  const normalizedInterests = normalizeInterests(interests);
-  const normalizedAvailability = availability ? normalizeAvailability(availability) : '';
-  const normalizedLocation = location ? normalizeLocation(location) : '';
+  const normalizedSkills = normalizeStringArray(skills);
+  const normalizedInterests = normalizeStringArray(interests);
+  const sanitizedAvailability = sanitizeText(availability);
+  const sanitizedLocation = sanitizeText(location);
   const sanitizedBio = sanitizeText(bio);
 
   const updated = await upsertVolunteerProfile({
     userId,
     skills: normalizedSkills,
     interests: normalizedInterests,
-    availability: normalizedAvailability,
-    location: normalizedLocation,
+    availability: sanitizedAvailability,
+    location: sanitizedLocation,
     bio: sanitizedBio,
   });
 
@@ -409,8 +414,7 @@ async function getVolunteerDashboard(userId) {
     title: row.title,
     dateStart: toIsoOrNull(row.date_start),
     dateEnd: toIsoOrNull(row.date_end),
-    location: getLocationLabel(row.location),
-    locationValue: row.location || '',
+    location: row.location,
     theme: row.theme,
     category: row.category,
     joinedAt: toIsoOrNull(row.signup_created_at),
@@ -451,7 +455,7 @@ async function dispatchEventReminders() {
             `Hi ${signup.name || 'there'},`,
             `Just a friendly nudge that <strong>${signup.title}</strong> kicks off soon.`,
             `When: ${formatEventDateRange(signup)}`,
-            `Where: ${getLocationLabel(signup.location)}`,
+            `Where: ${signup.location}`,
             'Reply to this email if you have questions. We are excited to see you there!',
           ],
           previewText: `${signup.title} starts soon`,
@@ -493,6 +497,7 @@ function startReminderScheduler({ intervalMs = 15 * 60 * 1000 } = {}) {
 
 module.exports = {
   BADGES,
+  normalizeStringArray,
   getProfile,
   updateProfile,
   browseEvents,

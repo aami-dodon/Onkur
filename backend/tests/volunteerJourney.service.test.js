@@ -61,7 +61,7 @@ describe('volunteerJourney.service', () => {
     description = 'Help restore the local park.',
     category = 'clean-up',
     theme = 'nature',
-    location = 'toronto-on',
+    location = 'Riverfront',
     capacity = 10,
     status = 'PUBLISHED',
     startOffsetHours = 48,
@@ -87,30 +87,28 @@ describe('volunteerJourney.service', () => {
     const updated = await volunteerService.updateProfile({
       userId: volunteer.id,
       skills: ['Tree Planting', 'tree planting', 'Community Outreach'],
-      interests: ['Forest restoration', 'Food security'],
+      interests: ['Forests', 'Education'],
       availability: 'Weekends',
-      location: 'Toronto, ON',
+      location: ' Pune ',
       bio: 'Ready to help nurture our urban forests.',
     });
 
-    expect(updated.skills).toEqual(['tree-planting', 'community-outreach']);
-    expect(updated.interests).toEqual(['forest-restoration', 'food-security']);
-    expect(updated.availability).toBe('weekends');
-    expect(updated.location).toBe('Toronto, ON');
+    expect(updated.skills).toEqual(['tree planting', 'community outreach']);
+    expect(updated.interests).toEqual(['forests', 'education']);
+    expect(updated.availability).toBe('Weekends');
+    expect(updated.location).toBe('Pune');
 
     const profile = await volunteerService.getProfile(volunteer.id);
     expect(profile.skills).toEqual(updated.skills);
     expect(profile.interests).toEqual(updated.interests);
-    expect(profile.location).toBe('Toronto, ON');
-    expect(profile.locationLabel).toBe('Toronto, ON');
   });
 
   test('event signup enforces uniqueness and capacity while sending confirmation email', async () => {
     const primaryVolunteer = await createVolunteer({ name: 'Primary', email: 'primary@example.com' });
     const secondaryVolunteer = await createVolunteer({ name: 'Secondary', email: 'secondary@example.com' });
-    const event = await createPublishedEvent({ capacity: 1, location: 'vancouver-bc' });
+    const event = await createPublishedEvent({ capacity: 1, location: 'Lakeside' });
 
-    const list = await volunteerService.browseEvents({ location: 'vancouver-bc' }, { userId: primaryVolunteer.id });
+    const list = await volunteerService.browseEvents({ location: 'Lakeside' }, { userId: primaryVolunteer.id });
     expect(list).toHaveLength(1);
 
     const signup = await volunteerService.signupForEvent({ eventId: event.id, user: primaryVolunteer });

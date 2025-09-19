@@ -6,5 +6,3 @@ These notes apply to files within `frontend/src/features/event-manager/`.
 - Favor lightweight composable components; prefer colocated hooks for data fetching tied to this feature instead of global state.
 - Forms should be mobile-first with stacked inputs and accessible labels; use inline status badges for success/error feedback.
 - When surfacing metrics, accompany numeric values with short descriptive labels for clarity on small screens.
-
-- Use the shared `useReferenceData` hook when populating manager forms so free-text location suggestions stay aligned with volunteer experiences.

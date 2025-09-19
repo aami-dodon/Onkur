@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import useReferenceData from '../../lib/useReferenceData';
 
 function formatDateRange(event) {
   if (!event?.dateStart) return 'Date TBA';
@@ -26,7 +25,6 @@ function summarize(event) {
 export default function EventDiscovery({ events, filters, onFilterChange, onSignup, isLoading }) {
   const [form, setForm] = useState({ category: '', location: '', theme: '', date: '' });
   const [actionStates, setActionStates] = useState({});
-  const { data: referenceData, status: referenceStatus } = useReferenceData();
 
   useEffect(() => {
     setForm({
@@ -40,14 +38,6 @@ export default function EventDiscovery({ events, filters, onFilterChange, onSign
   const totalAvailable = useMemo(
     () => events.reduce((count, event) => (event.availableSlots > 0 ? count + 1 : count), 0),
     [events]
-  );
-
-  const locationOptions = referenceData?.locations || [];
-  const referenceReady = referenceStatus === 'success';
-
-  const locationSuggestions = useMemo(
-    () => locationOptions.map((option) => option.label),
-    [locationOptions],
   );
 
   const handleChange = (event) => {
@@ -104,21 +94,10 @@ export default function EventDiscovery({ events, filters, onFilterChange, onSign
               className="rounded-lg border border-brand-forest/20 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-green focus:outline-none"
               type="text"
               name="location"
-              placeholder="City, region, or virtual"
+              placeholder="Search by neighbourhood"
               value={form.location}
               onChange={handleChange}
-              list={locationSuggestions.length ? 'discovery-location-suggestions' : undefined}
             />
-            {locationSuggestions.length ? (
-              <datalist id="discovery-location-suggestions">
-                {locationSuggestions.map((label) => (
-                  <option key={label} value={label} />
-                ))}
-              </datalist>
-            ) : null}
-            {!referenceReady ? (
-              <span className="text-xs text-brand-muted">Loading location suggestions…</span>
-            ) : null}
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-semibold text-brand-forest">Theme</span>
