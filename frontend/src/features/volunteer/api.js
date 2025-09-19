@@ -26,6 +26,18 @@ export function updateVolunteerProfile(token, payload) {
   return apiRequest('/api/me/profile', { method: 'PUT', token, body: payload });
 }
 
+export function fetchProfileLookups(token) {
+  return apiRequest('/api/profile/lookups', { token });
+}
+
+export function fetchCitiesForState(token, stateCode) {
+  const normalized = stateCode ? String(stateCode).trim() : '';
+  if (!normalized) {
+    return Promise.resolve({ state: null, cities: [] });
+  }
+  return apiRequest(`/api/profile/states/${encodeURIComponent(normalized)}/cities`, { token });
+}
+
 export function fetchEvents(token, filters = {}) {
   return apiRequest(`/api/events${buildQuery(filters)}`, { token });
 }

@@ -1,9 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import useDocumentTitle from '../../lib/useDocumentTitle';
 import { useAuth } from '../auth/AuthContext';
 import ProfileEditor from '../volunteer/ProfileEditor';
-import { fetchVolunteerProfile, updateVolunteerProfile } from '../volunteer/api';
+import {
+  fetchVolunteerProfile,
+  updateVolunteerProfile,
+  fetchProfileLookups,
+  fetchCitiesForState,
+} from '../volunteer/api';
 import DashboardCard from './DashboardCard';
 import { determinePrimaryRole } from './roleUtils';
 
@@ -40,6 +45,8 @@ export default function ProfilePage({ role, roles = [] }) {
   const { token, user, refreshProfile } = useAuth();
   const [profile, setProfile] = useState(null);
   const [status, setStatus] = useState({ phase: 'loading', message: '' });
+  const [lookups, setLookups] = useState({ skills: [], interests: [], availability: [], states: [] });
+  const [citiesByState, setCitiesByState] = useState({});
 
   const firstName = useMemo(() => user?.name?.split(' ')[0] || 'there', [user?.name]);
   const activeRole = useMemo(
@@ -53,6 +60,15 @@ export default function ProfilePage({ role, roles = [] }) {
 
   useDocumentTitle('Onkur | Profile');
 
+  const loadLookups = useCallback(async () => {
+    if (!token) {
+      return null;
+    }
+    const response = await fetchProfileLookups(token);
+    setLookups(response);
+    return response;
+  }, [token]);
+
   useEffect(() => {
     if (!token) return undefined;
     let active = true;
@@ -61,9 +77,12 @@ export default function ProfilePage({ role, roles = [] }) {
 
     (async () => {
       try {
-        const response = await fetchVolunteerProfile(token);
+        const [profileResponse] = await Promise.all([
+          fetchVolunteerProfile(token),
+          loadLookups(),
+        ]);
         if (!active) return;
-        setProfile(response);
+        setProfile(profileResponse);
         setStatus({ phase: 'ready', message: '' });
       } catch (error) {
         if (!active) return;
@@ -74,7 +93,27 @@ export default function ProfilePage({ role, roles = [] }) {
     return () => {
       active = false;
     };
-  }, [token]);
+  }, [token, loadLookups]);
+
+  const handleLoadCities = useCallback(
+    async (stateCode) => {
+      if (!token) {
+        return [];
+      }
+      const normalized = stateCode ? stateCode.trim() : '';
+      if (!normalized) {
+        return [];
+      }
+      if (citiesByState[normalized]) {
+        return citiesByState[normalized];
+      }
+      const response = await fetchCitiesForState(token, normalized);
+      const cityOptions = Array.isArray(response?.cities) ? response.cities : [];
+      setCitiesByState((prev) => ({ ...prev, [normalized]: cityOptions }));
+      return cityOptions;
+    },
+    [token, citiesByState]
+  );
 
   const handleSave = async (payload) => {
     if (!token) {
@@ -86,6 +125,14 @@ export default function ProfilePage({ role, roles = [] }) {
       await refreshProfile();
     } catch (error) {
       console.warn('Unable to refresh profile', error);
+    }
+    try {
+      await loadLookups();
+      if (updated?.stateCode) {
+        await handleLoadCities(updated.stateCode);
+      }
+    } catch (error) {
+      console.warn('Unable to refresh lookup data', error);
     }
     return updated;
   };
@@ -108,7 +155,13 @@ export default function ProfilePage({ role, roles = [] }) {
         {isLoading ? (
           <p className="m-0 text-sm text-brand-muted">Loading your profile…</p>
         ) : profile ? (
-          <ProfileEditor profile={profile} onSave={handleSave} />
+          <ProfileEditor
+            profile={profile}
+            onSave={handleSave}
+            lookups={lookups}
+            onRequestCities={handleLoadCities}
+            initialCities={profile?.stateCode ? citiesByState[profile.stateCode] : []}
+          />
         ) : (
           <p className="m-0 text-sm text-brand-muted">We could not load your profile yet. Please try again shortly.</p>
         )}

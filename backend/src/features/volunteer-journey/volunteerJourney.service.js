@@ -3,6 +3,16 @@ const { sendTemplatedEmail } = require('../email/email.service');
 const {
   getVolunteerProfile,
   upsertVolunteerProfile,
+  ensureSkillOption,
+  ensureInterestOption,
+  listSkillOptions,
+  listInterestOptions,
+  listAvailabilityOptions,
+  listStates,
+  listCitiesByState,
+  findAvailabilityOption,
+  findStateByCode,
+  findCityBySlug,
   listPublishedEvents,
   findEventById,
   createEventSignup,
@@ -73,6 +83,35 @@ function sanitizeText(value) {
   return text.length ? text : null;
 }
 
+function normalizeLookupValue(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const normalized = String(value).trim();
+  return normalized.length ? normalized : null;
+}
+
+function normalizeStateCode(value) {
+  const normalized = normalizeLookupValue(value);
+  return normalized ? normalized.toUpperCase() : null;
+}
+
+function normalizeSlug(value) {
+  const normalized = normalizeLookupValue(value);
+  return normalized ? normalized.toLowerCase() : null;
+}
+
+function toTitleCase(value) {
+  if (!value) {
+    return '';
+  }
+  return String(value)
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ');
+}
+
 function toIsoOrNull(value) {
   if (!value) {
     return null;
@@ -91,18 +130,37 @@ function mapProfileRow(row, fallbackUserId) {
       skills: [],
       interests: [],
       availability: '',
+      availabilityLabel: '',
+      stateCode: '',
+      stateName: '',
+      citySlug: '',
+      cityName: '',
       location: '',
       bio: '',
       createdAt: null,
       updatedAt: null,
     };
   }
+  const stateCode = row.state_code || '';
+  const citySlug = row.city_slug || '';
+  const stateName = row.state_name || '';
+  const cityName = row.city_name || '';
+  const combinedLocation = row.location
+    ? row.location
+    : cityName && stateName
+    ? `${cityName}, ${stateName}`
+    : cityName || stateName || '';
   return {
     userId: row.user_id,
     skills: Array.isArray(row.skills) ? row.skills : [],
     interests: Array.isArray(row.interests) ? row.interests : [],
     availability: row.availability || '',
-    location: row.location || '',
+    availabilityLabel: row.availability_label || '',
+    stateCode,
+    stateName,
+    citySlug,
+    cityName,
+    location: combinedLocation,
     bio: row.bio || '',
     createdAt: toIsoOrNull(row.created_at),
     updatedAt: toIsoOrNull(row.updated_at),
@@ -251,18 +309,68 @@ async function getProfile(userId) {
   return mapProfileRow(row, userId);
 }
 
-async function updateProfile({ userId, skills, interests, availability, location, bio }) {
+async function updateProfile({ userId, skills, interests, availability, stateCode, citySlug, bio }) {
   const normalizedSkills = normalizeStringArray(skills);
   const normalizedInterests = normalizeStringArray(interests);
-  const sanitizedAvailability = sanitizeText(availability);
-  const sanitizedLocation = sanitizeText(location);
+  const normalizedAvailability = normalizeSlug(availability);
+  const normalizedStateCode = normalizeStateCode(stateCode);
+  const normalizedCitySlug = normalizeSlug(citySlug);
   const sanitizedBio = sanitizeText(bio);
+
+  await Promise.all(
+    normalizedSkills.map((value) => ensureSkillOption({ value, label: toTitleCase(value) }))
+  );
+  await Promise.all(
+    normalizedInterests.map((value) => ensureInterestOption({ value, label: toTitleCase(value) }))
+  );
+
+  let availabilityValue = null;
+  if (normalizedAvailability) {
+    const option = await findAvailabilityOption(normalizedAvailability);
+    if (!option) {
+      throw Object.assign(new Error('Select an availability option from the list'), { statusCode: 400 });
+    }
+    availabilityValue = option.value;
+  }
+
+  let stateRecord = null;
+  if (normalizedStateCode) {
+    stateRecord = await findStateByCode(normalizedStateCode);
+    if (!stateRecord) {
+      throw Object.assign(new Error('Select a valid state from the list'), { statusCode: 400 });
+    }
+  }
+
+  let cityRecord = null;
+  if (normalizedCitySlug) {
+    cityRecord = await findCityBySlug(normalizedCitySlug);
+    if (!cityRecord) {
+      throw Object.assign(new Error('Select a valid city from the list'), { statusCode: 400 });
+    }
+  }
+
+  if (cityRecord && stateRecord && cityRecord.state_code !== stateRecord.code) {
+    throw Object.assign(new Error('Select a city within your chosen state'), { statusCode: 400 });
+  }
+
+  if (cityRecord && !stateRecord) {
+    stateRecord = await findStateByCode(cityRecord.state_code);
+  }
+
+  const locationDisplay = cityRecord
+    ? `${cityRecord.name}${stateRecord ? `, ${stateRecord.name}` : ''}`
+    : stateRecord
+    ? stateRecord.name
+    : null;
+  const sanitizedLocation = sanitizeText(locationDisplay);
 
   const updated = await upsertVolunteerProfile({
     userId,
     skills: normalizedSkills,
     interests: normalizedInterests,
-    availability: sanitizedAvailability,
+    availability: availabilityValue,
+    stateCode: stateRecord ? stateRecord.code : null,
+    citySlug: cityRecord ? cityRecord.slug : null,
     location: sanitizedLocation,
     bio: sanitizedBio,
   });
@@ -271,9 +379,45 @@ async function updateProfile({ userId, skills, interests, availability, location
     userId,
     skillsCount: normalizedSkills.length,
     interestsCount: normalizedInterests.length,
+    stateCode: stateRecord ? stateRecord.code : null,
+    citySlug: cityRecord ? cityRecord.slug : null,
+    availability: availabilityValue || null,
   });
 
-  return mapProfileRow(updated, userId);
+  const fresh = await getVolunteerProfile(userId);
+  return mapProfileRow(fresh, userId);
+}
+
+async function getProfileLookups() {
+  const [skillRows, interestRows, availabilityRows, stateRows] = await Promise.all([
+    listSkillOptions(),
+    listInterestOptions(),
+    listAvailabilityOptions(),
+    listStates(),
+  ]);
+
+  return {
+    skills: skillRows.map((row) => ({ value: row.value, label: row.label })),
+    interests: interestRows.map((row) => ({ value: row.value, label: row.label })),
+    availability: availabilityRows.map((row) => ({ value: row.value, label: row.label })),
+    states: stateRows.map((row) => ({ value: row.code, label: row.name })),
+  };
+}
+
+async function getCitiesForState(stateCode) {
+  const normalizedStateCode = normalizeStateCode(stateCode);
+  if (!normalizedStateCode) {
+    throw Object.assign(new Error('State code is required'), { statusCode: 400 });
+  }
+  const state = await findStateByCode(normalizedStateCode);
+  if (!state) {
+    throw Object.assign(new Error('State not found'), { statusCode: 404 });
+  }
+  const cities = await listCitiesByState(state.code);
+  return {
+    state: { value: state.code, label: state.name },
+    cities: cities.map((city) => ({ value: city.slug, label: city.name })),
+  };
 }
 
 async function browseEvents(filters = {}, { userId = null } = {}) {
@@ -500,6 +644,8 @@ module.exports = {
   normalizeStringArray,
   getProfile,
   updateProfile,
+  getProfileLookups,
+  getCitiesForState,
   browseEvents,
   signupForEvent,
   listMySignups,

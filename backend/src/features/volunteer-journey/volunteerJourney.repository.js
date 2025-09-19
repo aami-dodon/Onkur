@@ -1,6 +1,14 @@
 const { randomUUID } = require('crypto');
 const pool = require('../common/db');
 
+function toNameSlug(name) {
+  return String(name || '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 const schemaPromise = (async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS volunteer_profiles (
@@ -8,12 +16,88 @@ const schemaPromise = (async () => {
       skills TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
       interests TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
       availability TEXT NULL,
+      state_code TEXT NULL,
+      city_slug TEXT NULL,
       location TEXT NULL,
       bio TEXT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+
+  await pool.query(`ALTER TABLE volunteer_profiles ADD COLUMN IF NOT EXISTS state_code TEXT NULL`);
+  await pool.query(`ALTER TABLE volunteer_profiles ADD COLUMN IF NOT EXISTS city_slug TEXT NULL`);
+  await pool.query(`ALTER TABLE volunteer_profiles ADD COLUMN IF NOT EXISTS location TEXT NULL`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS profile_skill_options (
+      value TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS profile_interest_options (
+      value TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS profile_availability_options (
+      value TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS indian_states (
+      code TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS indian_cities (
+      slug TEXT PRIMARY KEY,
+      state_code TEXT NOT NULL REFERENCES indian_states(code) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      name_slug TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(state_code, name_slug)
+    )
+  `);
+
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_indian_cities_state ON indian_cities (state_code)`);
+  await pool.query(`ALTER TABLE indian_cities DROP CONSTRAINT IF EXISTS indian_cities_state_code_lower_name_key`);
+  await pool.query(`ALTER TABLE indian_cities ADD COLUMN IF NOT EXISTS name_slug TEXT`);
+  const citiesNeedingSlug = await pool.query(
+    `SELECT slug, name FROM indian_cities WHERE name_slug IS NULL OR name_slug = ''`
+  );
+  for (const city of citiesNeedingSlug.rows) {
+    await pool.query(`UPDATE indian_cities SET name_slug = $1 WHERE slug = $2`, [toNameSlug(city.name || city.slug), city.slug]);
+  }
+  await pool.query(`ALTER TABLE indian_cities ALTER COLUMN name_slug SET NOT NULL`);
+  await pool.query(
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_indian_cities_state_name_slug ON indian_cities (state_code, name_slug)`
+  );
+
+  await pool.query(`ALTER TABLE volunteer_profiles DROP CONSTRAINT IF EXISTS volunteer_profiles_city_slug_fkey`);
+  await pool.query(`ALTER TABLE volunteer_profiles DROP CONSTRAINT IF EXISTS volunteer_profiles_state_code_fkey`);
+  await pool.query(
+    `ALTER TABLE volunteer_profiles ADD CONSTRAINT volunteer_profiles_state_code_fkey FOREIGN KEY (state_code) REFERENCES indian_states(code) ON DELETE SET NULL`
+  );
+  await pool.query(
+    `ALTER TABLE volunteer_profiles ADD CONSTRAINT volunteer_profiles_city_slug_fkey FOREIGN KEY (city_slug) REFERENCES indian_cities(slug) ON DELETE SET NULL`
+  );
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS events (
@@ -157,34 +241,215 @@ async function getVolunteerProfile(userId) {
   await ensureSchema();
   const result = await pool.query(
     `
-      SELECT user_id, skills, interests, availability, location, bio, created_at, updated_at
-      FROM volunteer_profiles
-      WHERE user_id = $1
+      SELECT
+        vp.user_id,
+        vp.skills,
+        vp.interests,
+        vp.availability,
+        vp.state_code,
+        vp.city_slug,
+        vp.location,
+        vp.bio,
+        vp.created_at,
+        vp.updated_at,
+        ao.label AS availability_label,
+        s.name AS state_name,
+        c.name AS city_name
+      FROM volunteer_profiles vp
+      LEFT JOIN profile_availability_options ao ON ao.value = vp.availability
+      LEFT JOIN indian_states s ON s.code = vp.state_code
+      LEFT JOIN indian_cities c ON c.slug = vp.city_slug
+      WHERE vp.user_id = $1
     `,
     [userId]
   );
   return result.rows[0] || null;
 }
 
-async function upsertVolunteerProfile({ userId, skills, interests, availability, location, bio }) {
+async function upsertVolunteerProfile({
+  userId,
+  skills,
+  interests,
+  availability,
+  stateCode,
+  citySlug,
+  location,
+  bio,
+}) {
   await ensureSchema();
   const result = await pool.query(
     `
-      INSERT INTO volunteer_profiles (user_id, skills, interests, availability, location, bio, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      INSERT INTO volunteer_profiles (user_id, skills, interests, availability, state_code, city_slug, location, bio, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
       ON CONFLICT (user_id)
       DO UPDATE SET
         skills = EXCLUDED.skills,
         interests = EXCLUDED.interests,
         availability = EXCLUDED.availability,
+        state_code = EXCLUDED.state_code,
+        city_slug = EXCLUDED.city_slug,
         location = EXCLUDED.location,
         bio = EXCLUDED.bio,
         updated_at = NOW()
-      RETURNING user_id, skills, interests, availability, location, bio, created_at, updated_at
+      RETURNING user_id, skills, interests, availability, state_code, city_slug, location, bio, created_at, updated_at
     `,
-    [userId, skills, interests, availability, location, bio]
+    [userId, skills, interests, availability, stateCode, citySlug, location, bio]
   );
   return result.rows[0];
+}
+
+async function ensureSkillOption({ value, label }) {
+  await ensureSchema();
+  if (!value) {
+    return null;
+  }
+  const result = await pool.query(
+    `
+      INSERT INTO profile_skill_options (value, label, updated_at)
+      VALUES ($1, $2, NOW())
+      ON CONFLICT (value)
+      DO UPDATE SET label = EXCLUDED.label, updated_at = NOW()
+      RETURNING value, label
+    `,
+    [value, label || value]
+  );
+  return result.rows[0];
+}
+
+async function ensureInterestOption({ value, label }) {
+  await ensureSchema();
+  if (!value) {
+    return null;
+  }
+  const result = await pool.query(
+    `
+      INSERT INTO profile_interest_options (value, label, updated_at)
+      VALUES ($1, $2, NOW())
+      ON CONFLICT (value)
+      DO UPDATE SET label = EXCLUDED.label, updated_at = NOW()
+      RETURNING value, label
+    `,
+    [value, label || value]
+  );
+  return result.rows[0];
+}
+
+async function ensureAvailabilityOption({ value, label, sortOrder = 0 }) {
+  await ensureSchema();
+  if (!value) {
+    return null;
+  }
+  const result = await pool.query(
+    `
+      INSERT INTO profile_availability_options (value, label, sort_order)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (value)
+      DO UPDATE SET label = EXCLUDED.label, sort_order = EXCLUDED.sort_order
+      RETURNING value, label, sort_order
+    `,
+    [value, label || value, sortOrder]
+  );
+  return result.rows[0];
+}
+
+async function ensureState({ code, name }) {
+  await ensureSchema();
+  if (!code) {
+    return null;
+  }
+  const result = await pool.query(
+    `
+      INSERT INTO indian_states (code, name, updated_at)
+      VALUES ($1, $2, NOW())
+      ON CONFLICT (code)
+      DO UPDATE SET name = EXCLUDED.name, updated_at = NOW()
+      RETURNING code, name
+    `,
+    [code, name || code]
+  );
+  return result.rows[0];
+}
+
+async function ensureCity({ slug, stateCode, name }) {
+  await ensureSchema();
+  if (!slug || !stateCode) {
+    return null;
+  }
+  const nameSlug = toNameSlug(name || slug);
+  const result = await pool.query(
+    `
+      INSERT INTO indian_cities (slug, state_code, name, name_slug, updated_at)
+      VALUES ($1, $2, $3, $4, NOW())
+      ON CONFLICT (slug)
+      DO UPDATE SET state_code = EXCLUDED.state_code, name = EXCLUDED.name, name_slug = EXCLUDED.name_slug, updated_at = NOW()
+      RETURNING slug, state_code, name
+    `,
+    [slug, stateCode, name || slug, nameSlug]
+  );
+  return result.rows[0];
+}
+
+async function listSkillOptions() {
+  await ensureSchema();
+  const result = await pool.query(
+    `SELECT value, label FROM profile_skill_options ORDER BY label ASC`
+  );
+  return result.rows;
+}
+
+async function listInterestOptions() {
+  await ensureSchema();
+  const result = await pool.query(
+    `SELECT value, label FROM profile_interest_options ORDER BY label ASC`
+  );
+  return result.rows;
+}
+
+async function listAvailabilityOptions() {
+  await ensureSchema();
+  const result = await pool.query(
+    `SELECT value, label, sort_order FROM profile_availability_options ORDER BY sort_order ASC, label ASC`
+  );
+  return result.rows;
+}
+
+async function listStates() {
+  await ensureSchema();
+  const result = await pool.query(`SELECT code, name FROM indian_states ORDER BY name ASC`);
+  return result.rows;
+}
+
+async function listCitiesByState(stateCode) {
+  await ensureSchema();
+  const result = await pool.query(
+    `SELECT slug, state_code, name FROM indian_cities WHERE state_code = $1 ORDER BY name ASC`,
+    [stateCode]
+  );
+  return result.rows;
+}
+
+async function findAvailabilityOption(value) {
+  await ensureSchema();
+  const result = await pool.query(
+    `SELECT value, label FROM profile_availability_options WHERE value = $1`,
+    [value]
+  );
+  return result.rows[0] || null;
+}
+
+async function findStateByCode(code) {
+  await ensureSchema();
+  const result = await pool.query(`SELECT code, name FROM indian_states WHERE code = $1`, [code]);
+  return result.rows[0] || null;
+}
+
+async function findCityBySlug(slug) {
+  await ensureSchema();
+  const result = await pool.query(
+    `SELECT slug, state_code, name FROM indian_cities WHERE slug = $1`,
+    [slug]
+  );
+  return result.rows[0] || null;
 }
 
 async function listPublishedEvents({ category, location, theme, date }, { forUserId = null } = {}) {
@@ -582,6 +847,19 @@ module.exports = {
   ensureSchema,
   getVolunteerProfile,
   upsertVolunteerProfile,
+  ensureSkillOption,
+  ensureInterestOption,
+  ensureAvailabilityOption,
+  ensureState,
+  ensureCity,
+  listSkillOptions,
+  listInterestOptions,
+  listAvailabilityOptions,
+  listStates,
+  listCitiesByState,
+  findAvailabilityOption,
+  findStateByCode,
+  findCityBySlug,
   listPublishedEvents,
   findEventById,
   createEventSignup,

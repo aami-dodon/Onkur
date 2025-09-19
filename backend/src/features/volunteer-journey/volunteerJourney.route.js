@@ -3,6 +3,8 @@ const { authenticate } = require('../auth/auth.middleware');
 const {
   getProfile,
   updateProfile,
+  getProfileLookups,
+  getCitiesForState,
   browseEvents,
   signupForEvent,
   listMySignups,
@@ -55,16 +57,38 @@ router.get('/me/profile', authOnly, async (req, res) => {
 
 router.put('/me/profile', authOnly, async (req, res) => {
   try {
-    const { skills, interests, availability, location, bio } = req.body || {};
+    const { skills, interests, availability, stateCode, citySlug, bio } = req.body || {};
     const updated = await updateProfile({
       userId: req.user.id,
       skills,
       interests,
       availability,
-      location,
+      stateCode,
+      citySlug,
       bio,
     });
     res.json(updated);
+  } catch (error) {
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message });
+  }
+});
+
+router.get('/profile/lookups', authOnly, async (req, res) => {
+  try {
+    const lookups = await getProfileLookups();
+    res.json(lookups);
+  } catch (error) {
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message });
+  }
+});
+
+router.get('/profile/states/:stateCode/cities', authOnly, async (req, res) => {
+  try {
+    const { stateCode } = req.params;
+    const response = await getCitiesForState(stateCode);
+    res.json(response);
   } catch (error) {
     const status = error.statusCode || 500;
     res.status(status).json({ error: error.message });
