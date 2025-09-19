@@ -49,13 +49,16 @@ export default function AdminOverviewCards({ overview, loading = false, error = 
       >
         <ul className="m-0 list-none space-y-1.5 p-0 text-sm text-brand-muted">
           <li>
-            Active users: <strong className="text-brand-forest">{overview.users?.active ?? 0}</strong>
+            Active users:{' '}
+            <strong className="text-brand-forest">{overview.users?.active ?? 0}</strong>
           </li>
           <li>
-            Inactive users: <strong className="text-brand-forest">{overview.users?.inactive ?? 0}</strong>
+            Inactive users:{' '}
+            <strong className="text-brand-forest">{overview.users?.inactive ?? 0}</strong>
           </li>
           <li>
-            Total accounts: <strong className="text-brand-forest">{overview.users?.total ?? 0}</strong>
+            Total accounts:{' '}
+            <strong className="text-brand-forest">{overview.users?.total ?? 0}</strong>
           </li>
           {roleEntries.length ? (
             <li>
@@ -78,16 +81,20 @@ export default function AdminOverviewCards({ overview, loading = false, error = 
       >
         <ul className="m-0 list-none space-y-1.5 p-0 text-sm text-brand-muted">
           <li>
-            Pending approval: <strong className="text-brand-forest">{overview.events?.pendingApproval ?? 0}</strong>
+            Pending approval:{' '}
+            <strong className="text-brand-forest">{overview.events?.pendingApproval ?? 0}</strong>
           </li>
           <li>
-            Published: <strong className="text-brand-forest">{overview.events?.published ?? 0}</strong>
+            Published:{' '}
+            <strong className="text-brand-forest">{overview.events?.published ?? 0}</strong>
           </li>
           <li>
-            Upcoming: <strong className="text-brand-forest">{overview.events?.upcoming ?? 0}</strong>
+            Upcoming:{' '}
+            <strong className="text-brand-forest">{overview.events?.upcoming ?? 0}</strong>
           </li>
           <li>
-            Completed: <strong className="text-brand-forest">{overview.events?.completed ?? 0}</strong>
+            Completed:{' '}
+            <strong className="text-brand-forest">{overview.events?.completed ?? 0}</strong>
           </li>
         </ul>
       </DashboardCard>
@@ -98,16 +105,22 @@ export default function AdminOverviewCards({ overview, loading = false, error = 
       >
         <ul className="m-0 list-none space-y-1.5 p-0 text-sm text-brand-muted">
           <li>
-            Approved sponsors: <strong className="text-brand-forest">{overview.sponsors?.approved ?? 0}</strong>
+            Approved sponsors:{' '}
+            <strong className="text-brand-forest">{overview.sponsors?.approved ?? 0}</strong>
           </li>
           <li>
-            Pending reviews: <strong className="text-brand-forest">{overview.sponsors?.pending ?? 0}</strong>
+            Pending reviews:{' '}
+            <strong className="text-brand-forest">{overview.sponsors?.pending ?? 0}</strong>
           </li>
           <li>
-            Declined applications: <strong className="text-brand-forest">{overview.sponsors?.declined ?? 0}</strong>
+            Declined applications:{' '}
+            <strong className="text-brand-forest">{overview.sponsors?.declined ?? 0}</strong>
           </li>
           <li>
-            Approved funds: <strong className="text-brand-forest">₹{Number(overview.sponsors?.approvedFunds || 0).toLocaleString()}</strong>
+            Approved funds:{' '}
+            <strong className="text-brand-forest">
+              ₹{Number(overview.sponsors?.approvedFunds || 0).toLocaleString()}
+            </strong>
           </li>
         </ul>
       </DashboardCard>
@@ -118,17 +131,24 @@ export default function AdminOverviewCards({ overview, loading = false, error = 
       >
         <ul className="m-0 list-none space-y-1.5 p-0 text-sm text-brand-muted">
           <li>
-            Volunteer hours logged: <strong className="text-brand-forest">{formatMinutes(overview.volunteers?.totalMinutes)}</strong>
+            Volunteer hours logged:{' '}
+            <strong className="text-brand-forest">
+              {formatMinutes(overview.volunteers?.totalMinutes)}
+            </strong>
           </li>
           <li>
             Active volunteers (30 days):{' '}
-            <strong className="text-brand-forest">{overview.volunteers?.activeLast30Days ?? 0}</strong>
+            <strong className="text-brand-forest">
+              {overview.volunteers?.activeLast30Days ?? 0}
+            </strong>
           </li>
           <li>
-            Gallery items pending: <strong className="text-brand-forest">{overview.gallery?.pending ?? 0}</strong>
+            Gallery items pending:{' '}
+            <strong className="text-brand-forest">{overview.gallery?.pending ?? 0}</strong>
           </li>
           <li>
-            Approvals last week: <strong className="text-brand-forest">{overview.audits?.actionsLast7Days ?? 0}</strong>
+            Approvals last week:{' '}
+            <strong className="text-brand-forest">{overview.audits?.actionsLast7Days ?? 0}</strong>
           </li>
         </ul>
       </DashboardCard>

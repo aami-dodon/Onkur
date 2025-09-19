@@ -39,7 +39,9 @@ describe('volunteerJourney.service', () => {
     authService = require('../src/features/auth/auth.service');
     volunteerService = require('../src/features/volunteer-journey/volunteerJourney.service');
     repository = require('../src/features/volunteer-journey/volunteerJourney.repository');
-    ({ seedVolunteerProfileLookups: seedLookups } = require('../src/features/volunteer-journey/profile.bootstrap'));
+    ({
+      seedVolunteerProfileLookups: seedLookups,
+    } = require('../src/features/volunteer-journey/profile.bootstrap'));
 
     await seedLookups();
   });
@@ -48,11 +50,16 @@ describe('volunteerJourney.service', () => {
     jest.resetModules();
   });
 
-  async function createVolunteer({ name = 'Volunteer One', email = 'volunteer1@example.com', password = 'password123' } = {}) {
+  async function createVolunteer({
+    name = 'Volunteer One',
+    email = 'volunteer1@example.com',
+    password = 'password123',
+  } = {}) {
     const signup = await authService.signup({ name, email, password });
-    const tokenRow = await pool.query('SELECT token FROM email_verification_tokens WHERE user_id = $1', [
-      signup.user.id,
-    ]);
+    const tokenRow = await pool.query(
+      'SELECT token FROM email_verification_tokens WHERE user_id = $1',
+      [signup.user.id]
+    );
     if (tokenRow.rows[0]) {
       await authService.verifyEmail({ token: tokenRow.rows[0].token });
     }
@@ -83,7 +90,19 @@ describe('volunteerJourney.service', () => {
       `,
       [id, title, description, category, theme, start, end, location, capacity, status, createdBy]
     );
-    return { id, title, description, category, theme, location, capacity, status, start, end, createdBy };
+    return {
+      id,
+      title,
+      description,
+      category,
+      theme,
+      location,
+      capacity,
+      status,
+      start,
+      end,
+      createdBy,
+    };
   }
 
   test('updates and reads volunteer profile fields with normalization', async () => {
@@ -118,14 +137,30 @@ describe('volunteerJourney.service', () => {
 
   test('event signup enforces uniqueness and capacity while notifying stakeholders', async () => {
     const manager = await createVolunteer({ name: 'Coordinator', email: 'manager@example.com' });
-    const primaryVolunteer = await createVolunteer({ name: 'Primary', email: 'primary@example.com' });
-    const secondaryVolunteer = await createVolunteer({ name: 'Secondary', email: 'secondary@example.com' });
-    const event = await createPublishedEvent({ capacity: 1, location: 'Lakeside', createdBy: manager.id });
+    const primaryVolunteer = await createVolunteer({
+      name: 'Primary',
+      email: 'primary@example.com',
+    });
+    const secondaryVolunteer = await createVolunteer({
+      name: 'Secondary',
+      email: 'secondary@example.com',
+    });
+    const event = await createPublishedEvent({
+      capacity: 1,
+      location: 'Lakeside',
+      createdBy: manager.id,
+    });
 
-    const list = await volunteerService.browseEvents({ location: 'Lakeside' }, { userId: primaryVolunteer.id });
+    const list = await volunteerService.browseEvents(
+      { location: 'Lakeside' },
+      { userId: primaryVolunteer.id }
+    );
     expect(list).toHaveLength(1);
 
-    const signup = await volunteerService.signupForEvent({ eventId: event.id, user: primaryVolunteer });
+    const signup = await volunteerService.signupForEvent({
+      eventId: event.id,
+      user: primaryVolunteer,
+    });
     expect(signup.event.isRegistered).toBe(true);
     expect(signup.managerEmailDispatched).toBe(true);
     expect(emailServiceMock.sendTemplatedEmail).toHaveBeenCalledTimes(2);
@@ -133,11 +168,15 @@ describe('volunteerJourney.service', () => {
     expect(volunteerEmail[0].to).toBe(primaryVolunteer.email);
     expect(managerEmail[0].to).toBe(manager.email);
 
-    await expect(volunteerService.signupForEvent({ eventId: event.id, user: primaryVolunteer })).rejects.toMatchObject({
+    await expect(
+      volunteerService.signupForEvent({ eventId: event.id, user: primaryVolunteer })
+    ).rejects.toMatchObject({
       statusCode: 409,
     });
 
-    await expect(volunteerService.signupForEvent({ eventId: event.id, user: secondaryVolunteer })).rejects.toMatchObject({
+    await expect(
+      volunteerService.signupForEvent({ eventId: event.id, user: secondaryVolunteer })
+    ).rejects.toMatchObject({
       statusCode: 409,
     });
   });
@@ -147,13 +186,25 @@ describe('volunteerJourney.service', () => {
     const event = await createPublishedEvent({ capacity: 5 });
 
     await expect(
-      volunteerService.recordVolunteerHours({ userId: volunteer.id, eventId: event.id, minutes: 60 })
+      volunteerService.recordVolunteerHours({
+        userId: volunteer.id,
+        eventId: event.id,
+        minutes: 60,
+      })
     ).rejects.toMatchObject({ statusCode: 400 });
 
     await volunteerService.signupForEvent({ eventId: event.id, user: volunteer });
 
-    await volunteerService.recordVolunteerHours({ userId: volunteer.id, eventId: event.id, minutes: 300 });
-    await volunteerService.recordVolunteerHours({ userId: volunteer.id, eventId: event.id, minutes: 320 });
+    await volunteerService.recordVolunteerHours({
+      userId: volunteer.id,
+      eventId: event.id,
+      minutes: 300,
+    });
+    await volunteerService.recordVolunteerHours({
+      userId: volunteer.id,
+      eventId: event.id,
+      minutes: 320,
+    });
 
     const hours = await volunteerService.getVolunteerHours(volunteer.id);
     expect(hours.totalMinutes).toBe(620);

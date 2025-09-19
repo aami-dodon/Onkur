@@ -41,7 +41,9 @@ export default function LoginPage() {
         role="form"
       >
         <div className="space-y-2 text-center sm:text-left">
-          <h2 className="m-0 font-display text-2xl font-semibold text-brand-green">Welcome back to Onkur</h2>
+          <h2 className="m-0 font-display text-2xl font-semibold text-brand-green">
+            Welcome back to Onkur
+          </h2>
           <p className="m-0 text-sm text-brand-muted sm:text-base">
             Reconnect with the community and track the impact you are creating.
           </p>

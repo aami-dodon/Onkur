@@ -35,19 +35,26 @@ export default function PublicGalleryPage() {
     };
   }, []);
 
-  const selectedEvent = useMemo(() => events.find((event) => event.id === selectedEventId) || null, [events, selectedEventId]);
+  const selectedEvent = useMemo(
+    () => events.find((event) => event.id === selectedEventId) || null,
+    [events, selectedEventId]
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-10 sm:px-6 lg:px-8">
       <header className="flex flex-col gap-3 text-center">
-        <h1 className="m-0 font-display text-3xl font-semibold text-brand-forest sm:text-4xl">Impact in full color</h1>
+        <h1 className="m-0 font-display text-3xl font-semibold text-brand-forest sm:text-4xl">
+          Impact in full color
+        </h1>
         <p className="m-0 text-base text-brand-muted sm:text-lg">
-          Browse approved galleries from recent Onkur events. Every story highlights volunteers, sponsors, and communities
-          thriving together.
+          Browse approved galleries from recent Onkur events. Every story highlights volunteers,
+          sponsors, and communities thriving together.
         </p>
       </header>
       {status === 'error' ? (
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">{error}</div>
+        <div className="rounded-3xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+          {error}
+        </div>
       ) : null}
       <section className="flex flex-col gap-4">
         <h2 className="m-0 text-lg font-semibold text-brand-forest">Featured galleries</h2>
@@ -67,7 +74,9 @@ export default function PublicGalleryPage() {
               <p className="m-0 text-xs uppercase tracking-[0.24em] text-brand-muted">
                 {event.mediaCount} photos · {event.theme || 'Community impact'}
               </p>
-              <p className="m-0 text-sm text-brand-muted">{event.location || 'Across our communities'}</p>
+              <p className="m-0 text-sm text-brand-muted">
+                {event.location || 'Across our communities'}
+              </p>
               {Array.isArray(event.sponsors) && event.sponsors.length ? (
                 <div className="flex flex-wrap items-center gap-2">
                   {event.sponsors.slice(0, 3).map((sponsor) => (
@@ -76,7 +85,11 @@ export default function PublicGalleryPage() {
                       className="inline-flex items-center gap-2 rounded-full bg-brand-sand px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-forest"
                     >
                       {sponsor.logoUrl ? (
-                        <img src={sponsor.logoUrl} alt={sponsor.orgName} className="h-5 w-5 rounded-full object-cover" />
+                        <img
+                          src={sponsor.logoUrl}
+                          alt={sponsor.orgName}
+                          className="h-5 w-5 rounded-full object-cover"
+                        />
                       ) : null}
                       {sponsor.orgName}
                     </span>

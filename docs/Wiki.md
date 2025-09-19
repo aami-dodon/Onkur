@@ -1,26 +1,37 @@
 # Dynamic gallery URL resolution
+
 - **Date:** 2025-10-13
 - **Change:** Introduced a shared gallery storage URL helper that always rebuilds public media links from the live MinIO/S3 configuration and wired repository mappers to consume it while keeping inline fallbacks intact.
 - **Impact:** Updating `MINIO_ENDPOINT`, port, or TLS settings now retroactively adjusts previously uploaded gallery image URLs without backfilling the database, ensuring legacy media keeps working after storage host changes.
 
 # Onkur Change Log
 
+## Repository hygiene & CI refresh
+
+- **Date:** 2025-10-14
+- **Change:** Removed committed dependency directories, introduced workspace `.gitignore` rules, added Prettier/ESLint configs for backend and frontend, wired Vitest smoke coverage for the app shell, and provisioned `.env.example` templates. Established GitHub Actions CI to run formatting checks, linting, tests, and production builds on every push.
+- **Impact:** Contributors work from a predictable baseline with reproducible installs, automated quality gates, and documentation that points to the new contribution, conduct, and license policies.
+
 ## Dev server cache headers for React integrity
+
 - **Date:** 2025-10-12
 - **Change:** Configured the Vite dev server to emit `no-store` cache headers so module requests bypass browser caches after container restarts and documented the requirement in the frontend agent guide.
 - **Impact:** Prevents stale React vendor chunks from lingering in browser caches, eliminating the "Invalid hook call" errors that previously required a manual cache clear before the dashboard would load again.
 
 ## Impact analytics rollup hardening
+
 - **Date:** 2025-10-11
 - **Change:** Hardened the impact analytics repository to sum recorded dashboard views instead of counting rows, expanded the Jest suite with in-memory database coverage for story submission, moderation notifications, and overview export math, and refreshed impact feature guidelines to keep future changes aligned.
 - **Impact:** Stakeholders now see accurate analytics usage totals, regression coverage guards the end-to-end story pipeline, and future impact work has a documented testing contract.
 
 ## Phase 7 impact storytelling & analytics
+
 - **Date:** 2025-10-10
 - **Change:** Delivered the Phase 7 impact layer: beneficiaries can submit rich stories tied to events, admins moderate approvals with sponsor + author notifications, the gallery now renders approved impact stories, and a consolidated analytics API/CSV export surfaces volunteer hours, participation, gallery reach, and sponsor impressions. Volunteer dashboards show a new community highlights card.
 - **Impact:** Storytelling now travels from submission through approval to public display, sponsors get notified when spotlighted, and admins plus stakeholders can export platform-wide impact metrics while volunteers see how their hours move the needle.
 
 ## Audit log metadata defaults
+
 - **Date:** 2025-10-09
 - **Change:** Normalized the backend audit logging helper to always persist an empty JSON object when optional metadata is
   omitted, aligning inserts with the database `metadata` column's `NOT NULL` constraint and preventing login attempts from
@@ -29,16 +40,19 @@
   reach the dashboard even when no supplemental metadata accompanies the audit entry.
 
 ## React 18.3 alignment for auth hooks
+
 - **Date:** 2025-10-07
 - **Change:** Upgraded the frontend to `react@18.3.1` and `react-dom@18.3.1`, refreshed the lockfile, and enforced `npm dedupe` guidance so the Auth context resolves hooks against a single React dispatcher.
 - **Impact:** Logged-in sessions no longer trigger the "Invalid hook call" error inside `AuthProvider`, restoring dashboard access while keeping the Vite dedupe safeguards documented for future dependency work.
 
 ## Layout Suspense loader overlay
+
 - **Date:** 2025-10-06
 - **Change:** Wrapped the layout content area in its own `Suspense` boundary that renders the shared `LoadingScreen` and adjusted the loader container sizing so route-to-route navigation always presents an inline progress indicator without collapsing the spinner.
 - **Impact:** Volunteers, sponsors, and admins now see immediate feedback when navigating between dashboard sections, confirming their interactions while lazy-loaded routes stream in.
 
 ## React dedupe for hook stability
+
 - **Date:** 2025-10-05
 - **Change:** Configured Vite to deduplicate `react` and `react-dom` module resolution so the dev server and production build alw
   ays share a single React instance.
@@ -46,208 +60,237 @@
   or that prevented the landing page from rendering.
 
 ## Direct main bundle loading
+
 - **Date:** 2025-10-04
 - **Change:** Updated the frontend entry script to load `src/main.js` directly, replaced the JSX entry module with a JavaScript
   module to avoid redirects, and refreshed the Vite HTML transform so Rocket Loader keeps the correct crossorigin attributes.
 - **Impact:** Browsers now request the dashboard bundle without following `main.jsx` detours, trimming an extra roundtrip when t
-he app boots under the CDN.
+  he app boots under the CDN.
 
 ## Event report downloads stay in app
+
 - **Date:** 2025-10-04
 - **Change:** Converted the event report export into an authenticated blob download so managers save CSVs without opening new tabs, and replaced the volunteer guidance CTA with an in-app link to avoid full page reloads.
 - **Impact:** Event managers can grab analytics without context switches while volunteers jump to the events hub instantly with client-side routing.
 
 ## Desktop navigation parity
+
 - **Date:** 2025-09-18
 - **Change:** Introduced a desktop header navigation that mirrors the mobile bottom menu, centralized the navigation config, and wired menu items to new `/app/events`, `/app/gallery`, and `/app/profile` routes.
 - **Impact:** Authenticated users can now move between dashboard sections on both mobile and desktop, with dedicated views for events, gallery spotlights, and profile management.
 
 ## Volunteer dashboard API routing fix
+
 - **Date:** 2025-09-18
 - **Change:** Updated the volunteer journey router to register its endpoints relative to the `/api` base path so that dashboard requests such as `/api/me/dashboard` resolve correctly after login.
 - **Impact:** Volunteers can now load their dashboard without receiving the generic "Request failed" error because the routes map to the expected URLs.
 
 ## Phase 3 event manager workflows
+
 - **Date:** 2025-09-19
 - **Change:** Introduced a dedicated event management feature set: managers can draft, update, publish, and complete events; define task boards; assign registered volunteers; process attendance with automatic hour logging; and generate shareable CSV impact reports. The frontend dashboard now surfaces a full workspace for these flows.
 - **Impact:** Event managers can coordinate end-to-end logistics from the dashboard while volunteers immediately see published events, their assignments, and updated hours when checked in on site.
 
-
 ## README roadmap refresh
+
 - **Date:** 2025-09-20
 - **Change:** Expanded the public README to reflect the completed three-phase rollout, covering volunteer profiles, discovery, event management, and supporting tooling while pointing to the canonical wiki file.
 - **Impact:** Stakeholders and contributors now have an at-a-glance summary of Onkur's Phase 1–3 capabilities without diving into internal docs.
 
 ## Role-aware registration and directories
+
 - **Date:** 2025-09-20
 - **Change:** Expanded signup to let new members pick multiple roles (volunteer, event manager, sponsor) via accessible checkboxes, persisted through a new `user_roles` join table. Admin tooling now edits multi-role assignments, and all auth responses expose a normalized `roles` array alongside the primary role.
 - **Impact:** Members can express every way they want to contribute from day one, and admin workflows stay in sync with richer role data across the platform.
+
 ## Branded email foundation
+
 - **Date:** 2025-09-21
 - **Change:** Refreshed the Nodemailer service with a reusable Onkur theme that injects a responsive CSS layout, standardized the `[Onkur]` subject prefix, and added a `npm run send:test-email` utility for verifying SMTP credentials via the new template.
 - **Impact:** Contributors have a modern baseline for transactional emails and a simple script to confirm delivery without duplicating setup work.
+
 ## Admin bootstrap configuration
+
 - **Date:** 2025-09-21
 - **Change:** Added startup logic that seeds a default admin account whenever `ADMIN_NAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` are provided. The bootstrapper promotes existing records to the ADMIN role or creates a verified admin using the configured credentials.
 - **Impact:** Deployments now guarantee an ADMIN user without manual SQL, ensuring future admin-only features have an account ready for use.
 
-
 ## Email verification handoff improvements
+
 - **Date:** 2025-09-22
 - **Change:** The signup API now returns the configured admin contact address alongside the verification prompt, and the frontend guides new members to a dedicated "Check your email" screen that preserves their address, explains the confirmation step, and surfaces the admin email for support.
 - **Impact:** Fresh registrants immediately understand that email verification is required before logging in and know how to reach an administrator if the confirmation message does not arrive.
 
 ## Configurable verification support contact
+
 - **Date:** 2025-09-22
 - **Change:** Centralized the admin support email so both the API and post-signup UX read from environment variables (`ADMIN_EMAIL` and `VITE_ADMIN_EMAIL`), trimming and formatting comma-separated addresses for display.
 - **Impact:** Operations teams can change the contact mailbox without redeploying code, and registrants always see the up-to-date support email after signing up.
+
 ## Unified multi-role dashboard priority
+
 - **Date:** 2025-09-22
 - **Change:** Centralized role-priority helpers on the backend and dashboard so users holding multiple roles always expose a deterministic `primaryRole`, ensuring dashboards, galleries, and profiles tailor their intros correctly while preserving all role badges.
 - **Impact:** Members who are simultaneously volunteers, event managers, and sponsors now see the full toolset without losing access to any experience, and administrators reuse a single helper when adjusting role order.
+
 ## Volunteer home focuses on commitments
+
 - **Date:** 2025-09-22
 - **Change:** Removed the in-dashboard profile editor for volunteers and expanded the upcoming commitments card to span the dashboard width so all roles treat profile updates through the dedicated profile page.
 - **Impact:** Volunteers manage their profiles from the Profile menu while the dashboard highlights schedules and logged impact without split attention.
 
 ## Volunteer dashboard event discovery removal
+
 - **Date:** 2025-09-22
 - **Change:** Retired the "Discover new events" panel from the volunteer home view so the dashboard centers on commitments and impact tracking while directing discovery traffic to the dedicated events hub.
 - **Impact:** Volunteers see a streamlined home focused on what they’ve scheduled and accomplished, using the events hub when they’re ready to browse new opportunities.
 
 ## Profile completion reminder on volunteer home
+
 - **Date:** 2025-09-23
 - **Change:** Added a volunteer dashboard call-to-action that surfaces when profile data is incomplete, showing percent completion, highlighting missing sections, and linking directly to the profile editor.
 - **Impact:** Volunteers understand why finishing their profile matters and can jump straight to the editor, helping event managers match the right people to upcoming opportunities.
 
 ## Role-aware profile completion prompts
+
 - **Date:** 2025-09-23
 - **Change:** Extended the profile completion call-to-action to event manager and sponsor dashboards, centralizing the UI so each role reuses the same visual pattern while customizing motivational copy.
 - **Impact:** Coordinators and partners now receive tailored encouragement to complete their profiles, improving trust with volunteers and giving the team better context for recognition efforts.
 
 ## Sponsor & manager profile CTA data fix
+
 - **Date:** 2025-09-23
 - **Change:** Updated the auth service to include volunteer profile payloads in public user responses so sponsor and event manager dashboards can measure completion progress immediately after login.
 - **Impact:** Non-volunteer roles now see the profile completion prompts that were previously scoped to volunteers, keeping the cross-role guidance consistent.
 
 ## Lookup-driven profile editor
+
 - **Date:** 2025-09-24
 - **Change:** Replaced free-form profile fields with curated lookup selectors for skills, interests, availability, and location. The backend now seeds Indian-centric reference data for these lookups, exposes authenticated endpoints to fetch cascaded state/city lists, and persists selections alongside optional custom skills or interests.
 - **Impact:** Volunteers and other members update their profiles faster with consistent terminology, coordinators can filter against normalized data, and deployments automatically receive the seeded options without manual database scripts.
 
 ## Profile editor primary action buttons
+
 - **Date:** 2025-09-25
 - **Change:** Promoted the custom skill and interest buttons on the volunteer profile editor to use the primary button style and documented the expectation in the volunteer frontend guidelines.
 - **Impact:** The calls-to-action to add new skills or interests now stand out visually, guiding members to enrich their profiles without hunting for the controls.
 
-
 ## Event manager lookup-driven event logging
+
 - **Date:** 2025-09-26
 - **Change:** Event drafting now relies on reference data: categories persist to a new `event_categories` table, state/city fields reference the Indian lookup tables, an `isOnline` flag drives mode-specific validation, and optional skill/interest/availability arrays capture ideal volunteers. The manager workspace fetches these lookups, offers inline category creation, and reshapes the form/UI to surface online mode and location chips.
 - **Impact:** Managers log events with consistent taxonomy, can flag virtual sessions, and share richer expectations with volunteers without duplicating reference data or free-form text.
 
 ## Hours logging requires event participation
+
 - **Date:** 2025-09-25
 - **Change:** Updated the volunteer hours tracker to hide the logging form when a volunteer has not joined any events, replacing it with guidance to explore the events hub. Documented the pattern in the volunteer frontend guidelines.
 - **Impact:** Volunteers understand they must RSVP to an event before logging time and are directed to the appropriate place to do so, preventing empty submissions.
 
 ## Volunteer events CTA width refinement
+
 - **Date:** 2025-09-25
 - **Change:** Adjusted the volunteer hours tracker events hub link to use a self-starting primary button so the CTA renders at its standard width instead of stretching across the card. Added the expectation to the volunteer frontend guidelines.
 - **Impact:** Volunteers see a tidy guidance card that matches other dashboard buttons while still drawing attention to the events hub when they need to join an opportunity before logging hours.
 
 ## Event launch outreach automation
+
 - **Date:** 2025-09-26
 - **Change:** Event creation now schedules branded emails to every volunteer and sponsor in the background, tailoring the message, CTA, and impact notes when their profile skills, interests, availability, or location align with the opportunity.
 - **Impact:** Event managers publish without waiting on email dispatch while volunteers and sponsors receive timely, personalized nudges that highlight why the event matters to them.
 
 ## Idempotent event lookup constraints
+
 - **Date:** 2025-09-27
 - **Change:** Hardened the volunteer journey bootstrapper to check for foreign key constraints before adding them to the `events` table so schema setup can run multiple times without raising duplicate constraint errors.
 - **Impact:** Local development and container restarts no longer crash during startup when the lookup seeding runs after the schema has already been upgraded.
 
 ## Event creation placeholder alignment
+
 - **Date:** 2025-09-27
 - **Change:** Fixed the event creation repository insert statement to provide parameter placeholders for every column so the database receives the required availability and creator values alongside the draft status default.
 - **Impact:** Event managers can save drafts without encountering the "INSERT has more target columns than expressions" error.
 
-
 ## Manager notifications on volunteer signups
+
 - **Date:** 2025-09-28
 - **Change:** Updated the volunteer signup service to look up an event's manager and send them a branded notification email whenever a volunteer registers, while preserving the primary confirmation flow if the manager email fails.
 - **Impact:** Event managers now receive timely awareness of new volunteers joining their events, letting them review rosters and plan assignments without monitoring the dashboard constantly.
 
 ## Volunteer event departures reset impact
+
 - **Date:** 2025-09-28
 - **Change:** Added a `DELETE /api/events/:eventId/signup` endpoint that uses a transactional `cancelEventSignup` helper to remove assignments, attendance, and logged hours before emailing the event manager via the branded template. The volunteer dashboard and events hub now surface "Leave event" actions with inline feedback and refresh all summary panels after success.
 - **Impact:** Volunteers can bow out of commitments at any time, their impact totals drop to zero for that event, and managers receive immediate notice to rebalance coverage.
 
 ## Phase 4 gallery storytelling
+
 - **Date:** 2025-09-29
 - **Change:** Introduced an end-to-end event gallery system: uploads pass through a moderated pipeline with EXIF-stripping image processing, MinIO/S3 storage, role-aware tagging, sponsor/community notifications, public `/gallery` browsing, infinite-scroll viewing, and an admin moderation queue. Dashboard gallery tooling now lets participants submit photos, review approved stories, and admins oversee queues.
 - **Impact:** Onkur can showcase event impact through rich, mobile-first visuals. Volunteers and managers highlight participants and sponsors, admins guard quality, sponsors are alerted when featured, and visitors explore live galleries with quick load times.
 
-
 ## Event gallery runtime compatibility
+
 - **Date:** 2025-09-29
 - **Change:** Updated the gallery upload service to lazy-load the `file-type` detector through an ES module import so Node 20 resolves the dependency without triggering the "No exports main defined" error during startup.
 - **Impact:** Backend containers boot cleanly again, keeping gallery moderation, uploads, and notifications online for admins and event teams.
 
-
 ## Mobile header compaction
+
 - **Date:** 2025-09-30
 - **Change:** Slimmed the authenticated dashboard header with tighter spacing, hid the subtitle on mobile, and relocated the logout action to the sticky bottom navigation.
 - **Impact:** Mobile users regain vertical space for content while still accessing logout from the persistent footer, and desktop retains the prominent logout control.
 
-
 ## Earthy brown branding refresh
+
 - **Date:** 2025-09-30
 - **Change:** Recolored the shared Tailwind palette and home page theme styles to center on earthy browns and ambers, updating gradients, shadows, and button treatments to match the new direction.
 - **Impact:** The web experience now carries a cohesive warm visual identity that aligns with the refreshed Onkur brand guidelines without disrupting existing layout structure.
 
-
-
 ## Phase 5 sponsor partnerships
+
 - **Date:** 2025-10-01
 - **Change:** Introduced the sponsor workflow end to end: sponsors apply for approval, admins moderate applications, approved sponsors pledge funds or in-kind support to events, and dashboards surface live sponsorships with ROI-ready metrics and impact reports.
 - **Impact:** Sponsors gain a dedicated workspace to support events, see their logos across event and gallery experiences, and receive automated summaries of volunteer hours, attendance, and gallery visibility tied to their contributions.
 
 ## Phase 6 admin oversight
+
 - **Date:** 2025-10-08
 - **Change:** Delivered a comprehensive admin console with moderation queues for events, sponsors, and gallery media; approval/rejection APIs that log before/after snapshots; user management to toggle roles and deactivate accounts; and downloadable reports with CSV/Excel output plus refreshed metrics tiles.
 - **Impact:** Admins can govern the entire platform from one screen, keep audit trails for every action, notify submitters automatically, and download system-wide datasets for compliance or analytics without touching the database.
 
-
 ## Sponsor event discovery guardrails
+
 - **Date:** 2025-10-02
 - **Change:** Hardened the shared event discovery component to treat sponsor metadata as optional, guarding array access and action handlers so the volunteer and sponsor dashboards no longer crash when the API omits sponsorship details.
 - **Impact:** Event lists now render reliably for every role, giving sponsors and volunteers uninterrupted access to filters, signups, and pledge actions even while data loads or profiles await approval.
 
-
 ## GTmetrix bundle optimizations
+
 - **Date:** 2025-10-02
 - **Change:** Swapped top-level routes and dashboard surfaces to `React.lazy` + Suspense fallbacks so React Router pages load on demand, and tuned `vite.config.js` to leverage Terser minification, drop console/debugger statements, and emit manual vendor chunks for React and router packages.
 - **Impact:** Initial page loads download smaller JavaScript payloads while subsequent navigation streams feature-specific code, aligning the dashboard with GTmetrix recommendations for minification, unused code removal, and bundle splitting.
 
-
 ## Rocket Loader preload credential alignment
+
 - **Date:** 2025-10-02
 - **Change:** Added a Vite HTML transform that injects `crossorigin="anonymous"` on the dev client preload and entry module scripts while updating `index.html` to mark the root bundle with the same attribute.
 - **Impact:** Cloudflare Rocket Loader now reuses the preload for `@vite/client` without warning about credential mode mismatches, keeping browser consoles clean during development.
 
 ## CSS delivery optimizations
+
 - **Date:** 2025-10-03
 - **Change:** Moved Google Font loading from a CSS `@import` into `<link>` tags within `index.html` and introduced cssnano into the PostCSS pipeline so production builds ship minified stylesheets.
 - **Impact:** The dashboard avoids render-blocking stylesheet imports while trimming roughly 2KB from the compiled CSS bundle, improving page load performance.
 
 ## Google Fonts swap delivery
+
 - **Date:** 2025-10-03
 - **Change:** Swapped the dashboard back to Google Fonts, loading Inter and Nunito weights through `<link>` tags that request latin subsets with `display=swap` while removing the bundled WOFF2 assets and `fonts.css` entrypoint.
 - **Impact:** The build avoids binary font commits while still shipping non-blocking typography with the lighter latin-focused families the UI expects.
 
 ## Landing LCP fallback removal
+
 - **Date:** 2025-10-03
 - **Change:** Inlined the public `HomePage` in `App.jsx` instead of lazy loading it so first impressions avoid the Suspense spinner and the hero content can render with the initial bundle.
 - **Impact:** Largest Contentful Paint on the marketing home now depends on the first script payload alone, eliminating the extra network hop that pushed GTmetrix LCP near 5.5 seconds.
-
-

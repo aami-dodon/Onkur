@@ -1,7 +1,17 @@
 const pool = require('../common/db');
 
 async function getOverviewMetrics() {
-  const [roleCountsResult, userCountsResult, eventStatsResult, volunteerTotalsResult, volunteerActiveResult, sponsorProfilesResult, sponsorFundsResult, galleryStatsResult, auditRecentResult] = await Promise.all([
+  const [
+    roleCountsResult,
+    userCountsResult,
+    eventStatsResult,
+    volunteerTotalsResult,
+    volunteerActiveResult,
+    sponsorProfilesResult,
+    sponsorFundsResult,
+    galleryStatsResult,
+    auditRecentResult,
+  ] = await Promise.all([
     pool.query(`SELECT role, COUNT(*)::INT AS count FROM user_roles GROUP BY role`),
     pool.query(`
       SELECT
@@ -31,14 +41,18 @@ async function getOverviewMetrics() {
         COUNT(*) FILTER (WHERE status = 'DECLINED') ::INT AS declined_count
       FROM sponsor_profiles
     `),
-    pool.query(`SELECT COALESCE(SUM(amount), 0)::NUMERIC AS total_amount FROM sponsorships WHERE status = 'APPROVED'`),
+    pool.query(
+      `SELECT COALESCE(SUM(amount), 0)::NUMERIC AS total_amount FROM sponsorships WHERE status = 'APPROVED'`
+    ),
     pool.query(`
       SELECT
         COUNT(*) FILTER (WHERE status = 'PENDING') ::INT AS pending_count,
         COUNT(*) FILTER (WHERE status = 'APPROVED') ::INT AS approved_count
       FROM event_media
     `),
-    pool.query(`SELECT COUNT(*)::INT AS recent_actions FROM audit_logs WHERE created_at >= NOW() - INTERVAL '7 days'`),
+    pool.query(
+      `SELECT COUNT(*)::INT AS recent_actions FROM audit_logs WHERE created_at >= NOW() - INTERVAL '7 days'`
+    ),
   ]);
 
   const roleCounts = roleCountsResult.rows.reduce((acc, row) => {

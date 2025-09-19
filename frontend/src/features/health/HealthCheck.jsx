@@ -9,7 +9,7 @@ function HealthCheck() {
 
   useEffect(() => {
     fetch(`${API_BASE}/api/health`)
-      .then(res => res.json())
+      .then((res) => res.json())
       .then(
         (result) => {
           setData(result);

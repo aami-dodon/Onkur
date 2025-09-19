@@ -12,7 +12,7 @@ function toNameSlug(name) {
 async function ensureConstraint(constraintName, tableName, definitionSql) {
   const existing = await pool.query(
     `SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = $1 AND table_name = $2`,
-    [constraintName, tableName],
+    [constraintName, tableName]
   );
   if (!existing.rowCount) {
     await pool.query(definitionSql);
@@ -86,22 +86,33 @@ const schemaPromise = (async () => {
     )
   `);
 
-  await pool.query(`CREATE INDEX IF NOT EXISTS idx_indian_cities_state ON indian_cities (state_code)`);
-  await pool.query(`ALTER TABLE indian_cities DROP CONSTRAINT IF EXISTS indian_cities_state_code_lower_name_key`);
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS idx_indian_cities_state ON indian_cities (state_code)`
+  );
+  await pool.query(
+    `ALTER TABLE indian_cities DROP CONSTRAINT IF EXISTS indian_cities_state_code_lower_name_key`
+  );
   await pool.query(`ALTER TABLE indian_cities ADD COLUMN IF NOT EXISTS name_slug TEXT`);
   const citiesNeedingSlug = await pool.query(
     `SELECT slug, name FROM indian_cities WHERE name_slug IS NULL OR name_slug = ''`
   );
   for (const city of citiesNeedingSlug.rows) {
-    await pool.query(`UPDATE indian_cities SET name_slug = $1 WHERE slug = $2`, [toNameSlug(city.name || city.slug), city.slug]);
+    await pool.query(`UPDATE indian_cities SET name_slug = $1 WHERE slug = $2`, [
+      toNameSlug(city.name || city.slug),
+      city.slug,
+    ]);
   }
   await pool.query(`ALTER TABLE indian_cities ALTER COLUMN name_slug SET NOT NULL`);
   await pool.query(
     `CREATE UNIQUE INDEX IF NOT EXISTS idx_indian_cities_state_name_slug ON indian_cities (state_code, name_slug)`
   );
 
-  await pool.query(`ALTER TABLE volunteer_profiles DROP CONSTRAINT IF EXISTS volunteer_profiles_city_slug_fkey`);
-  await pool.query(`ALTER TABLE volunteer_profiles DROP CONSTRAINT IF EXISTS volunteer_profiles_state_code_fkey`);
+  await pool.query(
+    `ALTER TABLE volunteer_profiles DROP CONSTRAINT IF EXISTS volunteer_profiles_city_slug_fkey`
+  );
+  await pool.query(
+    `ALTER TABLE volunteer_profiles DROP CONSTRAINT IF EXISTS volunteer_profiles_state_code_fkey`
+  );
   await pool.query(
     `ALTER TABLE volunteer_profiles ADD CONSTRAINT volunteer_profiles_state_code_fkey FOREIGN KEY (state_code) REFERENCES indian_states(code) ON DELETE SET NULL`
   );
@@ -148,16 +159,24 @@ const schemaPromise = (async () => {
   await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ NULL`);
   await pool.query(`ALTER TABLE events ALTER COLUMN location DROP NOT NULL`);
   await pool.query(`ALTER TABLE events ALTER COLUMN status SET DEFAULT 'DRAFT'`);
-  await pool.query(`UPDATE events SET status = UPPER(status) WHERE status IS NOT NULL AND status <> UPPER(status)`);
+  await pool.query(
+    `UPDATE events SET status = UPPER(status) WHERE status IS NOT NULL AND status <> UPPER(status)`
+  );
   await pool.query(`ALTER TABLE events DROP CONSTRAINT IF EXISTS events_status_check`);
   await pool.query(
-    `ALTER TABLE events ADD CONSTRAINT events_status_check CHECK (status = ANY(ARRAY['DRAFT','PUBLISHED','CANCELLED','COMPLETED']::TEXT[]))`,
+    `ALTER TABLE events ADD CONSTRAINT events_status_check CHECK (status = ANY(ARRAY['DRAFT','PUBLISHED','CANCELLED','COMPLETED']::TEXT[]))`
   );
 
-  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS approval_status TEXT NOT NULL DEFAULT 'PENDING'`);
+  await pool.query(
+    `ALTER TABLE events ADD COLUMN IF NOT EXISTS approval_status TEXT NOT NULL DEFAULT 'PENDING'`
+  );
   await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS approval_note TEXT NULL`);
-  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS approval_decided_at TIMESTAMPTZ NULL`);
-  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS approval_decided_by UUID NULL REFERENCES users(id) ON DELETE SET NULL`);
+  await pool.query(
+    `ALTER TABLE events ADD COLUMN IF NOT EXISTS approval_decided_at TIMESTAMPTZ NULL`
+  );
+  await pool.query(
+    `ALTER TABLE events ADD COLUMN IF NOT EXISTS approval_decided_by UUID NULL REFERENCES users(id) ON DELETE SET NULL`
+  );
   await pool.query(`
     ALTER TABLE events
     DROP CONSTRAINT IF EXISTS events_approval_status_check
@@ -171,10 +190,18 @@ const schemaPromise = (async () => {
   await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS category_value TEXT NULL`);
   await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS location_state_code TEXT NULL`);
   await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS location_city_slug TEXT NULL`);
-  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS is_online BOOLEAN NOT NULL DEFAULT FALSE`);
-  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS required_skills TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]`);
-  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS required_interests TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]`);
-  await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS required_availability TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]`);
+  await pool.query(
+    `ALTER TABLE events ADD COLUMN IF NOT EXISTS is_online BOOLEAN NOT NULL DEFAULT FALSE`
+  );
+  await pool.query(
+    `ALTER TABLE events ADD COLUMN IF NOT EXISTS required_skills TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]`
+  );
+  await pool.query(
+    `ALTER TABLE events ADD COLUMN IF NOT EXISTS required_interests TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]`
+  );
+  await pool.query(
+    `ALTER TABLE events ADD COLUMN IF NOT EXISTS required_availability TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]`
+  );
   await ensureConstraint(
     'events_category_value_fkey',
     'events',
@@ -207,11 +234,11 @@ const schemaPromise = (async () => {
         ON CONFLICT (value)
         DO UPDATE SET label = EXCLUDED.label, updated_at = NOW()
       `,
-      [value, categoryLabel],
+      [value, categoryLabel]
     );
     await pool.query(
       `UPDATE events SET category_value = $1 WHERE category = $2 AND (category_value IS NULL OR category_value = '')`,
-      [value, categoryLabel],
+      [value, categoryLabel]
     );
   }
 
@@ -596,10 +623,9 @@ async function listPublishedEvents({ category, location, theme, date }, { forUse
 
   let registeredIds = new Set();
   if (forUserId) {
-    const signupRes = await pool.query(
-      `SELECT event_id FROM event_signups WHERE user_id = $1`,
-      [forUserId]
-    );
+    const signupRes = await pool.query(`SELECT event_id FROM event_signups WHERE user_id = $1`, [
+      forUserId,
+    ]);
     registeredIds = new Set(signupRes.rows.map((row) => row.event_id));
   }
 
@@ -680,7 +706,9 @@ async function createEventSignup({ eventId, userId }) {
       [eventId, userId]
     );
     if (existing.rows[0]) {
-      throw Object.assign(new Error('You are already registered for this event'), { statusCode: 409 });
+      throw Object.assign(new Error('You are already registered for this event'), {
+        statusCode: 409,
+      });
     }
 
     const countResult = await client.query(
@@ -736,7 +764,7 @@ async function cancelEventSignup({ eventId, userId }) {
         WHERE e.id = $1
         FOR UPDATE
       `,
-      [eventId],
+      [eventId]
     );
 
     const event = eventResult.rows[0];
@@ -751,7 +779,7 @@ async function cancelEventSignup({ eventId, userId }) {
         WHERE event_id = $1 AND user_id = $2
         FOR UPDATE
       `,
-      [eventId, userId],
+      [eventId, userId]
     );
 
     const signup = signupResult.rows[0];
@@ -759,7 +787,10 @@ async function cancelEventSignup({ eventId, userId }) {
       throw Object.assign(new Error('You are not registered for this event'), { statusCode: 404 });
     }
 
-    await client.query(`DELETE FROM event_assignments WHERE event_id = $1 AND user_id = $2`, [eventId, userId]);
+    await client.query(`DELETE FROM event_assignments WHERE event_id = $1 AND user_id = $2`, [
+      eventId,
+      userId,
+    ]);
 
     const removedHours = await client.query(
       `
@@ -767,12 +798,18 @@ async function cancelEventSignup({ eventId, userId }) {
         WHERE event_id = $1 AND user_id = $2
         RETURNING id, minutes
       `,
-      [eventId, userId],
+      [eventId, userId]
     );
 
-    await client.query(`DELETE FROM event_attendance WHERE event_id = $1 AND user_id = $2`, [eventId, userId]);
+    await client.query(`DELETE FROM event_attendance WHERE event_id = $1 AND user_id = $2`, [
+      eventId,
+      userId,
+    ]);
 
-    await client.query(`DELETE FROM event_signups WHERE event_id = $1 AND user_id = $2`, [eventId, userId]);
+    await client.query(`DELETE FROM event_signups WHERE event_id = $1 AND user_id = $2`, [
+      eventId,
+      userId,
+    ]);
 
     await client.query('COMMIT');
 
@@ -784,7 +821,10 @@ async function cancelEventSignup({ eventId, userId }) {
         }
       : null;
 
-    const totalMinutesRemoved = removedHours.rows.reduce((total, row) => total + Number(row.minutes || 0), 0);
+    const totalMinutesRemoved = removedHours.rows.reduce(
+      (total, row) => total + Number(row.minutes || 0),
+      0
+    );
 
     return {
       event,
@@ -960,10 +1000,7 @@ async function findSignupsNeedingReminder() {
 
 async function markReminderSent(signupId) {
   await ensureSchema();
-  await pool.query(
-    `UPDATE event_signups SET reminder_sent_at = NOW() WHERE id = $1`,
-    [signupId]
-  );
+  await pool.query(`UPDATE event_signups SET reminder_sent_at = NOW() WHERE id = $1`, [signupId]);
 }
 
 async function getUpcomingEventsForUser(userId) {

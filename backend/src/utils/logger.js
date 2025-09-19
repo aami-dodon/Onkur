@@ -1,7 +1,7 @@
-const fs = require("fs");
-const path = require("path");
-const winston = require("winston");
-const config = require("../config");
+const fs = require('fs');
+const path = require('path');
+const winston = require('winston');
+const config = require('../config');
 
 const transports = [
   new winston.transports.Console({
@@ -29,7 +29,7 @@ const logger = winston.createLogger({
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.printf(({ timestamp, level, message, ...meta }) => {
-      const metaString = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : "";
+      const metaString = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
       return `${timestamp} [${level}] ${message}${metaString}`;
     })
   ),

@@ -54,7 +54,13 @@ export function AuthProvider({ children }) {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (!stored) {
         if (isMounted) {
-          setAuth({ status: 'unauthenticated', user: null, token: null, jti: null, expiresAt: null });
+          setAuth({
+            status: 'unauthenticated',
+            user: null,
+            token: null,
+            jti: null,
+            expiresAt: null,
+          });
         }
         return;
       }
@@ -73,7 +79,13 @@ export function AuthProvider({ children }) {
       } catch (error) {
         clearSessionStorage();
         if (isMounted) {
-          setAuth({ status: 'unauthenticated', user: null, token: null, jti: null, expiresAt: null });
+          setAuth({
+            status: 'unauthenticated',
+            user: null,
+            token: null,
+            jti: null,
+            expiresAt: null,
+          });
         }
       }
     })();

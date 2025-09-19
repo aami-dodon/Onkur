@@ -8,10 +8,12 @@ function StatusBadge({ status }) {
     normalized === 'APPROVED'
       ? 'bg-brand-forest/10 text-brand-forest'
       : normalized === 'DECLINED'
-      ? 'bg-red-100 text-red-700'
-      : 'bg-brand-sand text-brand-muted';
+        ? 'bg-red-100 text-red-700'
+        : 'bg-brand-sand text-brand-muted';
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${tone}`}>
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${tone}`}
+    >
       {normalized}
     </span>
   );
@@ -26,7 +28,9 @@ function ContributionDetails({ sponsorship }) {
     <div className="flex flex-col gap-3 rounded-3xl border border-brand-forest/10 bg-white/80 p-4">
       <header className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h4 className="m-0 text-base font-semibold text-brand-forest">{sponsorship.event?.title || 'Sponsored event'}</h4>
+          <h4 className="m-0 text-base font-semibold text-brand-forest">
+            {sponsorship.event?.title || 'Sponsored event'}
+          </h4>
           <StatusBadge status={sponsorship.status} />
         </div>
         <p className="m-0 text-xs uppercase tracking-[0.22em] text-brand-muted">

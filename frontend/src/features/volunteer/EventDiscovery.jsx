@@ -95,14 +95,20 @@ export default function EventDiscovery({
     } catch (error) {
       setActionStates((prev) => ({
         ...prev,
-        [eventId]: { status: 'leave-error', message: error.message || 'Unable to leave this event.' },
+        [eventId]: {
+          status: 'leave-error',
+          message: error.message || 'Unable to leave this event.',
+        },
       }));
     }
   };
 
   return (
     <div className="flex flex-col gap-5">
-      <form className="grid gap-3 rounded-2xl border border-brand-forest/10 bg-brand-sand/60 p-4" onSubmit={handleSubmit}>
+      <form
+        className="grid gap-3 rounded-2xl border border-brand-forest/10 bg-brand-sand/60 p-4"
+        onSubmit={handleSubmit}
+      >
         <div className="grid gap-3 sm:[grid-template-columns:repeat(2,minmax(0,1fr))]">
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-semibold text-brand-forest">Category</span>
@@ -161,15 +167,15 @@ export default function EventDiscovery({
             Reset
           </button>
           <span className="text-xs text-brand-muted">
-            {events.length ? `${events.length} event${events.length === 1 ? '' : 's'} shown` : 'No events to show yet'}
+            {events.length
+              ? `${events.length} event${events.length === 1 ? '' : 's'} shown`
+              : 'No events to show yet'}
           </span>
         </div>
       </form>
 
       <div className="space-y-4">
-        {isLoading ? (
-          <p className="m-0 text-sm text-brand-muted">Loading opportunities…</p>
-        ) : null}
+        {isLoading ? <p className="m-0 text-sm text-brand-muted">Loading opportunities…</p> : null}
         {!events.length && !isLoading ? (
           <p className="m-0 rounded-xl border border-dashed border-brand-forest/30 bg-white p-4 text-sm text-brand-muted">
             No events match these filters yet. Try widening your search or check back soon.
@@ -218,7 +224,11 @@ export default function EventDiscovery({
                       className="inline-flex items-center gap-2 rounded-full bg-brand-sand px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-forest"
                     >
                       {sponsor.logoUrl ? (
-                        <img src={sponsor.logoUrl} alt={sponsor.orgName} className="h-5 w-5 rounded-full object-cover" />
+                        <img
+                          src={sponsor.logoUrl}
+                          alt={sponsor.orgName}
+                          className="h-5 w-5 rounded-full object-cover"
+                        />
                       ) : null}
                       {sponsor.orgName}
                     </span>
@@ -255,12 +265,15 @@ export default function EventDiscovery({
                   </button>
                 )}
                 {!isSponsorMode && alreadyJoined ? (
-                  <span className="text-xs font-semibold text-brand-green">You\u2019re confirmed!</span>
+                  <span className="text-xs font-semibold text-brand-green">
+                    You\u2019re confirmed!
+                  </span>
                 ) : null}
                 {!isSponsorMode && isFull && !alreadyJoined ? (
                   <span className="text-xs text-brand-muted">This event reached capacity.</span>
                 ) : null}
-                {!isSponsorMode && (state.status === 'join-error' || state.status === 'leave-error') ? (
+                {!isSponsorMode &&
+                (state.status === 'join-error' || state.status === 'leave-error') ? (
                   <span className="text-xs text-red-600">{state.message}</span>
                 ) : null}
                 {!isSponsorMode && state.status === 'join-success' && !alreadyJoined ? (
@@ -284,10 +297,10 @@ export default function EventDiscovery({
               ? `${totalAvailable} event${totalAvailable === 1 ? '' : 's'} ready for sponsorship.`
               : 'All listed events are already fully supported.'
             : totalAvailable
-            ? `${totalAvailable} event${totalAvailable === 1 ? '' : 's'} still ${
-                totalAvailable === 1 ? 'has' : 'have'
-              } volunteer spots available.`
-            : 'All listed events are currently full.'}
+              ? `${totalAvailable} event${totalAvailable === 1 ? '' : 's'} still ${
+                  totalAvailable === 1 ? 'has' : 'have'
+                } volunteer spots available.`
+              : 'All listed events are currently full.'}
         </p>
       ) : null}
     </div>

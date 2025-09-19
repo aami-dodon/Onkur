@@ -61,7 +61,9 @@ function GalleryGrid({ items, onSelect, isLoading }) {
     return (
       <div className="flex flex-col items-center gap-4 rounded-3xl border border-dashed border-brand-forest/20 bg-white/70 p-10 text-center">
         <span className="text-4xl">📸</span>
-        <p className="m-0 text-sm text-brand-muted">No approved media yet. Be the first to share impact from this event.</p>
+        <p className="m-0 text-sm text-brand-muted">
+          No approved media yet. Be the first to share impact from this event.
+        </p>
       </div>
     );
   }
@@ -114,7 +116,9 @@ export default function EventGalleryViewer({ eventId, token, refreshSignal = 0, 
           pageSize: 12,
           token,
         });
-        setItems((prev) => (nextPage === 1 ? response.media || [] : [...prev, ...(response.media || [])]));
+        setItems((prev) =>
+          nextPage === 1 ? response.media || [] : [...prev, ...(response.media || [])]
+        );
         setEventInfo(response.event || null);
         setMetrics(response.metrics || { viewCount: 0, lastViewedAt: null });
         setHasMore(Boolean(response.hasMore));
@@ -125,7 +129,7 @@ export default function EventGalleryViewer({ eventId, token, refreshSignal = 0, 
         setStatus('error');
       }
     },
-    [eventId, status, token],
+    [eventId, status, token]
   );
 
   useEffect(() => {
@@ -173,13 +177,16 @@ export default function EventGalleryViewer({ eventId, token, refreshSignal = 0, 
     if (observerRef.current) {
       observerRef.current.disconnect();
     }
-    observerRef.current = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          loadPage(page + 1);
-        }
-      });
-    }, { threshold: 1 });
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            loadPage(page + 1);
+          }
+        });
+      },
+      { threshold: 1 }
+    );
     observerRef.current.observe(sentinelRef.current);
     return () => {
       observerRef.current?.disconnect();
@@ -219,7 +226,11 @@ export default function EventGalleryViewer({ eventId, token, refreshSignal = 0, 
                   className="inline-flex items-center gap-2 rounded-full bg-brand-sand px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-forest"
                 >
                   {sponsor.logoUrl ? (
-                    <img src={sponsor.logoUrl} alt={sponsor.orgName} className="h-5 w-5 rounded-full object-cover" />
+                    <img
+                      src={sponsor.logoUrl}
+                      alt={sponsor.orgName}
+                      className="h-5 w-5 rounded-full object-cover"
+                    />
                   ) : null}
                   {sponsor.orgName}
                 </span>
@@ -229,35 +240,48 @@ export default function EventGalleryViewer({ eventId, token, refreshSignal = 0, 
         </header>
       ) : null}
       {status === 'error' ? (
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
+        <div className="rounded-3xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
       ) : null}
-      <GalleryGrid items={items} onSelect={(index) => setSelectedIndex(index)} isLoading={status === 'loading' && !items.length} />
-      {hasMore ? (
-        <div ref={sentinelRef} className="h-1 w-full" aria-hidden="true" />
-      ) : null}
+      <GalleryGrid
+        items={items}
+        onSelect={(index) => setSelectedIndex(index)}
+        isLoading={status === 'loading' && !items.length}
+      />
+      {hasMore ? <div ref={sentinelRef} className="h-1 w-full" aria-hidden="true" /> : null}
       {status === 'loading' ? (
         <p className="text-center text-sm text-brand-muted">Loading more moments…</p>
       ) : null}
       <section className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
           <h4 className="m-0 text-base font-semibold text-brand-forest">Impact stories</h4>
-          <p className="m-0 text-xs uppercase tracking-[0.24em] text-brand-muted">Community voices from this event</p>
+          <p className="m-0 text-xs uppercase tracking-[0.24em] text-brand-muted">
+            Community voices from this event
+          </p>
         </div>
         {storyState.status === 'error' ? (
-          <div className="rounded-3xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">{storyState.error}</div>
+          <div className="rounded-3xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+            {storyState.error}
+          </div>
         ) : null}
         {storyState.status === 'loading' && !stories.length ? (
           <div className="rounded-3xl border border-dashed border-brand-forest/15 bg-white/80 p-4 text-center text-sm text-brand-muted">
             Gathering stories…
           </div>
         ) : null}
-        <ImpactStoriesList stories={stories} emptyState="No stories yet. Share yours to inspire the next crew." />
+        <ImpactStoriesList
+          stories={stories}
+          emptyState="No stories yet. Share yours to inspire the next crew."
+        />
       </section>
       <GalleryLightbox
         media={activeMedia}
         onClose={() => setSelectedIndex(null)}
         onPrev={() => setSelectedIndex((prev) => (prev === null ? null : Math.max(0, prev - 1)))}
-        onNext={() => setSelectedIndex((prev) => (prev === null ? null : Math.min(items.length - 1, prev + 1)))}
+        onNext={() =>
+          setSelectedIndex((prev) => (prev === null ? null : Math.min(items.length - 1, prev + 1)))
+        }
       />
     </div>
   );

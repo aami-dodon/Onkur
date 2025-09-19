@@ -1,7 +1,9 @@
 const { randomUUID } = require('crypto');
 const pool = require('../common/db');
 const { ensureSchema: ensureSponsorSchema } = require('../sponsors/sponsor.repository');
-const { ensureSchema: ensureVolunteerSchema } = require('../volunteer-journey/volunteerJourney.repository');
+const {
+  ensureSchema: ensureVolunteerSchema,
+} = require('../volunteer-journey/volunteerJourney.repository');
 const { resolveMediaUrl } = require('./storageUrl');
 
 const VALID_STATUSES = ['PENDING', 'APPROVED', 'REJECTED'];
@@ -73,13 +75,23 @@ const schemaPromise = (async () => {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_event_media_event ON event_media (event_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_event_media_status ON event_media (status)`);
   await pool.query(`ALTER TABLE event_media ADD COLUMN IF NOT EXISTS rejection_reason TEXT NULL`);
-  await pool.query(`ALTER TABLE event_media ADD COLUMN IF NOT EXISTS sponsor_mentions INTEGER NOT NULL DEFAULT 0`);
-  await pool.query(`ALTER TABLE event_media ADD COLUMN IF NOT EXISTS moderation_time_ms BIGINT NULL`);
+  await pool.query(
+    `ALTER TABLE event_media ADD COLUMN IF NOT EXISTS sponsor_mentions INTEGER NOT NULL DEFAULT 0`
+  );
+  await pool.query(
+    `ALTER TABLE event_media ADD COLUMN IF NOT EXISTS moderation_time_ms BIGINT NULL`
+  );
   await pool.query(`ALTER TABLE event_media ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ NULL`);
-  await pool.query(`ALTER TABLE event_media ADD COLUMN IF NOT EXISTS approved_by UUID NULL REFERENCES users(id) ON DELETE SET NULL`);
-  await pool.query(`ALTER TABLE event_media ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
+  await pool.query(
+    `ALTER TABLE event_media ADD COLUMN IF NOT EXISTS approved_by UUID NULL REFERENCES users(id) ON DELETE SET NULL`
+  );
+  await pool.query(
+    `ALTER TABLE event_media ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
+  );
   try {
-    await pool.query(`ALTER TABLE event_media ALTER COLUMN tags SET DATA TYPE JSONB USING tags::JSONB`);
+    await pool.query(
+      `ALTER TABLE event_media ALTER COLUMN tags SET DATA TYPE JSONB USING tags::JSONB`
+    );
   } catch (error) {
     if (!/syntax error/i.test(error.message || '')) {
       throw error;
@@ -177,7 +189,7 @@ async function createMedia({
       JSON.stringify(tags || []),
       status,
       sponsorMentions,
-    ],
+    ]
   );
   return mapMediaRow(result.rows[0]);
 }
@@ -190,7 +202,7 @@ async function findMediaById(mediaId) {
       FROM event_media
       WHERE id = $1
     `,
-    [mediaId],
+    [mediaId]
   );
   return mapMediaRow(result.rows[0]);
 }
@@ -210,7 +222,7 @@ async function listApprovedMediaForEvent(eventId, { page = 1, pageSize = 20 } = 
         ORDER BY approved_at DESC NULLS LAST, created_at DESC
         LIMIT $2 OFFSET $3
       `,
-      [eventId, limit, offset],
+      [eventId, limit, offset]
     ),
     pool.query(
       `
@@ -218,7 +230,7 @@ async function listApprovedMediaForEvent(eventId, { page = 1, pageSize = 20 } = 
         FROM event_media
         WHERE event_id = $1 AND status = 'APPROVED'
       `,
-      [eventId],
+      [eventId]
     ),
   ]);
 
@@ -250,14 +262,14 @@ async function listPendingMedia({ page = 1, pageSize = 20 } = {}) {
         ORDER BY created_at ASC
         LIMIT $1 OFFSET $2
       `,
-      [limit, offset],
+      [limit, offset]
     ),
     pool.query(
       `
         SELECT COUNT(*)::BIGINT AS total
         FROM event_media
         WHERE status = 'PENDING'
-      `,
+      `
     ),
   ]);
 
@@ -324,7 +336,7 @@ async function updateSponsorMentions(mediaId, sponsorMentions) {
       WHERE id = $1
       RETURNING *
     `,
-    [mediaId, Number(sponsorMentions) || 0],
+    [mediaId, Number(sponsorMentions) || 0]
   );
   return mapMediaRow(result.rows[0]);
 }
@@ -338,7 +350,7 @@ async function incrementGalleryView(eventId) {
       ON CONFLICT (event_id)
       DO UPDATE SET view_count = event_gallery_metrics.view_count + 1, last_viewed_at = NOW(), updated_at = NOW()
     `,
-    [eventId],
+    [eventId]
   );
 }
 
@@ -350,7 +362,7 @@ async function getGalleryMetrics(eventId) {
       FROM event_gallery_metrics
       WHERE event_id = $1
     `,
-    [eventId],
+    [eventId]
   );
   const row = result.rows[0] || null;
   if (!row) {
@@ -380,7 +392,7 @@ async function listGalleryEvents({ page = 1, pageSize = 12 } = {}) {
         ORDER BY last_media_at DESC NULLS LAST, e.date_start DESC NULLS LAST
         LIMIT $1 OFFSET $2
       `,
-      [limit, offset],
+      [limit, offset]
     ),
     pool.query(
       `
@@ -391,7 +403,7 @@ async function listGalleryEvents({ page = 1, pageSize = 12 } = {}) {
           JOIN event_media em ON em.event_id = e.id AND em.status = 'APPROVED'
           GROUP BY e.id
         ) counted
-      `,
+      `
     ),
   ]);
 
@@ -429,7 +441,7 @@ async function listEventVolunteers(eventId) {
       WHERE es.event_id = $1
       ORDER BY u.name ASC
     `,
-    [eventId],
+    [eventId]
   );
   return result.rows.map((row) => ({
     id: row.id,
@@ -442,7 +454,7 @@ async function isVolunteerForEvent(eventId, userId) {
   await ensureSchema();
   const result = await pool.query(
     `SELECT 1 FROM event_signups WHERE event_id = $1 AND user_id = $2 LIMIT 1`,
-    [eventId, userId],
+    [eventId, userId]
   );
   return Boolean(result.rows[0]);
 }
@@ -457,7 +469,7 @@ async function listSponsors() {
       JOIN users u ON u.id = sp.user_id
       WHERE sp.status = 'APPROVED'
       ORDER BY sp.org_name ASC
-    `,
+    `
   );
   return result.rows.map((row) => ({
     id: row.id,

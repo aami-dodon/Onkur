@@ -71,9 +71,7 @@ function normalizeStringArray(input) {
     return [];
   }
   const list = Array.isArray(input) ? input : [input];
-  const cleaned = list
-    .map((value) => String(value || '').trim())
-    .filter(Boolean);
+  const cleaned = list.map((value) => String(value || '').trim()).filter(Boolean);
   return [...new Set(cleaned)];
 }
 
@@ -114,10 +112,7 @@ function describeLocation(event) {
 }
 
 function resolveAppBaseUrl() {
-  const base =
-    (config.app && config.app.baseUrl) ||
-    config.corsOrigin ||
-    'http://localhost:3000';
+  const base = (config.app && config.app.baseUrl) || config.corsOrigin || 'http://localhost:3000';
   return String(base).replace(/\/$/, '');
 }
 
@@ -146,11 +141,11 @@ function formatEventDateRange(event) {
 
   const startLabel = `${start.toLocaleDateString(undefined, dateOptions)} ${start.toLocaleTimeString(
     undefined,
-    timeOptions,
+    timeOptions
   )}`;
   const endLabel = `${end.toLocaleDateString(undefined, dateOptions)} ${end.toLocaleTimeString(
     undefined,
-    timeOptions,
+    timeOptions
   )}`;
   return `${startLabel} → ${endLabel}`;
 }
@@ -195,7 +190,10 @@ function buildProfileMatches(event, profile = {}) {
   const profileSkills = toStringArray(profile.skills);
   const skillMatches = eventSkills.filter((skill) => profileSkills.includes(skill));
   if (skillMatches.length) {
-    const label = skillMatches.length > 1 ? `skills (${skillMatches.join(', ')})` : `skill (${skillMatches[0]})`;
+    const label =
+      skillMatches.length > 1
+        ? `skills (${skillMatches.join(', ')})`
+        : `skill (${skillMatches[0]})`;
     matches.push(label);
   }
 
@@ -212,7 +210,9 @@ function buildProfileMatches(event, profile = {}) {
 
   const eventAvailability = toStringArray(event.requiredAvailability);
   const profileAvailability = toStringArray(profile.availability);
-  const availabilityMatches = eventAvailability.filter((availability) => profileAvailability.includes(availability));
+  const availabilityMatches = eventAvailability.filter((availability) =>
+    profileAvailability.includes(availability)
+  );
   if (availabilityMatches.length) {
     const label =
       availabilityMatches.length > 1
@@ -262,9 +262,7 @@ async function dispatchRoleEmails({ role, recipients, event, actor, baseUrl }) {
       : `New event "${event.title}" is ready for volunteers`;
 
   const heading =
-    role === 'SPONSOR'
-      ? 'Help this initiative take root'
-      : 'Be one of the first to RSVP';
+    role === 'SPONSOR' ? 'Help this initiative take root' : 'Be one of the first to RSVP';
 
   const ctaLabel = role === 'SPONSOR' ? 'Review event brief' : 'Review and RSVP';
 
@@ -273,7 +271,8 @@ async function dispatchRoleEmails({ role, recipients, event, actor, baseUrl }) {
       if (!recipient?.email) {
         return null;
       }
-      const firstName = recipient.name?.split(' ')[0] || (role === 'SPONSOR' ? 'partner' : 'volunteer');
+      const firstName =
+        recipient.name?.split(' ')[0] || (role === 'SPONSOR' ? 'partner' : 'volunteer');
       const personalizedNote = buildPersonalizedNote(event, recipient, role);
       const bodyLines = [
         `Hi ${firstName},`,
@@ -300,7 +299,7 @@ async function dispatchRoleEmails({ role, recipients, event, actor, baseUrl }) {
       bodyLines.push(
         role === 'SPONSOR'
           ? 'Review the brief to see how your sponsorship or network can accelerate this cause.'
-          : 'Tap below to read the full brief and claim your spot before it fills up.',
+          : 'Tap below to read the full brief and claim your spot before it fills up.'
       );
 
       return sendTemplatedEmail({
@@ -314,7 +313,7 @@ async function dispatchRoleEmails({ role, recipients, event, actor, baseUrl }) {
           url: eventUrl,
         },
       });
-    }),
+    })
   );
 
   results.forEach((result, index) => {
@@ -341,11 +340,12 @@ async function sendEventCreationEmails({ event, actor }) {
 
   const volunteers = recipients.filter(
     (recipient) =>
-      recipient.roles?.includes('VOLUNTEER') && recipient.id !== actorId && recipient.email,
+      recipient.roles?.includes('VOLUNTEER') && recipient.id !== actorId && recipient.email
   );
 
   const sponsors = recipients.filter(
-    (recipient) => recipient.roles?.includes('SPONSOR') && recipient.id !== actorId && recipient.email,
+    (recipient) =>
+      recipient.roles?.includes('SPONSOR') && recipient.id !== actorId && recipient.email
   );
 
   await Promise.all([
@@ -373,14 +373,14 @@ function normalizeEventPayload(payload = {}) {
   const title = String(payload.title || '').trim();
   const description = String(payload.description || '').trim();
   const categoryLabel = String(
-    payload.categoryLabel || payload.category_label || payload.category || '',
+    payload.categoryLabel || payload.category_label || payload.category || ''
   ).trim();
   const categoryValue = String(
-    payload.categoryValue || payload.category_value || payload.categoryOption?.value || '',
+    payload.categoryValue || payload.category_value || payload.categoryOption?.value || ''
   ).trim();
   const theme = payload.theme ? String(payload.theme).trim() : null;
   const locationNote = String(
-    payload.locationNote || payload.location_note || payload.location || payload.venue || '',
+    payload.locationNote || payload.location_note || payload.location || payload.venue || ''
   ).trim();
   const requirements = payload.requirements ? String(payload.requirements).trim() : null;
 
@@ -399,7 +399,9 @@ function normalizeEventPayload(payload = {}) {
   }
 
   const isOnline = toBooleanFlag(payload.isOnline ?? payload.is_online);
-  const stateCode = String(payload.stateCode || payload.state_code || '').trim().toUpperCase();
+  const stateCode = String(payload.stateCode || payload.state_code || '')
+    .trim()
+    .toUpperCase();
   const citySlug = String(payload.citySlug || payload.city_slug || '').trim();
   if (!isOnline) {
     if (!stateCode) {
@@ -431,7 +433,7 @@ function normalizeEventPayload(payload = {}) {
     requiredSkills: normalizeStringArray(payload.requiredSkills || payload.skills),
     requiredInterests: normalizeStringArray(payload.requiredInterests || payload.interests),
     requiredAvailability: normalizeStringArray(
-      payload.requiredAvailability || payload.availability,
+      payload.requiredAvailability || payload.availability
     ),
   };
 }
@@ -505,7 +507,9 @@ async function resolveLocation({ isOnline, stateCode, citySlug, locationNote }) 
     };
   }
 
-  const normalizedState = String(stateCode || '').trim().toUpperCase();
+  const normalizedState = String(stateCode || '')
+    .trim()
+    .toUpperCase();
   const normalizedCity = String(citySlug || '').trim();
 
   const stateRecord = await findStateByCode(normalizedState);
@@ -632,16 +636,16 @@ async function publishEvent(eventId, actor) {
 
   if (actor?.email) {
     try {
-          await sendTemplatedEmail({
-            to: actor.email,
-            subject: `Your event "${updated.title}" is now live`,
-            heading: 'Event published successfully',
-            bodyLines: [
-              `Great news, ${actor.name?.split(' ')[0] || 'there'}!`,
-              `Your event <strong>${updated.title}</strong> has been published and is now visible to volunteers.`,
-              `Capacity: ${updated.capacity} · Location: ${describeLocation(updated)}`,
-            ],
-          });
+      await sendTemplatedEmail({
+        to: actor.email,
+        subject: `Your event "${updated.title}" is now live`,
+        heading: 'Event published successfully',
+        bodyLines: [
+          `Great news, ${actor.name?.split(' ')[0] || 'there'}!`,
+          `Your event <strong>${updated.title}</strong> has been published and is now visible to volunteers.`,
+          `Capacity: ${updated.capacity} · Location: ${describeLocation(updated)}`,
+        ],
+      });
     } catch (error) {
       logger.warn('Failed to send publish confirmation email', {
         eventId,
@@ -683,13 +687,15 @@ async function getEventAssignments(eventId) {
   return listAssignmentsForEvent(eventId);
 }
 
-async function assignVolunteersToTasks(eventId, assignments, actor) {
-  const result = await assignVolunteers(eventId, assignments, { assignedBy: actor?.id || null });
+async function assignVolunteersToTasks(eventId, assignments) {
+  const result = await assignVolunteers(eventId, assignments);
   const assignmentDetails = result.assignments;
   const newAssignmentIds = new Set(result.newAssignments.map((item) => item.assignmentId));
   const event = await findEventById(eventId);
 
-  const notifications = assignmentDetails.filter((assignment) => newAssignmentIds.has(assignment.id));
+  const notifications = assignmentDetails.filter((assignment) =>
+    newAssignmentIds.has(assignment.id)
+  );
 
   await Promise.all(
     notifications.map(async (assignment) => {
@@ -715,7 +721,7 @@ async function assignVolunteersToTasks(eventId, assignments, actor) {
           error: error.message,
         });
       }
-    }),
+    })
   );
 
   return assignmentDetails;

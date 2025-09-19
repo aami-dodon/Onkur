@@ -31,7 +31,10 @@ export default function ImpactStoryComposer({ eventId, token, onSubmitted }) {
         setMediaState({ state: 'success', message: '' });
       } catch (error) {
         if (!active) return;
-        setMediaState({ state: 'error', message: error.message || 'Unable to load gallery highlights.' });
+        setMediaState({
+          state: 'error',
+          message: error.message || 'Unable to load gallery highlights.',
+        });
       }
     })();
     return () => {
@@ -46,20 +49,17 @@ export default function ImpactStoryComposer({ eventId, token, onSubmitted }) {
     setStatus({ state: 'idle', message: '' });
   }, [eventId]);
 
-  const toggleMedia = useCallback(
-    (mediaId) => {
-      setSelectedMedia((prev) => {
-        if (prev.includes(mediaId)) {
-          return prev.filter((value) => value !== mediaId);
-        }
-        if (prev.length >= MAX_MEDIA_SELECTION) {
-          return prev;
-        }
-        return [...prev, mediaId];
-      });
-    },
-    [],
-  );
+  const toggleMedia = useCallback((mediaId) => {
+    setSelectedMedia((prev) => {
+      if (prev.includes(mediaId)) {
+        return prev.filter((value) => value !== mediaId);
+      }
+      if (prev.length >= MAX_MEDIA_SELECTION) {
+        return prev;
+      }
+      return [...prev, mediaId];
+    });
+  }, []);
 
   const handleSubmit = useCallback(
     async (event) => {
@@ -76,16 +76,22 @@ export default function ImpactStoryComposer({ eventId, token, onSubmitted }) {
           body: body.trim(),
           mediaIds: selectedMedia,
         });
-        setStatus({ state: 'success', message: 'Thanks for sharing! Your story is now awaiting moderator review.' });
+        setStatus({
+          state: 'success',
+          message: 'Thanks for sharing! Your story is now awaiting moderator review.',
+        });
         setTitle('');
         setBody('');
         setSelectedMedia([]);
         onSubmitted?.(result.story);
       } catch (error) {
-        setStatus({ state: 'error', message: error.message || 'Unable to submit your story right now.' });
+        setStatus({
+          state: 'error',
+          message: error.message || 'Unable to submit your story right now.',
+        });
       }
     },
-    [body, canSubmit, eventId, onSubmitted, selectedMedia, title, token],
+    [body, canSubmit, eventId, onSubmitted, selectedMedia, title, token]
   );
 
   if (!token || !eventId) {
@@ -93,11 +99,15 @@ export default function ImpactStoryComposer({ eventId, token, onSubmitted }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-3xl border border-brand-forest/15 bg-white/90 p-5 shadow-sm">
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col gap-4 rounded-3xl border border-brand-forest/15 bg-white/90 p-5 shadow-sm"
+    >
       <header className="flex flex-col gap-1 text-left">
         <h3 className="m-0 text-lg font-semibold text-brand-forest">Share an impact story</h3>
         <p className="m-0 text-sm text-brand-muted">
-          Celebrate the community you served. Stories go live after an admin review and appear in the event gallery.
+          Celebrate the community you served. Stories go live after an admin review and appear in
+          the event gallery.
         </p>
       </header>
       <label className="flex flex-col gap-2 text-sm font-medium text-brand-forest">
@@ -120,10 +130,14 @@ export default function ImpactStoryComposer({ eventId, token, onSubmitted }) {
           maxLength={500}
           className="w-full rounded-xl border border-brand-green/40 bg-white px-4 py-3 text-sm text-brand-forest shadow-inner focus:border-brand-forest focus:outline-none focus:ring-2 focus:ring-brand-forest/40"
         />
-        <span className="text-xs font-normal text-brand-muted">{body.trim().length} / 500 characters</span>
+        <span className="text-xs font-normal text-brand-muted">
+          {body.trim().length} / 500 characters
+        </span>
       </label>
       <section className="flex flex-col gap-2">
-        <p className="m-0 text-sm font-semibold text-brand-forest">Highlight up to {MAX_MEDIA_SELECTION} gallery photos</p>
+        <p className="m-0 text-sm font-semibold text-brand-forest">
+          Highlight up to {MAX_MEDIA_SELECTION} gallery photos
+        </p>
         {mediaState.state === 'error' ? (
           <p className="m-0 text-xs text-red-600">{mediaState.message}</p>
         ) : null}
@@ -137,11 +151,15 @@ export default function ImpactStoryComposer({ eventId, token, onSubmitted }) {
                   type="button"
                   onClick={() => toggleMedia(media.id)}
                   className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition ${
-                    checked ? 'border-brand-forest bg-brand-sand text-brand-forest' : 'border-brand-forest/20 bg-white text-brand-forest'
+                    checked
+                      ? 'border-brand-forest bg-brand-sand text-brand-forest'
+                      : 'border-brand-forest/20 bg-white text-brand-forest'
                   }`}
                 >
                   <span className="inline-flex h-2.5 w-2.5 rounded-full border border-brand-forest bg-white">
-                    {checked ? <span className="block h-full w-full rounded-full bg-brand-forest" /> : null}
+                    {checked ? (
+                      <span className="block h-full w-full rounded-full bg-brand-forest" />
+                    ) : null}
                   </span>
                   {media.caption ? media.caption.slice(0, 24) : 'Gallery photo'}
                 </button>
@@ -149,7 +167,9 @@ export default function ImpactStoryComposer({ eventId, token, onSubmitted }) {
             })
           ) : (
             <p className="m-0 text-xs text-brand-muted">
-              {mediaState.state === 'loading' ? 'Loading gallery highlights…' : 'Upload photos to this gallery to link them here.'}
+              {mediaState.state === 'loading'
+                ? 'Loading gallery highlights…'
+                : 'Upload photos to this gallery to link them here.'}
             </p>
           )}
         </div>
@@ -158,7 +178,9 @@ export default function ImpactStoryComposer({ eventId, token, onSubmitted }) {
         <p className="m-0 text-sm font-semibold text-red-600">{status.message}</p>
       ) : null}
       {status.state === 'success' ? (
-        <p className="m-0 rounded-xl bg-brand-sand/80 px-3 py-2 text-sm font-medium text-brand-forest">{status.message}</p>
+        <p className="m-0 rounded-xl bg-brand-sand/80 px-3 py-2 text-sm font-medium text-brand-forest">
+          {status.message}
+        </p>
       ) : null}
       <button
         type="submit"

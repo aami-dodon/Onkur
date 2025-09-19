@@ -177,9 +177,9 @@ router.post('/events/:eventId/tasks/assignments', async (req, res) => {
     const assignmentsPayload = Array.isArray(req.body?.assignments)
       ? req.body.assignments
       : Array.isArray(req.body)
-      ? req.body
-      : [];
-    const assignments = await assignVolunteersToTasks(eventId, assignmentsPayload, req.user);
+        ? req.body
+        : [];
+    const assignments = await assignVolunteersToTasks(eventId, assignmentsPayload);
     res.json({ assignments });
   } catch (error) {
     const status = error.statusCode || 500;

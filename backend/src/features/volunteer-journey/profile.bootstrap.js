@@ -27,7 +27,7 @@ const INTEREST_SEEDS = [
   { value: 'education access', label: 'Education Access' },
   { value: 'rural development', label: 'Rural Development' },
   { value: 'climate advocacy', label: 'Climate Advocacy' },
-  { value: 'women empowerment', label: "Women Empowerment" },
+  { value: 'women empowerment', label: 'Women Empowerment' },
   { value: 'youth leadership', label: 'Youth Leadership' },
   { value: 'health camps', label: 'Health Camps' },
   { value: 'disaster relief', label: 'Disaster Relief' },

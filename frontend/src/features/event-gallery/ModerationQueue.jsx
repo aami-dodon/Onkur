@@ -14,7 +14,9 @@ function ModerationCard({ item, onApprove, onReject }) {
         />
         <div className="flex flex-1 flex-col gap-2 text-sm text-brand-forest">
           <p className="m-0 font-semibold">{item.caption || 'No caption provided'}</p>
-          <p className="m-0 text-xs uppercase tracking-[0.24em] text-brand-muted">Uploaded {new Date(item.createdAt).toLocaleString()}</p>
+          <p className="m-0 text-xs uppercase tracking-[0.24em] text-brand-muted">
+            Uploaded {new Date(item.createdAt).toLocaleString()}
+          </p>
         </div>
       </div>
       <div className="flex flex-col gap-2">
@@ -80,7 +82,7 @@ export default function ModerationQueue({ token }) {
         setMessage(error.message || 'Approval failed');
       }
     },
-    [token],
+    [token]
   );
 
   const handleReject = useCallback(
@@ -92,7 +94,7 @@ export default function ModerationQueue({ token }) {
         setMessage(error.message || 'Rejection failed');
       }
     },
-    [token],
+    [token]
   );
 
   if (!token) {
@@ -103,16 +105,27 @@ export default function ModerationQueue({ token }) {
     <section className="flex flex-col gap-4 rounded-3xl border border-brand-forest/10 bg-brand-sand/40 p-5">
       <header className="flex flex-col gap-1">
         <h3 className="m-0 text-lg font-semibold text-brand-forest">Moderation queue</h3>
-        <p className="m-0 text-sm text-brand-muted">Approve or reject pending uploads so galleries stay safe and inspiring.</p>
+        <p className="m-0 text-sm text-brand-muted">
+          Approve or reject pending uploads so galleries stay safe and inspiring.
+        </p>
       </header>
-      {status === 'loading' ? <p className="text-sm text-brand-muted">Reviewing submissions…</p> : null}
+      {status === 'loading' ? (
+        <p className="text-sm text-brand-muted">Reviewing submissions…</p>
+      ) : null}
       {status === 'error' ? <p className="text-sm text-red-600">{message}</p> : null}
       {items.length === 0 && status === 'success' ? (
-        <p className="text-sm text-brand-muted">All clear! New submissions will appear here for review.</p>
+        <p className="text-sm text-brand-muted">
+          All clear! New submissions will appear here for review.
+        </p>
       ) : null}
       <div className="flex flex-col gap-3">
         {items.map((item) => (
-          <ModerationCard key={item.id} item={item} onApprove={handleApprove} onReject={handleReject} />
+          <ModerationCard
+            key={item.id}
+            item={item}
+            onApprove={handleApprove}
+            onReject={handleReject}
+          />
         ))}
       </div>
     </section>

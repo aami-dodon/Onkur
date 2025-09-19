@@ -15,7 +15,10 @@ const {
   markReportDelivered,
 } = require('./sponsor.repository');
 const { findUserById, replaceUserRoles } = require('../auth/auth.repository');
-const { generateEventReport, findEventById } = require('../event-management/eventManagement.repository');
+const {
+  generateEventReport,
+  findEventById,
+} = require('../event-management/eventManagement.repository');
 const { getGalleryMetrics } = require('../event-gallery/eventGallery.repository');
 const { sendTemplatedEmail } = require('../email/email.service');
 
@@ -53,15 +56,14 @@ function sanitizeBrandAssets(payload) {
       .filter((entry) => entry.length);
   }
   if (Array.isArray(files)) {
-    result.files = files
-      .map((entry) => String(entry || '').trim())
-      .filter((entry) => entry.length);
+    result.files = files.map((entry) => String(entry || '').trim()).filter((entry) => entry.length);
   }
   return result;
 }
 
 function ensureSponsorRole(user) {
-  const roles = Array.isArray(user.roles) && user.roles.length ? [...user.roles] : user.role ? [user.role] : [];
+  const roles =
+    Array.isArray(user.roles) && user.roles.length ? [...user.roles] : user.role ? [user.role] : [];
   if (!roles.includes('SPONSOR')) {
     roles.push('SPONSOR');
   }
@@ -102,11 +104,17 @@ async function applyForSponsor({
   });
 
   const desiredRoles = ensureSponsorRole(user);
-  if (desiredRoles.length !== (user.roles || []).length || !desiredRoles.every((role, index) => role === (user.roles || [])[index])) {
+  if (
+    desiredRoles.length !== (user.roles || []).length ||
+    !desiredRoles.every((role, index) => role === (user.roles || [])[index])
+  ) {
     try {
       await replaceUserRoles({ userId, roles: desiredRoles });
     } catch (error) {
-      logger.warn('Failed to refresh roles while applying as sponsor', { userId, error: error.message });
+      logger.warn('Failed to refresh roles while applying as sponsor', {
+        userId,
+        error: error.message,
+      });
     }
   }
 
@@ -138,13 +146,16 @@ async function updateProfile({ userId, updates }) {
     orgName: updates.orgName !== undefined ? sanitizeString(updates.orgName) : undefined,
     website: updates.website !== undefined ? sanitizeString(updates.website) : undefined,
     logoUrl: updates.logoUrl !== undefined ? sanitizeString(updates.logoUrl) : undefined,
-    contactName: updates.contactName !== undefined ? sanitizeString(updates.contactName) : undefined,
+    contactName:
+      updates.contactName !== undefined ? sanitizeString(updates.contactName) : undefined,
     contactEmail:
       updates.contactEmail !== undefined
         ? sanitizeString(updates.contactEmail) || user?.email
         : undefined,
-    contactPhone: updates.contactPhone !== undefined ? sanitizeString(updates.contactPhone) : undefined,
-    brandAssets: updates.brandAssets !== undefined ? sanitizeBrandAssets(updates.brandAssets) : undefined,
+    contactPhone:
+      updates.contactPhone !== undefined ? sanitizeString(updates.contactPhone) : undefined,
+    brandAssets:
+      updates.brandAssets !== undefined ? sanitizeBrandAssets(updates.brandAssets) : undefined,
   });
   logger.info('Sponsor profile updated', { userId });
   return next;
@@ -162,7 +173,10 @@ async function resolveSponsorContact(profile) {
   try {
     user = await findUserById(profile.userId);
   } catch (error) {
-    logger.warn('Failed to resolve sponsor user contact', { sponsorId: profile.userId, error: error.message });
+    logger.warn('Failed to resolve sponsor user contact', {
+      sponsorId: profile.userId,
+      error: error.message,
+    });
   }
   const email = sanitizeString(profile.contactEmail) || (user ? user.email : null);
   const name =
@@ -270,9 +284,9 @@ async function pledgeSponsorship({ sponsorId, eventId, type, amount, notes }) {
         subject: `Thanks for pledging support for ${event.title}`,
         heading: 'We received your pledge',
         bodyLines: [
-        `Hi ${contact.name},`,
-        `Thank you for offering ${normalizedType === 'FUNDS' ? `₹${normalizedAmount?.toLocaleString('en-IN')}` : 'in-kind resources'} to <strong>${event.title}</strong>.`,
-        'Our team will review and confirm the sponsorship shortly.',
+          `Hi ${contact.name},`,
+          `Thank you for offering ${normalizedType === 'FUNDS' ? `₹${normalizedAmount?.toLocaleString('en-IN')}` : 'in-kind resources'} to <strong>${event.title}</strong>.`,
+          'Our team will review and confirm the sponsorship shortly.',
         ],
         cta: {
           url: `${APP_BASE_URL}/app`,
@@ -337,7 +351,10 @@ async function updateSponsorshipApproval({ sponsorshipId, status }) {
           previewText: 'Sponsorship confirmed',
         });
       } catch (error) {
-        logger.warn('Failed to send sponsorship approval email', { sponsorshipId, error: error.message });
+        logger.warn('Failed to send sponsorship approval email', {
+          sponsorshipId,
+          error: error.message,
+        });
       }
     } else if (contact.email && sponsorship.status === 'DECLINED') {
       try {
@@ -353,7 +370,10 @@ async function updateSponsorshipApproval({ sponsorshipId, status }) {
           previewText: 'Update on your sponsorship',
         });
       } catch (error) {
-        logger.warn('Failed to send sponsorship decline email', { sponsorshipId, error: error.message });
+        logger.warn('Failed to send sponsorship decline email', {
+          sponsorshipId,
+          error: error.message,
+        });
       }
     }
   }
@@ -402,7 +422,11 @@ async function getSponsorDashboard({ sponsorId }) {
     try {
       impacts.set(eventId, await buildEventImpact(eventId));
     } catch (error) {
-      logger.warn('Failed to build impact snapshot for sponsor dashboard', { sponsorId, eventId, error: error.message });
+      logger.warn('Failed to build impact snapshot for sponsor dashboard', {
+        sponsorId,
+        eventId,
+        error: error.message,
+      });
     }
   }
 
@@ -467,10 +491,19 @@ async function getSponsorReports({ sponsorId }) {
   }
 
   if (reports.length) {
-    const totalHours = reports.reduce((sum, report) => sum + Number(report.totals.totalHours || 0), 0);
-    const totalViews = reports.reduce((sum, report) => sum + Number(report.gallery.viewCount || 0), 0);
+    const totalHours = reports.reduce(
+      (sum, report) => sum + Number(report.totals.totalHours || 0),
+      0
+    );
+    const totalViews = reports.reduce(
+      (sum, report) => sum + Number(report.gallery.viewCount || 0),
+      0
+    );
     const totalFunds = reports
-      .filter((report) => report.contribution.type === 'FUNDS' && typeof report.contribution.amount === 'number')
+      .filter(
+        (report) =>
+          report.contribution.type === 'FUNDS' && typeof report.contribution.amount === 'number'
+      )
       .reduce((sum, report) => sum + report.contribution.amount, 0);
 
     const contact = await resolveSponsorContact(profile);
@@ -481,22 +514,25 @@ async function getSponsorReports({ sponsorId }) {
           subject: 'Your latest Onkur impact report',
           heading: 'Impact snapshot ready',
           bodyLines: [
-          `Hi ${contact.name},`,
-          `Approved sponsorships covered <strong>${reports.length}</strong> event${reports.length === 1 ? '' : 's'}.`,
-          `Volunteers delivered <strong>${Math.round(totalHours * 100) / 100}</strong> hours and the galleries earned <strong>${totalViews}</strong> views.`,
-          totalFunds
-            ? `Direct funds contributed: <strong>₹${Math.round(totalFunds * 100) / 100}</strong>.`
-            : 'In-kind support amplified every moment shared in the galleries.',
-        ],
-        cta: {
-          url: `${APP_BASE_URL}/app`,
-          label: 'Review detailed reports',
-        },
-        previewText: 'Your sponsorship impact snapshot is ready',
+            `Hi ${contact.name},`,
+            `Approved sponsorships covered <strong>${reports.length}</strong> event${reports.length === 1 ? '' : 's'}.`,
+            `Volunteers delivered <strong>${Math.round(totalHours * 100) / 100}</strong> hours and the galleries earned <strong>${totalViews}</strong> views.`,
+            totalFunds
+              ? `Direct funds contributed: <strong>₹${Math.round(totalFunds * 100) / 100}</strong>.`
+              : 'In-kind support amplified every moment shared in the galleries.',
+          ],
+          cta: {
+            url: `${APP_BASE_URL}/app`,
+            label: 'Review detailed reports',
+          },
+          previewText: 'Your sponsorship impact snapshot is ready',
         });
         await markReportDelivered({ sponsorId });
       } catch (error) {
-        logger.warn('Failed to send sponsor impact report email', { sponsorId, error: error.message });
+        logger.warn('Failed to send sponsor impact report email', {
+          sponsorId,
+          error: error.message,
+        });
       }
     }
   }

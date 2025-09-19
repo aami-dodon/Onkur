@@ -27,10 +27,7 @@ export default function SponsorDashboard() {
   const firstName = user?.name?.split(' ')[0] || 'sponsor';
   useDocumentTitle(`Onkur | Thank you, ${firstName} 🌍`);
 
-  const profileProgress = useMemo(
-    () => calculateProfileProgress(user?.profile),
-    [user?.profile]
-  );
+  const profileProgress = useMemo(() => calculateProfileProgress(user?.profile), [user?.profile]);
 
   useEffect(() => {
     if (!token) {
@@ -83,8 +80,6 @@ export default function SponsorDashboard() {
       const response = await applyForSponsor(token, payload);
       setProfile(response.profile || response?.profile || null);
       await refreshDashboard();
-    } catch (submissionError) {
-      throw submissionError;
     } finally {
       setProfileSubmitting(false);
     }
@@ -99,8 +94,6 @@ export default function SponsorDashboard() {
       const response = await updateSponsorProfile(token, payload);
       setProfile(response.profile || response?.profile || null);
       await refreshDashboard();
-    } catch (updateError) {
-      throw updateError;
     } finally {
       setProfileSubmitting(false);
     }
@@ -117,9 +110,15 @@ export default function SponsorDashboard() {
       if (data.profile) {
         setProfile(data.profile);
       }
-      setReportStatus({ state: 'success', message: 'Latest impact report delivered to your inbox.' });
+      setReportStatus({
+        state: 'success',
+        message: 'Latest impact report delivered to your inbox.',
+      });
     } catch (reportError) {
-      setReportStatus({ state: 'error', message: reportError.message || 'Unable to refresh reports right now.' });
+      setReportStatus({
+        state: 'error',
+        message: reportError.message || 'Unable to refresh reports right now.',
+      });
     }
   };
 
@@ -152,7 +151,9 @@ export default function SponsorDashboard() {
         description="Introduce your organization, causes, and recognition preferences so we can celebrate your sponsorship the right way."
       />
       {error ? (
-        <p className="md:col-span-full m-0 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</p>
+        <p className="md:col-span-full m-0 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </p>
       ) : null}
       {loading ? (
         <p className="md:col-span-full m-0 text-sm text-brand-muted">Loading sponsor workspace…</p>
@@ -183,7 +184,9 @@ export default function SponsorDashboard() {
               {reportStatus.state === 'loading' ? 'Refreshing…' : 'Email me an updated report'}
             </button>
             {reportStatus.state === 'error' ? (
-              <p className="m-0 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{reportStatus.message}</p>
+              <p className="m-0 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {reportStatus.message}
+              </p>
             ) : null}
             {reportStatus.state === 'success' ? (
               <p className="m-0 rounded-xl border border-brand-green/20 bg-brand-sand/70 p-3 text-sm text-brand-forest">
@@ -194,8 +197,8 @@ export default function SponsorDashboard() {
               <ul className="m-0 list-disc space-y-2 pl-5 text-sm text-brand-muted">
                 {reports.map((report) => (
                   <li key={report.sponsorshipId}>
-                    {report.event?.title || 'Sponsored event'} · {report.totals?.totalHours || 0} volunteer hours ·{' '}
-                    {report.gallery?.viewCount || 0} gallery views
+                    {report.event?.title || 'Sponsored event'} · {report.totals?.totalHours || 0}{' '}
+                    volunteer hours · {report.gallery?.viewCount || 0} gallery views
                   </li>
                 ))}
               </ul>

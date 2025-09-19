@@ -26,7 +26,12 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const [userState, setUserState] = useState({ status: 'idle', error: '', message: '' });
   const [userForm, setUserForm] = useState({ userId: '', roles: [], isActive: true });
-  const [exportState, setExportState] = useState({ entity: '', format: 'csv', status: 'idle', error: '' });
+  const [exportState, setExportState] = useState({
+    entity: '',
+    format: 'csv',
+    status: 'idle',
+    error: '',
+  });
   const [exportFormat, setExportFormat] = useState('csv');
   const [impactAnalytics, setImpactAnalytics] = useState(null);
   const [impactState, setImpactState] = useState({ status: 'idle', error: '' });
@@ -55,7 +60,10 @@ export default function AdminDashboard() {
       setImpactAnalytics(response.overview || null);
       setImpactState({ status: 'success', error: '' });
     } catch (error) {
-      setImpactState({ status: 'error', error: error.message || 'Unable to load impact analytics' });
+      setImpactState({
+        status: 'error',
+        error: error.message || 'Unable to load impact analytics',
+      });
     }
   }, [token]);
 
@@ -67,7 +75,11 @@ export default function AdminDashboard() {
         const data = await fetchModerationQueue({ token, type: typeToLoad });
         setQueueState({ status: 'success', error: '', data });
       } catch (error) {
-        setQueueState({ status: 'error', error: error.message || 'Unable to load moderation queue', data: { items: [] } });
+        setQueueState({
+          status: 'error',
+          error: error.message || 'Unable to load moderation queue',
+          data: { items: [] },
+        });
       }
     },
     [queueType, token]
@@ -81,7 +93,11 @@ export default function AdminDashboard() {
       setUsers(Array.isArray(fetched) ? fetched : []);
       setUserState((prev) => ({ ...prev, status: 'idle' }));
     } catch (error) {
-      setUserState({ status: 'error', error: error.message || 'Unable to load users', message: '' });
+      setUserState({
+        status: 'error',
+        error: error.message || 'Unable to load users',
+        message: '',
+      });
     }
   }, [fetchUsers]);
 
@@ -159,7 +175,11 @@ export default function AdminDashboard() {
 
   const handleFormChange = useCallback(
     (changes) => {
-      setUserState((prev) => ({ ...prev, message: '', error: prev.status === 'error' ? prev.error : '' }));
+      setUserState((prev) => ({
+        ...prev,
+        message: '',
+        error: prev.status === 'error' ? prev.error : '',
+      }));
       setUserForm((prev) => {
         if (Object.prototype.hasOwnProperty.call(changes, 'userId')) {
           const selected = users.find((entry) => entry.id === changes.userId);
@@ -169,8 +189,8 @@ export default function AdminDashboard() {
               selected && Array.isArray(selected.roles) && selected.roles.length
                 ? selected.roles
                 : roleOptions.length
-                ? [roleOptions[0]]
-                : [],
+                  ? [roleOptions[0]]
+                  : [],
             isActive: selected ? selected.isActive !== false : true,
           };
         }
@@ -184,7 +204,11 @@ export default function AdminDashboard() {
     async (event) => {
       event.preventDefault();
       if (!userForm.userId || !userForm.roles.length) {
-        setUserState({ status: 'error', error: 'Select a user and at least one role', message: '' });
+        setUserState({
+          status: 'error',
+          error: 'Select a user and at least one role',
+          message: '',
+        });
         return;
       }
       if (!token) {
@@ -200,11 +224,17 @@ export default function AdminDashboard() {
           isActive: userForm.isActive,
         });
         const updated = response.user;
-        setUsers((prev) => prev.map((entry) => (entry.id === updated.id ? { ...entry, ...updated } : entry)));
+        setUsers((prev) =>
+          prev.map((entry) => (entry.id === updated.id ? { ...entry, ...updated } : entry))
+        );
         setUserState({ status: 'idle', error: '', message: 'User updated successfully.' });
         loadOverview();
       } catch (error) {
-        setUserState({ status: 'error', error: error.message || 'Unable to update user', message: '' });
+        setUserState({
+          status: 'error',
+          error: error.message || 'Unable to update user',
+          message: '',
+        });
       }
     },
     [token, userForm, loadOverview]
@@ -228,7 +258,12 @@ export default function AdminDashboard() {
         URL.revokeObjectURL(url);
         setExportState({ entity: '', format: formatToUse, status: 'idle', error: '' });
       } catch (error) {
-        setExportState({ entity: '', format: formatToUse, status: 'error', error: error.message || 'Export failed' });
+        setExportState({
+          entity: '',
+          format: formatToUse,
+          status: 'error',
+          error: error.message || 'Export failed',
+        });
       }
     },
     [token, exportFormat]
@@ -249,7 +284,10 @@ export default function AdminDashboard() {
       URL.revokeObjectURL(url);
       setImpactExportState({ status: 'idle', error: '' });
     } catch (error) {
-      setImpactExportState({ status: 'error', error: error.message || 'Unable to export analytics' });
+      setImpactExportState({
+        status: 'error',
+        error: error.message || 'Unable to export analytics',
+      });
     }
   }, [token]);
 
@@ -261,7 +299,9 @@ export default function AdminDashboard() {
   return (
     <div className="grid gap-5 md:[grid-template-columns:repeat(auto-fit,minmax(320px,1fr))]">
       <header className="flex flex-col gap-2 md:col-span-full">
-        <h2 className="m-0 font-display text-2xl font-semibold text-brand-forest">Operations center 🌿</h2>
+        <h2 className="m-0 font-display text-2xl font-semibold text-brand-forest">
+          Operations center 🌿
+        </h2>
         <p className="m-0 text-sm text-brand-muted sm:text-base">
           Review submissions, steer sponsorships, and keep the community roster current.
         </p>

@@ -32,10 +32,7 @@ const ALLOWED_MIME_TYPES = new Map([
 ]);
 
 function resolveAppBaseUrl() {
-  const base =
-    (config.app && config.app.baseUrl) ||
-    config.corsOrigin ||
-    'http://localhost:3000';
+  const base = (config.app && config.app.baseUrl) || config.corsOrigin || 'http://localhost:3000';
   return String(base).replace(/\/$/, '');
 }
 
@@ -135,10 +132,11 @@ async function processImageBuffer(file) {
   const { fileTypeFromBuffer } = await fileTypeModulePromise;
   const detected = await fileTypeFromBuffer(file.buffer);
   if (!detected || !ALLOWED_MIME_TYPES.has(detected.mime)) {
-    throw Object.assign(new Error('Only JPEG, PNG, WebP, or HEIC images are supported'), { statusCode: 415 });
+    throw Object.assign(new Error('Only JPEG, PNG, WebP, or HEIC images are supported'), {
+      statusCode: 415,
+    });
   }
 
-  const extension = ALLOWED_MIME_TYPES.get(detected.mime);
   const baseImage = sharp(file.buffer, { failOn: 'warning' }).rotate();
   const metadata = await baseImage.metadata();
   const processed = await baseImage
@@ -194,13 +192,25 @@ async function storeImage({ eventId, buffer, mimeType, extension }) {
 function buildCommunityTags(event) {
   const tags = [];
   if (event.cityName) {
-    tags.push({ type: 'COMMUNITY', id: `city:${event.citySlug || toSlug(event.cityName)}`, label: event.cityName });
+    tags.push({
+      type: 'COMMUNITY',
+      id: `city:${event.citySlug || toSlug(event.cityName)}`,
+      label: event.cityName,
+    });
   }
   if (event.stateName) {
-    tags.push({ type: 'COMMUNITY', id: `state:${event.stateCode || toSlug(event.stateName)}`, label: event.stateName });
+    tags.push({
+      type: 'COMMUNITY',
+      id: `state:${event.stateCode || toSlug(event.stateName)}`,
+      label: event.stateName,
+    });
   }
   if (event.theme) {
-    tags.push({ type: 'COMMUNITY', id: `theme:${toSlug(event.theme)}`, label: toTitleCase(event.theme) });
+    tags.push({
+      type: 'COMMUNITY',
+      id: `theme:${toSlug(event.theme)}`,
+      label: toTitleCase(event.theme),
+    });
   }
   return tags;
 }
@@ -225,7 +235,9 @@ function sanitizeTags(rawTags, { volunteers, sponsors, event }) {
 
     if (type === 'VOLUNTEER') {
       if (!id || !volunteersById.has(id)) {
-        throw Object.assign(new Error('Volunteer tags must reference registered participants'), { statusCode: 400 });
+        throw Object.assign(new Error('Volunteer tags must reference registered participants'), {
+          statusCode: 400,
+        });
       }
       const volunteer = volunteersById.get(id);
       const key = `${type}:${id}`;
@@ -239,7 +251,9 @@ function sanitizeTags(rawTags, { volunteers, sponsors, event }) {
 
     if (type === 'SPONSOR') {
       if (!id || !sponsorsById.has(id)) {
-        throw Object.assign(new Error('Sponsor tags must reference active sponsors'), { statusCode: 400 });
+        throw Object.assign(new Error('Sponsor tags must reference active sponsors'), {
+          statusCode: 400,
+        });
       }
       const sponsor = sponsorsById.get(id);
       const key = `${type}:${id}`;
@@ -299,7 +313,10 @@ async function sendSubmissionEmail({ media, event, uploader }) {
       },
     });
   } catch (error) {
-    logger.warn('Failed to send gallery submission email', { mediaId: media.id, error: error.message });
+    logger.warn('Failed to send gallery submission email', {
+      mediaId: media.id,
+      error: error.message,
+    });
   }
 }
 
@@ -323,7 +340,9 @@ async function sendModerationEmail({ media, event, uploader, outcome, reason }) 
       ]
     : [
         `We had to reject your photo for <strong>${event.title}</strong>.`,
-        reason ? `Moderator note: ${reason}` : 'Please review the guidelines and try uploading again.',
+        reason
+          ? `Moderator note: ${reason}`
+          : 'Please review the guidelines and try uploading again.',
       ];
   try {
     await sendTemplatedEmail({
@@ -340,7 +359,11 @@ async function sendModerationEmail({ media, event, uploader, outcome, reason }) 
         : undefined,
     });
   } catch (error) {
-    logger.warn('Failed to send gallery moderation email', { mediaId: media.id, error: error.message, outcome });
+    logger.warn('Failed to send gallery moderation email', {
+      mediaId: media.id,
+      error: error.message,
+      outcome,
+    });
   }
 }
 
@@ -377,7 +400,7 @@ async function notifySponsors({ media, event, sponsors }) {
           error: error.message,
         });
       }
-    }),
+    })
   );
 }
 
@@ -413,7 +436,10 @@ async function uploadMediaForEvent({ eventId, file, caption, tags, user }) {
   });
 
   sendSubmissionEmail({ media, event, uploader: user }).catch((error) => {
-    logger.warn('Failed to queue gallery submission email', { mediaId: media.id, error: error.message });
+    logger.warn('Failed to queue gallery submission email', {
+      mediaId: media.id,
+      error: error.message,
+    });
   });
 
   return media;
@@ -456,8 +482,18 @@ async function moderateMedia({ mediaId, action, moderatorId, reason }) {
   const event = await ensureEvent(media.eventId);
   const uploader = await findUserById(media.uploaderId);
 
-  sendModerationEmail({ media, event, uploader, outcome: media.status, reason: media.rejectionReason }).catch((error) => {
-    logger.warn('Failed to send moderation outcome email', { mediaId: media.id, error: error.message, outcome: media.status });
+  sendModerationEmail({
+    media,
+    event,
+    uploader,
+    outcome: media.status,
+    reason: media.rejectionReason,
+  }).catch((error) => {
+    logger.warn('Failed to send moderation outcome email', {
+      mediaId: media.id,
+      error: error.message,
+      outcome: media.status,
+    });
   });
 
   if (media.status === 'APPROVED') {
@@ -469,7 +505,10 @@ async function moderateMedia({ mediaId, action, moderatorId, reason }) {
         .map((tag) => sponsorMap.get(tag.id))
         .filter((sponsor) => sponsor && sponsor.email);
       notifySponsors({ media, event, sponsors: notified }).catch((error) => {
-        logger.warn('Failed to notify sponsors after approval', { mediaId: media.id, error: error.message });
+        logger.warn('Failed to notify sponsors after approval', {
+          mediaId: media.id,
+          error: error.message,
+        });
       });
     }
   }
@@ -487,10 +526,7 @@ async function fetchMediaDetails(mediaId) {
 
 async function getTagOptions(eventId) {
   const event = await ensureEvent(eventId);
-  const [volunteers, sponsors] = await Promise.all([
-    listEventVolunteers(eventId),
-    listSponsors(),
-  ]);
+  const [volunteers, sponsors] = await Promise.all([listEventVolunteers(eventId), listSponsors()]);
   const communities = buildCommunityTags(event);
   return {
     volunteers,

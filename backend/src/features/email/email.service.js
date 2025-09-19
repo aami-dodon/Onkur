@@ -55,16 +55,12 @@ function resolveTransporter() {
 
 function renderStandardTemplate({ heading, bodyLines = [], cta, previewText }) {
   const safeBody = Array.isArray(bodyLines) ? bodyLines : [String(bodyLines || '')];
-  const bodyHtml = safeBody
-    .map(
-      (line) =>
-        `<p class="paragraph">${line}</p>`
-    )
-    .join('');
+  const bodyHtml = safeBody.map((line) => `<p class="paragraph">${line}</p>`).join('');
 
-  const ctaHtml = cta && cta.url && cta.label
-    ? `<div class="cta"><a class="ctaButton" href="${cta.url}" target="_blank" rel="noreferrer">${cta.label}</a></div>`
-    : '';
+  const ctaHtml =
+    cta && cta.url && cta.label
+      ? `<div class="cta"><a class="ctaButton" href="${cta.url}" target="_blank" rel="noreferrer">${cta.label}</a></div>`
+      : '';
 
   const resolvedPreview = previewText || heading;
 
@@ -250,7 +246,10 @@ async function sendEmail({ to, subject, html, text, headers = {} }) {
   const finalSubject = applySubjectPrefix(subject);
 
   if (!transport) {
-    logger.info('Email send skipped because transport is not configured', { to, subject: finalSubject });
+    logger.info('Email send skipped because transport is not configured', {
+      to,
+      subject: finalSubject,
+    });
     return null;
   }
 
@@ -287,7 +286,13 @@ async function sendTemplatedEmail({ to, subject, heading, bodyLines, cta, previe
   if (template.previewText) {
     enrichedHeaders['X-Preheader-Text'] = template.previewText;
   }
-  return sendEmail({ to, subject, html: template.html, text: template.text, headers: enrichedHeaders });
+  return sendEmail({
+    to,
+    subject,
+    html: template.html,
+    text: template.text,
+    headers: enrichedHeaders,
+  });
 }
 
 module.exports = {

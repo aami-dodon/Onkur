@@ -1,10 +1,13 @@
 # 🌿 Onkur Platform Overview
 
+[![CI](https://github.com/Onkur/Onkur/actions/workflows/ci.yml/badge.svg)](https://github.com/Onkur/Onkur/actions/workflows/ci.yml)
+
 Onkur is a mobile-first volunteering platform rooted in sustainability and community stewardship. The product is rolling out in three phases that collectively deliver authentication, volunteer empowerment, and rich event management workflows. Each milestone builds on a green-themed, responsive foundation so that every role—from volunteers to sponsors—has a tailored experience on phones first and desktops second.
 
 ## 🚦 Phase roadmap
 
 ### Phase 1 – Foundation (Complete)
+
 - Email + password signup, login, and logout backed by JWT auth with secure storage and revocation.
 - Role-based dashboards for Volunteers, Event Managers, Sponsors, and Admins, guarded by role-aware routing.
 - Admin tools to assign roles and manage the community directory while blocking unauthorized access.
@@ -12,6 +15,7 @@ Onkur is a mobile-first volunteering platform rooted in sustainability and commu
 - CI/CD workflow that installs dependencies, runs linting + unit tests for auth, and validates frontend builds.
 
 ### Phase 2 – Volunteer Journey (Complete)
+
 - Rich volunteer profile editor capturing skills, interests, location, and availability.
 - Event discovery with filters for date, location, category, and theme plus duplicate-signup prevention and capacity checks.
 - Event signup flow with confirmation + reminder emails, hours logging, and eco-badge thresholds (10/50/100 hours).
@@ -19,6 +23,7 @@ Onkur is a mobile-first volunteering platform rooted in sustainability and commu
 - Metrics tracking for conversion (views → signups), average volunteer hours, and retention.
 
 ### Phase 3 – Event Manager Workspace (Complete)
+
 - Event manager dashboard to create, draft, publish, and complete events with full date/time and capacity controls.
 - Task assignment surface so managers can allocate volunteers to event responsibilities and keep dashboards in sync.
 - Attendance tooling for check-in/out that feeds volunteer hour totals automatically.
@@ -26,6 +31,7 @@ Onkur is a mobile-first volunteering platform rooted in sustainability and commu
 - Notification suite for publish confirmations, assignment notices, reminders, and post-event acknowledgements.
 
 ### Phase 4 – Event Gallery (Complete)
+
 - Mobile-first gallery grid with lightbox viewer backed by infinite scroll so visitors can relive event stories quickly.
 - Volunteer and event manager upload flow with EXIF-stripped image processing, tag selection for volunteers/sponsors/communities, and moderation email notices.
 - Admin moderation queue to approve or reject submissions, capturing decision latency metrics and sponsor mentions automatically.
@@ -33,12 +39,14 @@ Onkur is a mobile-first volunteering platform rooted in sustainability and commu
 - MinIO/S3-backed storage with graceful inline fallback plus transactional emails to notify contributors and sponsors when galleries go live.
 
 ### Phase 5 – Sponsor Partnerships (Complete)
+
 - Sponsor registration and approval workflow that promotes verified organizations into the sponsor role.
 - Sponsor dashboard to manage organization profiles, pledge funds or in-kind support, and review live sponsorships.
 - Event and gallery experiences that surface approved sponsor logos and contributions for every supported event.
 - Automated impact reports summarizing volunteer hours, gallery views, and ROI metrics delivered to sponsor inboxes.
 
 ### Phase 6 – Admin Oversight (Complete)
+
 - Unified admin console that surfaces moderation queues for events, sponsors, and gallery media with bulk-ready workflows.
 - Approval and rejection APIs that publish or return submissions to draft while capturing audit trails and notifying submitters.
 - User management panel to adjust multi-role assignments and deactivate accounts without touching the database.
@@ -46,6 +54,7 @@ Onkur is a mobile-first volunteering platform rooted in sustainability and commu
 - Extended audit logging with before/after snapshots tied to each entity for transparent governance.
 
 ### Phase 7 – Impact & Community (Complete)
+
 - Beneficiaries, volunteers, and sponsors can submit rich event stories that flow through admin moderation with automated approval/rejection emails.
 - Approved impact stories surface alongside event galleries with sponsor highlights and community-friendly storytelling cards.
 - Platform-wide analytics dashboard reveals volunteer hours, participation, gallery engagement, and sponsor impressions with CSV export support.
@@ -58,6 +67,7 @@ Consult the living [product wiki](docs/Wiki.md) for design rationale, API schema
 ## 🚀 Getting started
 
 ### Backend (Express + Postgres)
+
 1. Install dependencies
    ```bash
    cd backend
@@ -89,6 +99,7 @@ Consult the living [product wiki](docs/Wiki.md) for design rationale, API schema
    ```
 
 ### Frontend (Vite + React)
+
 1. Install dependencies and configure the API origin
    ```bash
    cd frontend
@@ -104,34 +115,59 @@ Consult the living [product wiki](docs/Wiki.md) for design rationale, API schema
    Visit `http://localhost:5173` to explore the mobile-first shell.
 
 ### Docker (optional)
+
 Spin up both apps with shared hot reload:
+
 ```bash
 docker compose up --build
 ```
+
 - Backend: http://localhost:5000
 - Frontend: http://localhost:3000 (proxying Vite on 5173)
 
 ---
 
 ## ✅ Testing & quality
-Run the test suite and production build locally before pushing:
+
+Run the automated formatting, linting, tests, and production build locally before pushing:
 
 ```bash
 # backend
 cd backend
+npm run format:check
+npm run lint
 npm test
 
 # frontend
 cd ../frontend
+npm run format:check
+npm run lint
+npm run test
 npm run build
 ```
 
-The GitHub Actions pipeline (`.github/workflows/ci.yml`) mirrors these steps to keep the main branch healthy.
-Jest coverage now includes the impact storytelling pipeline—submission, moderation notifications, and analytics exports—so regressions surface quickly.
+These commands mirror the GitHub Actions workflow (`.github/workflows/ci.yml`) so pull requests stay green. Prettier guards consistent formatting, ESLint highlights common pitfalls, Vitest exercises the routing shell, and Jest protects the existing service contracts across the backend feature modules.
 
 ---
 
+## 🧹 Repository hygiene & environment
+
+- `.gitignore` now keeps `node_modules/`, build outputs, and log files out of commits. Reinstall dependencies with `npm install` in each workspace after cloning or pulling.
+- Bootstrap environment variables quickly by copying the provided `.env.example` files in `backend/` and `frontend/` before starting servers or tests.
+- The toolchain targets Node.js 20; matching that version keeps linting, testing, and build behavior consistent with CI.
+
+## 🤝 Contributing & community
+
+- Review the [CONTRIBUTING.md](CONTRIBUTING.md) guide for workflow conventions, required quality checks, and pull request tips.
+- Participation is governed by our [Code of Conduct](CODE_OF_CONDUCT.md); report concerns to the maintainers at conduct@onkur.example.
+- Summaries of noteworthy changes belong in [docs/Wiki.md](docs/Wiki.md) so future contributors understand the why behind updates.
+
+## 📄 License
+
+The project is available under the [MIT License](LICENSE).
+
 ## 🧭 Architecture quick reference
+
 - **Backend features** live under `backend/src/features/<feature-name>/`. Auth endpoints are defined in `auth.route.js`, volunteer flows under `volunteer-journey/`, and event tooling under `event-management/`.
 - **Frontend features** live under `frontend/src/features/<feature-name>/`. Dedicated modules for auth, volunteer, and event manager experiences plug into the router and reuse the shared `AuthProvider` for session state.
 - **Shared documentation**: the wiki captures stakeholder goals, color palette, data models, API reference, and roadmap milestones.

@@ -12,12 +12,8 @@ const renderTree = () =>
     React.createElement(
       BrowserRouter,
       null,
-      React.createElement(
-        AuthProvider,
-        null,
-        React.createElement(App),
-      ),
-    ),
+      React.createElement(AuthProvider, null, React.createElement(App))
+    )
   );
 
 ReactDOM.createRoot(document.getElementById('root')).render(renderTree());

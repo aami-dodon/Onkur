@@ -87,26 +87,23 @@ export default function EventManagerWorkspace() {
   const [newCategory, setNewCategory] = useState('');
   const [categoryState, setCategoryState] = useState({ status: 'idle', message: '' });
 
-  const authHeaders = useMemo(
-    () => ({ token }),
-    [token],
-  );
+  const authHeaders = useMemo(() => ({ token }), [token]);
 
   const skillMap = useMemo(
     () => new Map((lookups.skills || []).map((item) => [item.value, item.label])),
-    [lookups.skills],
+    [lookups.skills]
   );
   const interestMap = useMemo(
     () => new Map((lookups.interests || []).map((item) => [item.value, item.label])),
-    [lookups.interests],
+    [lookups.interests]
   );
   const availabilityMap = useMemo(
     () => new Map((lookups.availability || []).map((item) => [item.value, item.label])),
-    [lookups.availability],
+    [lookups.availability]
   );
   const cityOptions = useMemo(
     () => (form.stateCode && citiesStateCode === form.stateCode ? cities : []),
-    [form.stateCode, citiesStateCode, cities],
+    [form.stateCode, citiesStateCode, cities]
   );
 
   useEffect(() => {
@@ -124,7 +121,7 @@ export default function EventManagerWorkspace() {
           title: task.title,
           description: task.description || '',
           requiredCount: task.requiredCount || 1,
-        })),
+        }))
       );
     }
   }, [detail?.tasks]);
@@ -208,7 +205,8 @@ export default function EventManagerWorkspace() {
 
   const existingAssignments = useMemo(() => detail?.assignments || [], [detail?.assignments]);
 
-  const checkedInCount = detail?.signups?.filter((signup) => Boolean(signup.checkInAt))?.length || 0;
+  const checkedInCount =
+    detail?.signups?.filter((signup) => Boolean(signup.checkInAt))?.length || 0;
   const totalMinutes = detail?.event?.totalMinutes || 0;
 
   const handleFormChange = (event) => {
@@ -254,9 +252,7 @@ export default function EventManagerWorkspace() {
     event.preventDefault();
     setCreateState({ status: 'loading', message: '' });
     try {
-      const selectedCategory = lookups.categories.find(
-        (item) => item.value === form.categoryValue,
-      );
+      const selectedCategory = lookups.categories.find((item) => item.value === form.categoryValue);
       const payload = {
         title: form.title,
         description: form.description,
@@ -364,7 +360,11 @@ export default function EventManagerWorkspace() {
 
   const handleTaskFieldChange = (taskId, field, value) => {
     setTaskDrafts((prev) =>
-      prev.map((task) => (task.id === taskId ? { ...task, [field]: field === 'requiredCount' ? Number(value) : value } : task)),
+      prev.map((task) =>
+        task.id === taskId
+          ? { ...task, [field]: field === 'requiredCount' ? Number(value) : value }
+          : task
+      )
     );
   };
 
@@ -403,7 +403,7 @@ export default function EventManagerWorkspace() {
           title: task.title,
           description: task.description || '',
           requiredCount: task.requiredCount || 1,
-        })),
+        }))
       );
       setTaskState({ status: 'success', message: 'Tasks updated' });
       await refreshDetail(selectedId);
@@ -436,7 +436,10 @@ export default function EventManagerWorkspace() {
       setAssignmentState({ status: 'success', message: 'Volunteer assigned' });
       event.target.reset();
     } catch (error) {
-      setAssignmentState({ status: 'error', message: error.message || 'Unable to assign volunteer' });
+      setAssignmentState({
+        status: 'error',
+        message: error.message || 'Unable to assign volunteer',
+      });
     }
   };
 
@@ -444,11 +447,14 @@ export default function EventManagerWorkspace() {
     if (!selectedId) return;
     setAttendanceState((prev) => ({ ...prev, [signup.userId]: { status: 'loading' } }));
     try {
-      const response = await apiRequest(`/api/manager/events/${selectedId}/check-in/${signup.userId}`, {
-        ...authHeaders,
-        method: 'POST',
-        body: { action },
-      });
+      const response = await apiRequest(
+        `/api/manager/events/${selectedId}/check-in/${signup.userId}`,
+        {
+          ...authHeaders,
+          method: 'POST',
+          body: { action },
+        }
+      );
       const attendance = response.attendance;
       setDetail((prev) => {
         const updatedSignups = (prev.signups || []).map((item) =>
@@ -459,13 +465,13 @@ export default function EventManagerWorkspace() {
                 checkOutAt: attendance.checkOutAt,
                 minutes: attendance.minutes,
               }
-            : item,
+            : item
         );
         const updatedCheckedIn = updatedSignups.filter((item) => item.checkInAt).length;
         setEvents((eventsList) =>
           eventsList.map((event) =>
-            event.id === selectedId ? { ...event, checkedInCount: updatedCheckedIn } : event,
-          ),
+            event.id === selectedId ? { ...event, checkedInCount: updatedCheckedIn } : event
+          )
         );
         return {
           ...prev,
@@ -476,7 +482,10 @@ export default function EventManagerWorkspace() {
     } catch (error) {
       setAttendanceState((prev) => ({
         ...prev,
-        [signup.userId]: { status: 'error', message: error.message || 'Unable to update attendance' },
+        [signup.userId]: {
+          status: 'error',
+          message: error.message || 'Unable to update attendance',
+        },
       }));
     }
   };
@@ -515,7 +524,7 @@ export default function EventManagerWorkspace() {
         `${API_BASE}/api/manager/events/${selectedId}/report?format=csv`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
 
       if (!response.ok) {
@@ -564,7 +573,10 @@ export default function EventManagerWorkspace() {
             Draft the essentials now and publish when you&apos;re ready for volunteers to join.
           </p>
         </header>
-        <form className="grid gap-3 sm:[grid-template-columns:repeat(2,minmax(0,1fr))]" onSubmit={handleCreate}>
+        <form
+          className="grid gap-3 sm:[grid-template-columns:repeat(2,minmax(0,1fr))]"
+          onSubmit={handleCreate}
+        >
           {lookupsState.status === 'error' ? (
             <p className="sm:col-span-2 m-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
               {lookupsState.error}
@@ -638,7 +650,7 @@ export default function EventManagerWorkspace() {
               className="min-h-[96px] rounded-lg border border-brand-forest/20 bg-brand-sand/30 px-3 py-2 text-sm shadow-sm focus:border-brand-green focus:outline-none"
               value={form.description}
               onChange={handleFormChange}
-              placeholder="Share the mission, who you&apos;re supporting, and what to expect."
+              placeholder="Share the mission, who you're supporting, and what to expect."
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
@@ -773,7 +785,9 @@ export default function EventManagerWorkspace() {
                 </option>
               ))}
             </select>
-            <span className="text-xs text-brand-muted">Select one or more focus skills that will help this event thrive.</span>
+            <span className="text-xs text-brand-muted">
+              Select one or more focus skills that will help this event thrive.
+            </span>
           </label>
           <label className="flex flex-col gap-1 text-sm sm:col-span-2">
             <span className="font-semibold text-brand-forest">Interest focus (optional)</span>
@@ -792,7 +806,9 @@ export default function EventManagerWorkspace() {
             </select>
           </label>
           <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-            <span className="font-semibold text-brand-forest">Helpful availability windows (optional)</span>
+            <span className="font-semibold text-brand-forest">
+              Helpful availability windows (optional)
+            </span>
             <select
               multiple
               name="availability"
@@ -808,7 +824,11 @@ export default function EventManagerWorkspace() {
             </select>
           </label>
           <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-            <button type="submit" className="btn-primary" disabled={createState.status === 'loading'}>
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={createState.status === 'loading'}
+            >
               {createState.status === 'loading' ? 'Saving…' : 'Save draft'}
             </button>
             {createState.message ? (
@@ -828,11 +848,14 @@ export default function EventManagerWorkspace() {
         <header className="flex flex-col gap-1">
           <h3 className="m-0 text-xl font-semibold text-brand-forest">Your event pipeline</h3>
           <p className="m-0 text-sm text-brand-muted">
-            Monitor draft, published, and completed events in one glance. Volunteers see published events instantly.
+            Monitor draft, published, and completed events in one glance. Volunteers see published
+            events instantly.
           </p>
         </header>
         {listState.status === 'error' ? (
-          <p className="m-0 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{listState.error}</p>
+          <p className="m-0 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {listState.error}
+          </p>
         ) : null}
         <div className="grid gap-4 lg:[grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
           {events.map((event) => {
@@ -933,15 +956,21 @@ export default function EventManagerWorkspace() {
             <div className="grid gap-5 lg:[grid-template-columns:360px_1fr]">
               <aside className="flex flex-col gap-4">
                 <div className="rounded-xl border border-brand-forest/10 bg-brand-sand/40 p-4">
-                  <h4 className="m-0 text-sm font-semibold uppercase tracking-wide text-brand-forest">Snapshot</h4>
+                  <h4 className="m-0 text-sm font-semibold uppercase tracking-wide text-brand-forest">
+                    Snapshot
+                  </h4>
                   <dl className="mt-3 space-y-2 text-sm text-brand-muted">
                     <div className="flex items-center justify-between">
                       <dt className="font-medium text-brand-forest">Status</dt>
-                      <dd className="m-0 uppercase text-xs font-semibold text-brand-green">{detail.event.status}</dd>
+                      <dd className="m-0 uppercase text-xs font-semibold text-brand-green">
+                        {detail.event.status}
+                      </dd>
                     </div>
                     <div className="flex flex-col gap-1">
                       <dt className="font-medium text-brand-forest">Location</dt>
-                      <dd className="m-0 text-sm text-brand-muted">{describeLocation(detail.event)}</dd>
+                      <dd className="m-0 text-sm text-brand-muted">
+                        {describeLocation(detail.event)}
+                      </dd>
                     </div>
                     <div className="flex items-center justify-between">
                       <dt className="font-medium text-brand-forest">Mode</dt>
@@ -966,12 +995,15 @@ export default function EventManagerWorkspace() {
                   </dl>
                   {detail.event.requirements ? (
                     <p className="mt-3 rounded-lg bg-white/70 p-3 text-xs text-brand-muted">
-                      <span className="font-semibold text-brand-forest">Requirements:</span> {detail.event.requirements}
+                      <span className="font-semibold text-brand-forest">Requirements:</span>{' '}
+                      {detail.event.requirements}
                     </p>
                   ) : null}
                   {detail.event.requiredSkills?.length ? (
                     <div className="mt-3 flex flex-col gap-2 text-xs">
-                      <span className="font-semibold uppercase tracking-wide text-brand-forest">Skills highlighted</span>
+                      <span className="font-semibold uppercase tracking-wide text-brand-forest">
+                        Skills highlighted
+                      </span>
                       <div className="flex flex-wrap gap-2">
                         {detail.event.requiredSkills.map((skill) => (
                           <span
@@ -986,7 +1018,9 @@ export default function EventManagerWorkspace() {
                   ) : null}
                   {detail.event.requiredInterests?.length ? (
                     <div className="mt-3 flex flex-col gap-2 text-xs">
-                      <span className="font-semibold uppercase tracking-wide text-brand-forest">Interest focus</span>
+                      <span className="font-semibold uppercase tracking-wide text-brand-forest">
+                        Interest focus
+                      </span>
                       <div className="flex flex-wrap gap-2">
                         {detail.event.requiredInterests.map((interest) => (
                           <span
@@ -1001,7 +1035,9 @@ export default function EventManagerWorkspace() {
                   ) : null}
                   {detail.event.requiredAvailability?.length ? (
                     <div className="mt-3 flex flex-col gap-2 text-xs">
-                      <span className="font-semibold uppercase tracking-wide text-brand-forest">Preferred availability</span>
+                      <span className="font-semibold uppercase tracking-wide text-brand-forest">
+                        Preferred availability
+                      </span>
                       <div className="flex flex-wrap gap-2">
                         {detail.event.requiredAvailability.map((slot) => (
                           <span
@@ -1017,7 +1053,9 @@ export default function EventManagerWorkspace() {
                 </div>
 
                 <div className="rounded-xl border border-brand-forest/10 bg-brand-sand/40 p-4">
-                  <h4 className="m-0 text-sm font-semibold uppercase tracking-wide text-brand-forest">Assignments</h4>
+                  <h4 className="m-0 text-sm font-semibold uppercase tracking-wide text-brand-forest">
+                    Assignments
+                  </h4>
                   <form className="mt-3 flex flex-col gap-3" onSubmit={handleAssign}>
                     <label className="flex flex-col gap-1 text-xs">
                       <span className="font-semibold text-brand-forest">Task</span>
@@ -1055,7 +1093,11 @@ export default function EventManagerWorkspace() {
                         ))}
                       </select>
                     </label>
-                    <button type="submit" className="btn-primary" disabled={assignmentState.status === 'loading'}>
+                    <button
+                      type="submit"
+                      className="btn-primary"
+                      disabled={assignmentState.status === 'loading'}
+                    >
                       {assignmentState.status === 'loading' ? 'Assigning…' : 'Assign volunteer'}
                     </button>
                     {assignmentState.message ? (
@@ -1071,7 +1113,9 @@ export default function EventManagerWorkspace() {
                 </div>
 
                 <div className="rounded-xl border border-brand-forest/10 bg-brand-sand/40 p-4">
-                  <h4 className="m-0 text-sm font-semibold uppercase tracking-wide text-brand-forest">Impact report</h4>
+                  <h4 className="m-0 text-sm font-semibold uppercase tracking-wide text-brand-forest">
+                    Impact report
+                  </h4>
                   <div className="mt-3 flex flex-col gap-2 text-xs text-brand-muted">
                     <button
                       type="button"
@@ -1096,20 +1140,22 @@ export default function EventManagerWorkspace() {
                       <span className="text-xs text-red-600">{reportState.downloadError}</span>
                     ) : null}
                     {reportState.downloadStatus === 'success' ? (
-                      <span className="text-xs font-semibold text-brand-green">Report downloaded.</span>
+                      <span className="text-xs font-semibold text-brand-green">
+                        Report downloaded.
+                      </span>
                     ) : null}
-                      {report ? (
-                        <div className="rounded-lg bg-white/80 p-3 text-xs text-brand-muted">
-                          <p className="m-0 font-semibold text-brand-forest">{report.event.title}</p>
-                          <p className="m-0">Signups: {report.totals.totalSignups}</p>
-                          <p className="m-0">Checked in: {report.totals.totalCheckedIn}</p>
-                          <p className="m-0">Attendance rate: {report.totals.attendanceRate}%</p>
-                          <p className="m-0">Total hours: {report.totals.totalHours}</p>
-                          <p className="m-0 text-[11px] text-brand-forest">
-                            CSV downloads include these metrics plus timestamps and attendee details.
-                          </p>
-                        </div>
-                      ) : null}
+                    {report ? (
+                      <div className="rounded-lg bg-white/80 p-3 text-xs text-brand-muted">
+                        <p className="m-0 font-semibold text-brand-forest">{report.event.title}</p>
+                        <p className="m-0">Signups: {report.totals.totalSignups}</p>
+                        <p className="m-0">Checked in: {report.totals.totalCheckedIn}</p>
+                        <p className="m-0">Attendance rate: {report.totals.attendanceRate}%</p>
+                        <p className="m-0">Total hours: {report.totals.totalHours}</p>
+                        <p className="m-0 text-[11px] text-brand-forest">
+                          CSV downloads include these metrics plus timestamps and attendee details.
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </aside>
@@ -1118,7 +1164,9 @@ export default function EventManagerWorkspace() {
                 <section className="rounded-xl border border-brand-forest/10 bg-brand-sand/40 p-4">
                   <header className="flex flex-col gap-1 pb-3">
                     <h4 className="m-0 text-base font-semibold text-brand-forest">Task board</h4>
-                    <p className="m-0 text-xs text-brand-muted">Outline roles so volunteers know how they&apos;ll contribute.</p>
+                    <p className="m-0 text-xs text-brand-muted">
+                      Outline roles so volunteers know how they&apos;ll contribute.
+                    </p>
                   </header>
                   <div className="flex flex-col gap-3">
                     {taskDrafts.map((task) => (
@@ -1129,18 +1177,24 @@ export default function EventManagerWorkspace() {
                             <input
                               className="rounded-md border border-brand-forest/20 bg-white px-3 py-2 text-sm focus:border-brand-green focus:outline-none"
                               value={task.title}
-                              onChange={(event) => handleTaskFieldChange(task.id, 'title', event.target.value)}
+                              onChange={(event) =>
+                                handleTaskFieldChange(task.id, 'title', event.target.value)
+                              }
                               placeholder="Registration desk lead"
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-xs">
-                            <span className="font-semibold text-brand-forest">Needed volunteers</span>
+                            <span className="font-semibold text-brand-forest">
+                              Needed volunteers
+                            </span>
                             <input
                               type="number"
                               min="1"
                               className="rounded-md border border-brand-forest/20 bg-white px-3 py-2 text-sm focus:border-brand-green focus:outline-none"
                               value={task.requiredCount}
-                              onChange={(event) => handleTaskFieldChange(task.id, 'requiredCount', event.target.value)}
+                              onChange={(event) =>
+                                handleTaskFieldChange(task.id, 'requiredCount', event.target.value)
+                              }
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-xs sm:col-span-2">
@@ -1148,7 +1202,9 @@ export default function EventManagerWorkspace() {
                             <textarea
                               className="min-h-[60px] rounded-md border border-brand-forest/20 bg-white px-3 py-2 text-sm focus:border-brand-green focus:outline-none"
                               value={task.description}
-                              onChange={(event) => handleTaskFieldChange(task.id, 'description', event.target.value)}
+                              onChange={(event) =>
+                                handleTaskFieldChange(task.id, 'description', event.target.value)
+                              }
                               placeholder="Outline duties, schedules, or special gear."
                             />
                           </label>
@@ -1172,7 +1228,12 @@ export default function EventManagerWorkspace() {
                       + Add task
                     </button>
                     <div className="flex items-center gap-3">
-                      <button type="button" className="btn-primary" onClick={handleSaveTasks} disabled={taskState.status === 'loading'}>
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        onClick={handleSaveTasks}
+                        disabled={taskState.status === 'loading'}
+                      >
                         {taskState.status === 'loading' ? 'Saving…' : 'Save tasks'}
                       </button>
                       {taskState.message ? (
@@ -1191,16 +1252,27 @@ export default function EventManagerWorkspace() {
                 <section className="rounded-xl border border-brand-forest/10 bg-brand-sand/40 p-4">
                   <header className="flex flex-col gap-1 pb-3">
                     <h4 className="m-0 text-base font-semibold text-brand-forest">Crew roster</h4>
-                    <p className="m-0 text-xs text-brand-muted">See who&apos;s on each task and share quick updates.</p>
+                    <p className="m-0 text-xs text-brand-muted">
+                      See who&apos;s on each task and share quick updates.
+                    </p>
                   </header>
                   {existingAssignments.length ? (
                     <ul className="m-0 space-y-3 p-0">
                       {existingAssignments.map((assignment) => (
-                        <li key={assignment.id} className="list-none rounded-lg bg-white/80 p-3 shadow-sm">
-                          <p className="m-0 text-sm font-semibold text-brand-forest">{assignment.taskTitle}</p>
+                        <li
+                          key={assignment.id}
+                          className="list-none rounded-lg bg-white/80 p-3 shadow-sm"
+                        >
+                          <p className="m-0 text-sm font-semibold text-brand-forest">
+                            {assignment.taskTitle}
+                          </p>
                           <p className="m-0 text-xs text-brand-muted">{assignment.volunteerName}</p>
-                          <p className="m-0 text-xs text-brand-muted">{assignment.volunteerEmail}</p>
-                          <p className="m-0 text-xs text-brand-muted">Status: {assignment.status}</p>
+                          <p className="m-0 text-xs text-brand-muted">
+                            {assignment.volunteerEmail}
+                          </p>
+                          <p className="m-0 text-xs text-brand-muted">
+                            Status: {assignment.status}
+                          </p>
                         </li>
                       ))}
                     </ul>
@@ -1211,27 +1283,40 @@ export default function EventManagerWorkspace() {
 
                 <section className="rounded-xl border border-brand-forest/10 bg-brand-sand/40 p-4">
                   <header className="flex flex-col gap-1 pb-3">
-                    <h4 className="m-0 text-base font-semibold text-brand-forest">Attendance tracker</h4>
-                    <p className="m-0 text-xs text-brand-muted">Check volunteers in as they arrive and close out their hours.</p>
+                    <h4 className="m-0 text-base font-semibold text-brand-forest">
+                      Attendance tracker
+                    </h4>
+                    <p className="m-0 text-xs text-brand-muted">
+                      Check volunteers in as they arrive and close out their hours.
+                    </p>
                   </header>
                   {detail.signups?.length ? (
                     <div className="space-y-3">
                       {detail.signups.map((signup) => {
                         const state = attendanceState[signup.userId] || { status: 'idle' };
                         return (
-                          <article key={signup.userId} className="rounded-lg bg-white/80 p-3 shadow-sm">
+                          <article
+                            key={signup.userId}
+                            className="rounded-lg bg-white/80 p-3 shadow-sm"
+                          >
                             <header className="flex flex-col gap-1">
-                              <h5 className="m-0 text-sm font-semibold text-brand-forest">{signup.name}</h5>
+                              <h5 className="m-0 text-sm font-semibold text-brand-forest">
+                                {signup.name}
+                              </h5>
                               <p className="m-0 text-xs text-brand-muted">{signup.email}</p>
                             </header>
                             <dl className="mt-2 grid gap-2 text-xs text-brand-muted [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))]">
                               <div>
                                 <dt className="font-semibold text-brand-forest">Checked in</dt>
-                                <dd className="m-0">{signup.checkInAt ? formatDate(signup.checkInAt) : 'Not yet'}</dd>
+                                <dd className="m-0">
+                                  {signup.checkInAt ? formatDate(signup.checkInAt) : 'Not yet'}
+                                </dd>
                               </div>
                               <div>
                                 <dt className="font-semibold text-brand-forest">Checked out</dt>
-                                <dd className="m-0">{signup.checkOutAt ? formatDate(signup.checkOutAt) : 'Not yet'}</dd>
+                                <dd className="m-0">
+                                  {signup.checkOutAt ? formatDate(signup.checkOutAt) : 'Not yet'}
+                                </dd>
                               </div>
                               <div>
                                 <dt className="font-semibold text-brand-forest">Minutes</dt>
@@ -1245,15 +1330,27 @@ export default function EventManagerWorkspace() {
                                 onClick={() => handleAttendance(signup, 'check-in')}
                                 disabled={Boolean(signup.checkInAt) || state.status === 'loading'}
                               >
-                                {signup.checkInAt ? 'Checked in' : state.status === 'loading' ? 'Working…' : 'Check in'}
+                                {signup.checkInAt
+                                  ? 'Checked in'
+                                  : state.status === 'loading'
+                                    ? 'Working…'
+                                    : 'Check in'}
                               </button>
                               <button
                                 type="button"
                                 className="btn-primary"
                                 onClick={() => handleAttendance(signup, 'check-out')}
-                                disabled={!signup.checkInAt || Boolean(signup.checkOutAt) || state.status === 'loading'}
+                                disabled={
+                                  !signup.checkInAt ||
+                                  Boolean(signup.checkOutAt) ||
+                                  state.status === 'loading'
+                                }
                               >
-                                {signup.checkOutAt ? 'Completed' : state.status === 'loading' ? 'Working…' : 'Check out'}
+                                {signup.checkOutAt
+                                  ? 'Completed'
+                                  : state.status === 'loading'
+                                    ? 'Working…'
+                                    : 'Check out'}
                               </button>
                               {state.status === 'error' ? (
                                 <span className="text-xs text-red-600">{state.message}</span>

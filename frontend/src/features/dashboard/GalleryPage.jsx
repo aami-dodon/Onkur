@@ -58,7 +58,10 @@ export default function GalleryPage({ role, roles = [] }) {
   const { user, token } = useAuth();
   const firstName = useMemo(() => user?.name?.split(' ')[0] || 'friend', [user?.name]);
   const normalizedRoles = useMemo(() => normalizeRoles(roles, role), [roles, role]);
-  const activeRole = useMemo(() => determinePrimaryRole(normalizedRoles, role), [normalizedRoles, role]);
+  const activeRole = useMemo(
+    () => determinePrimaryRole(normalizedRoles, role),
+    [normalizedRoles, role]
+  );
   const intro = useMemo(() => buildIntro(activeRole, firstName), [activeRole, firstName]);
 
   const [uploadableEvents, setUploadableEvents] = useState([]);
@@ -73,15 +76,15 @@ export default function GalleryPage({ role, roles = [] }) {
 
   const canUpload = useMemo(
     () => normalizedRoles.includes('VOLUNTEER') || normalizedRoles.includes('EVENT_MANAGER'),
-    [normalizedRoles],
+    [normalizedRoles]
   );
 
   const canSubmitStory = useMemo(
     () =>
       normalizedRoles.some((roleName) =>
-        ['VOLUNTEER', 'EVENT_MANAGER', 'SPONSOR', 'ADMIN'].includes(roleName),
+        ['VOLUNTEER', 'EVENT_MANAGER', 'SPONSOR', 'ADMIN'].includes(roleName)
       ),
-    [normalizedRoles],
+    [normalizedRoles]
   );
 
   useEffect(() => {
@@ -97,15 +100,18 @@ export default function GalleryPage({ role, roles = [] }) {
         if (normalizedRoles.includes('VOLUNTEER')) {
           requests.push(
             apiRequest('/api/me/signups', { token }).then((response) =>
-              (response.signups || []).map((signup) => ({ id: signup.event_id || signup.eventId, title: signup.title })),
-            ),
+              (response.signups || []).map((signup) => ({
+                id: signup.event_id || signup.eventId,
+                title: signup.title,
+              }))
+            )
           );
         }
         if (normalizedRoles.includes('EVENT_MANAGER') || normalizedRoles.includes('ADMIN')) {
           requests.push(
             apiRequest('/api/manager/events', { token }).then((response) =>
-              (response.events || []).map((event) => ({ id: event.id, title: event.title })),
-            ),
+              (response.events || []).map((event) => ({ id: event.id, title: event.title }))
+            )
           );
         }
         const resolved = await Promise.all(requests);
@@ -113,7 +119,7 @@ export default function GalleryPage({ role, roles = [] }) {
         const merged = uniqEvents(resolved.flat());
         setUploadableEvents(merged);
         setUploadStatus({ state: 'success', message: '' });
-        setSelectedEventId((current) => (current || (merged[0] ? merged[0].id : '')));
+        setSelectedEventId((current) => current || (merged[0] ? merged[0].id : ''));
       } catch (error) {
         if (!isMounted) return;
         setUploadStatus({ state: 'error', message: error.message || 'Unable to load your events' });
@@ -131,7 +137,7 @@ export default function GalleryPage({ role, roles = [] }) {
       const events = response.events || [];
       setGalleryEvents(events);
       setGalleryStatus({ state: 'success', message: '' });
-      setSelectedEventId((current) => (current || (events[0] ? events[0].id : '')));
+      setSelectedEventId((current) => current || (events[0] ? events[0].id : ''));
     } catch (error) {
       setGalleryStatus({ state: 'error', message: error.message || 'Unable to load galleries' });
     }
@@ -149,7 +155,7 @@ export default function GalleryPage({ role, roles = [] }) {
       }
       loadGalleryEvents();
     },
-    [loadGalleryEvents],
+    [loadGalleryEvents]
   );
 
   const handleStorySubmitted = useCallback(() => {
@@ -160,7 +166,10 @@ export default function GalleryPage({ role, roles = [] }) {
     setStoryCount(Array.isArray(stories) ? stories.length : 0);
   }, []);
 
-  const viewerEvents = useMemo(() => galleryEvents.filter((event) => event && event.id), [galleryEvents]);
+  const viewerEvents = useMemo(
+    () => galleryEvents.filter((event) => event && event.id),
+    [galleryEvents]
+  );
   const isAdmin = normalizedRoles.includes('ADMIN');
 
   return (
@@ -176,7 +185,11 @@ export default function GalleryPage({ role, roles = [] }) {
 
       {canSubmitStory && selectedEventId ? (
         <div className="flex flex-col gap-2">
-          <ImpactStoryComposer eventId={selectedEventId} token={token} onSubmitted={handleStorySubmitted} />
+          <ImpactStoryComposer
+            eventId={selectedEventId}
+            token={token}
+            onSubmitted={handleStorySubmitted}
+          />
           <p className="m-0 text-xs text-brand-muted">
             {storyCount
               ? `${storyCount} approved impact stor${storyCount === 1 ? 'y' : 'ies'} featured for this event.`

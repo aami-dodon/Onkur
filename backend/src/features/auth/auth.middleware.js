@@ -29,11 +29,12 @@ function authorizeRoles(...allowedRoles) {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-    const userRoles = Array.isArray(req.user.roles) && req.user.roles.length
-      ? req.user.roles
-      : req.user.role
-      ? [req.user.role]
-      : [];
+    const userRoles =
+      Array.isArray(req.user.roles) && req.user.roles.length
+        ? req.user.roles
+        : req.user.role
+          ? [req.user.role]
+          : [];
     if (!userRoles.some((role) => allowedRoles.includes(role))) {
       return res.status(403).json({ error: 'Forbidden' });
     }

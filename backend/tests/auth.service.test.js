@@ -45,9 +45,10 @@ describe('auth.service', () => {
     expect(signupResult.user.roles).toEqual(['VOLUNTEER']);
     expect(signupResult.requiresEmailVerification).toBe(true);
 
-    const tokenRow = await pool.query('SELECT token FROM email_verification_tokens WHERE user_id = $1', [
-      signupResult.user.id,
-    ]);
+    const tokenRow = await pool.query(
+      'SELECT token FROM email_verification_tokens WHERE user_id = $1',
+      [signupResult.user.id]
+    );
     expect(tokenRow.rows[0]?.token).toBeTruthy();
 
     await authService.verifyEmail({ token: tokenRow.rows[0].token });
@@ -107,9 +108,10 @@ describe('auth.service', () => {
       password: 'password123',
     });
 
-    const tokenRow = await pool.query('SELECT token FROM email_verification_tokens WHERE user_id = $1', [
-      signupResult.user.id,
-    ]);
+    const tokenRow = await pool.query(
+      'SELECT token FROM email_verification_tokens WHERE user_id = $1',
+      [signupResult.user.id]
+    );
     await authService.verifyEmail({ token: tokenRow.rows[0].token });
 
     const { token, jti, user } = await authService.login({
@@ -122,7 +124,10 @@ describe('auth.service', () => {
 
     const payloadSegment = token.split('.')[1];
     const normalized = payloadSegment.replace(/-/g, '+').replace(/_/g, '/');
-    const payloadBuffer = Buffer.from(normalized + '==='.slice((normalized.length + 3) % 4), 'base64');
+    const payloadBuffer = Buffer.from(
+      normalized + '==='.slice((normalized.length + 3) % 4),
+      'base64'
+    );
     const decoded = JSON.parse(payloadBuffer.toString());
     const expiresAt = new Date(decoded.exp * 1000).toISOString();
 

@@ -55,8 +55,8 @@ export default function ReportingPanel({ onExport, exportState, format, onFormat
       ) : null}
 
       <p className="mt-4 text-xs text-brand-muted">
-        Exports include UTC timestamps. CSV opens in any spreadsheet, and the Excel option ships a ready-to-open workbook for
-        stakeholders who prefer .xls files.
+        Exports include UTC timestamps. CSV opens in any spreadsheet, and the Excel option ships a
+        ready-to-open workbook for stakeholders who prefer .xls files.
       </p>
     </DashboardCard>
   );

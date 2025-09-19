@@ -140,7 +140,9 @@ export default function SignupPage() {
         role="form"
       >
         <div className="space-y-2 text-center sm:text-left">
-          <h2 className="m-0 font-display text-2xl font-semibold text-brand-green">Join the Onkur movement</h2>
+          <h2 className="m-0 font-display text-2xl font-semibold text-brand-green">
+            Join the Onkur movement
+          </h2>
           <p className="m-0 text-sm text-brand-muted sm:text-base">
             Create an account to discover events, earn eco-badges, and follow your impact story.
           </p>
@@ -229,11 +231,15 @@ export default function SignupPage() {
                     key={role}
                     htmlFor={inputId}
                     className={`flex cursor-pointer flex-col gap-1 rounded-md border px-3 py-3 transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-green/50 ${
-                      checked ? 'border-brand-green bg-white shadow-[0_10px_22px_rgba(47,133,90,0.12)]' : 'border-brand-green/30 bg-white/80'
+                      checked
+                        ? 'border-brand-green bg-white shadow-[0_10px_22px_rgba(47,133,90,0.12)]'
+                        : 'border-brand-green/30 bg-white/80'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-base font-semibold text-brand-forest">{detail.label}</span>
+                      <span className="text-base font-semibold text-brand-forest">
+                        {detail.label}
+                      </span>
                       <input
                         id={inputId}
                         type="checkbox"

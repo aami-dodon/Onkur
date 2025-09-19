@@ -42,10 +42,7 @@ export default function VolunteerDashboard() {
   const [impactOverview, setImpactOverview] = useState(null);
   const [impactState, setImpactState] = useState({ status: 'idle', error: '' });
 
-  const profileProgress = useMemo(
-    () => calculateProfileProgress(dashboard?.profile),
-    [dashboard]
-  );
+  const profileProgress = useMemo(() => calculateProfileProgress(dashboard?.profile), [dashboard]);
 
   const totalBadgesEarned = useMemo(() => {
     if (!hoursSummary?.badges) return 0;
@@ -108,7 +105,10 @@ export default function VolunteerDashboard() {
       setImpactState({ status: 'success', error: '' });
     } catch (err) {
       if (!active) return;
-      setImpactState({ status: 'error', error: err.message || 'Unable to load community impact metrics.' });
+      setImpactState({
+        status: 'error',
+        error: err.message || 'Unable to load community impact metrics.',
+      });
     }
   }
 
@@ -125,8 +125,16 @@ export default function VolunteerDashboard() {
     try {
       await leaveEventRequest(token, eventId);
       setLeaveStatus((prev) => ({ ...prev, [eventId]: 'success' }));
-      setLeaveFeedback({ type: 'success', message: 'You left the event. We\u2019ll keep your calendar clear.' });
-      await Promise.all([refreshDashboard(token), refreshSignups(token), refreshHours(token), refreshImpact(token)]);
+      setLeaveFeedback({
+        type: 'success',
+        message: 'You left the event. We\u2019ll keep your calendar clear.',
+      });
+      await Promise.all([
+        refreshDashboard(token),
+        refreshSignups(token),
+        refreshHours(token),
+        refreshImpact(token),
+      ]);
     } catch (error) {
       setLeaveStatus((prev) => ({ ...prev, [eventId]: 'error' }));
       setLeaveFeedback({ type: 'error', message: error.message || 'Unable to leave this event.' });
@@ -144,7 +152,9 @@ export default function VolunteerDashboard() {
   return (
     <div className="grid gap-5 md:[grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
       <header className="flex flex-col gap-2 md:col-span-full">
-        <h2 className="m-0 font-display text-2xl font-semibold text-brand-forest">Hi {firstName} 👋</h2>
+        <h2 className="m-0 font-display text-2xl font-semibold text-brand-forest">
+          Hi {firstName} 👋
+        </h2>
         <p className="m-0 text-sm text-brand-muted sm:text-base">
           {loading
             ? 'Loading your volunteer journey…'
@@ -198,7 +208,9 @@ export default function VolunteerDashboard() {
                   </button>
                 </div>
                 {leaveStatus[event.id] === 'error' ? (
-                  <p className="mt-2 text-xs text-red-600">We couldn’t update this signup. Try again.</p>
+                  <p className="mt-2 text-xs text-red-600">
+                    We couldn’t update this signup. Try again.
+                  </p>
                 ) : null}
               </li>
             ))}
@@ -215,10 +227,15 @@ export default function VolunteerDashboard() {
         ) : null}
         {pastEvents.length ? (
           <div className="mt-4 space-y-2">
-            <h5 className="m-0 text-xs font-semibold uppercase tracking-[0.14em] text-brand-muted">Recently completed</h5>
+            <h5 className="m-0 text-xs font-semibold uppercase tracking-[0.14em] text-brand-muted">
+              Recently completed
+            </h5>
             <ul className="m-0 list-none space-y-2 p-0 text-xs text-brand-muted">
               {pastEvents.slice(0, 3).map((event) => (
-                <li key={event.id} className="rounded-xl border border-brand-forest/10 bg-white px-3 py-2">
+                <li
+                  key={event.id}
+                  className="rounded-xl border border-brand-forest/10 bg-white px-3 py-2"
+                >
                   <span className="font-semibold text-brand-forest">{event.title}</span>
                   <span className="block">{formatShortDate(event.dateEnd)}</span>
                 </li>
@@ -249,22 +266,33 @@ export default function VolunteerDashboard() {
         {impactOverview ? (
           <ul className="m-0 list-none space-y-2 p-0 text-sm text-brand-muted">
             <li>
-              <strong className="text-brand-forest">{formatNumber(impactOverview.volunteerEngagement?.totalHours || 0)}</strong>{' '}
+              <strong className="text-brand-forest">
+                {formatNumber(impactOverview.volunteerEngagement?.totalHours || 0)}
+              </strong>{' '}
               volunteer hours recorded across the community.
             </li>
             <li>
-              {formatNumber(impactOverview.stories?.approved ?? 0, { maximumFractionDigits: 0 })} stories approved this season and{' '}
-              {formatNumber(impactOverview.eventParticipation?.eventsSupported ?? 0, { maximumFractionDigits: 0 })} events supported by volunteers.
+              {formatNumber(impactOverview.stories?.approved ?? 0, { maximumFractionDigits: 0 })}{' '}
+              stories approved this season and{' '}
+              {formatNumber(impactOverview.eventParticipation?.eventsSupported ?? 0, {
+                maximumFractionDigits: 0,
+              })}{' '}
+              events supported by volunteers.
             </li>
             <li>
-              Galleries reached {formatNumber(impactOverview.galleryEngagement?.totalViews || 0, { maximumFractionDigits: 0 })} views
-              and spotlighted sponsors {formatNumber(impactOverview.sponsorImpact?.sponsorMentions || 0, {
+              Galleries reached{' '}
+              {formatNumber(impactOverview.galleryEngagement?.totalViews || 0, {
+                maximumFractionDigits: 0,
+              })}{' '}
+              views and spotlighted sponsors{' '}
+              {formatNumber(impactOverview.sponsorImpact?.sponsorMentions || 0, {
                 maximumFractionDigits: 0,
               })}{' '}
               times.
             </li>
             <li>
-              Volunteer retention trend vs last quarter: <span className="font-semibold text-brand-forest">{retentionLabel}</span>
+              Volunteer retention trend vs last quarter:{' '}
+              <span className="font-semibold text-brand-forest">{retentionLabel}</span>
             </li>
           </ul>
         ) : null}

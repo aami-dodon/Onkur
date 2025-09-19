@@ -29,19 +29,19 @@ function resolveHome(role) {
 export default function DashboardRouter() {
   const { user } = useAuth();
 
-  if (!user) {
-    return null;
-  }
-
   const normalizedRoles = useMemo(
-    () => normalizeRoles(user.roles, user.role),
-    [user.roles, user.role]
+    () => normalizeRoles(user?.roles ?? [], user?.role ?? null),
+    [user?.roles, user?.role]
   );
 
   const primaryRole = useMemo(
-    () => determinePrimaryRole(normalizedRoles, user.role),
-    [normalizedRoles, user.role]
+    () => determinePrimaryRole(normalizedRoles, user?.role ?? null),
+    [normalizedRoles, user?.role]
   );
+
+  if (!user) {
+    return null;
+  }
 
   const HomeComponent = resolveHome(primaryRole);
 
@@ -49,10 +49,7 @@ export default function DashboardRouter() {
     <Suspense fallback={<LoadingScreen label="Loading your dashboard" />}>
       <Routes>
         <Route index element={<HomeComponent />} />
-        <Route
-          path="events"
-          element={<EventsPage role={primaryRole} roles={normalizedRoles} />}
-        />
+        <Route path="events" element={<EventsPage role={primaryRole} roles={normalizedRoles} />} />
         <Route
           path="gallery"
           element={<GalleryPage role={primaryRole} roles={normalizedRoles} />}

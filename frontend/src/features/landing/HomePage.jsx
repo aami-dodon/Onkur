@@ -71,9 +71,10 @@ export default function HomePage() {
           <span className="home-hero__eyebrow">Nature · Sustainability · Community</span>
           <h2>Grow local impact with Onkur.</h2>
           <p>
-            Onkur is the mobile-first volunteering platform that brings volunteers, event managers, sponsors, and administrators
-            together to spark lasting environmental and social change. Plan immersive events, capture living galleries, and measure
-            the ripple effects of every action.
+            Onkur is the mobile-first volunteering platform that brings volunteers, event managers,
+            sponsors, and administrators together to spark lasting environmental and social change.
+            Plan immersive events, capture living galleries, and measure the ripple effects of every
+            action.
           </p>
           <div className="home-hero__actions">
             <Link className="btn-primary" to="/signup">
@@ -107,8 +108,9 @@ export default function HomePage() {
       <section className="home-highlight">
         <h3>Designed as a living ecosystem</h3>
         <p>
-          Every workflow, report, and gallery is crafted to feel warm, transparent, and actionable. Onkur keeps teams aligned
-          with responsive tools that work beautifully on mobile and desktop alike.
+          Every workflow, report, and gallery is crafted to feel warm, transparent, and actionable.
+          Onkur keeps teams aligned with responsive tools that work beautifully on mobile and
+          desktop alike.
         </p>
         <div className="home-highlight__grid">
           {HIGHLIGHTS.map((item) => (
@@ -125,8 +127,8 @@ export default function HomePage() {
         <div className="home-roles__intro">
           <h3>Built for every steward of change</h3>
           <p>
-            Purposeful features adapt to each role so every stakeholder—volunteers, organizers, sponsors, and admins—can focus on
-            what matters most: nurturing impact.
+            Purposeful features adapt to each role so every stakeholder—volunteers, organizers,
+            sponsors, and admins—can focus on what matters most: nurturing impact.
           </p>
         </div>
         <div className="home-roles__grid">
@@ -148,15 +150,24 @@ export default function HomePage() {
           <ul>
             <li>
               <strong>Morning check-in</strong>
-              <p>Review upcoming events, confirm volunteers, and highlight new sponsorship opportunities.</p>
+              <p>
+                Review upcoming events, confirm volunteers, and highlight new sponsorship
+                opportunities.
+              </p>
             </li>
             <li>
               <strong>In the field</strong>
-              <p>Capture photos, log attendance, and notify your community—all from a mobile-friendly workspace.</p>
+              <p>
+                Capture photos, log attendance, and notify your community—all from a mobile-friendly
+                workspace.
+              </p>
             </li>
             <li>
               <strong>Evening reflection</strong>
-              <p>Publish gallery stories, unlock eco-badges, and send dashboards that prove your collective impact.</p>
+              <p>
+                Publish gallery stories, unlock eco-badges, and send dashboards that prove your
+                collective impact.
+              </p>
             </li>
           </ul>
         </div>
@@ -183,7 +194,8 @@ export default function HomePage() {
         <div className="home-cta__content">
           <h3>Ready to nurture your next act of care?</h3>
           <p>
-            Join Onkur to connect purpose-driven people, illuminate every story, and measure the change you cultivate together.
+            Join Onkur to connect purpose-driven people, illuminate every story, and measure the
+            change you cultivate together.
           </p>
         </div>
         <div className="home-cta__actions">

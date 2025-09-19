@@ -11,10 +11,7 @@ export default function ProfileCompletionCallout({
     return null;
   }
 
-  const sectionClassName = [
-    'rounded-3xl border border-amber-200 bg-amber-50 p-5',
-    className,
-  ]
+  const sectionClassName = ['rounded-3xl border border-amber-200 bg-amber-50 p-5', className]
     .filter(Boolean)
     .join(' ');
 

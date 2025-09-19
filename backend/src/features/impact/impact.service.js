@@ -43,7 +43,8 @@ function formatStoryForResponse(story) {
   if (!story) {
     return null;
   }
-  const excerpt = story.body && story.body.length > 220 ? `${story.body.slice(0, 217)}…` : story.body;
+  const excerpt =
+    story.body && story.body.length > 220 ? `${story.body.slice(0, 217)}…` : story.body;
   return {
     ...story,
     excerpt,
@@ -65,7 +66,9 @@ async function submitImpactStory({ eventId, author, title, body, mediaIds = [] }
     throw error;
   }
   if (trimmedBody.length < 40) {
-    const error = new Error('Share at least a few sentences so the community can feel the impact (40+ characters).');
+    const error = new Error(
+      'Share at least a few sentences so the community can feel the impact (40+ characters).'
+    );
     error.statusCode = 400;
     throw error;
   }
@@ -200,7 +203,7 @@ async function notifySponsorsOfStory({ sponsors = [], story, event }) {
           sponsorId: sponsor.sponsorId,
         });
       }
-    }),
+    })
   );
 }
 
@@ -211,7 +214,11 @@ async function approveImpactStory({ storyId, moderator }) {
     throw error;
   }
   ensureUuid(storyId, 'Invalid story identifier');
-  const updated = await updateStoryStatus({ storyId, status: 'APPROVED', moderatorId: moderator.id });
+  const updated = await updateStoryStatus({
+    storyId,
+    status: 'APPROVED',
+    moderatorId: moderator.id,
+  });
   if (!updated) {
     const error = new Error('Story not found');
     error.statusCode = 404;
@@ -275,22 +282,29 @@ async function loadImpactAnalytics({ recordView = true } = {}) {
   if (recordView) {
     await incrementDailyMetric({ metricKey: 'analytics_dashboard_views', amount: 1 });
   }
-  const [storyCounts, volunteerHours, participation, gallery, sponsorImpact, usage, recentMetrics] = await Promise.all([
-    getStoryCountsByStatus(),
-    getVolunteerHoursAggregate(),
-    getEventParticipationSummary(),
-    getGalleryEngagementSummary(),
-    getSponsorImpactSummary(),
-    getAnalyticsUsageSummary(),
-    listRecentMetrics({ days: 45 }),
-  ]);
-  const totalStories = Object.values(storyCounts).reduce((sum, value) => sum + Number(value || 0), 0);
+  const [storyCounts, volunteerHours, participation, gallery, sponsorImpact, usage, recentMetrics] =
+    await Promise.all([
+      getStoryCountsByStatus(),
+      getVolunteerHoursAggregate(),
+      getEventParticipationSummary(),
+      getGalleryEngagementSummary(),
+      getSponsorImpactSummary(),
+      getAnalyticsUsageSummary(),
+      listRecentMetrics({ days: 45 }),
+    ]);
+  const totalStories = Object.values(storyCounts).reduce(
+    (sum, value) => sum + Number(value || 0),
+    0
+  );
   const volunteerHoursTotal = volunteerHours.totalMinutes || 0;
   const retentionDelta = computeRetentionChange(volunteerHours);
   return {
     stories: {
       total: totalStories,
-      submitted: Number(storyCounts.PENDING || 0) + Number(storyCounts.APPROVED || 0) + Number(storyCounts.REJECTED || 0),
+      submitted:
+        Number(storyCounts.PENDING || 0) +
+        Number(storyCounts.APPROVED || 0) +
+        Number(storyCounts.REJECTED || 0),
       approved: Number(storyCounts.APPROVED || 0),
       pending: Number(storyCounts.PENDING || 0),
       rejected: Number(storyCounts.REJECTED || 0),
@@ -326,20 +340,76 @@ function buildAnalyticsReportCsv(overview) {
     ['Stories', 'Approved', formatNumber(overview.stories.approved)],
     ['Stories', 'Pending review', formatNumber(overview.stories.pending)],
     ['Stories', 'Rejected', formatNumber(overview.stories.rejected)],
-    ['Volunteer engagement', 'Total hours logged', formatNumber(overview.volunteerEngagement.totalHours)],
-    ['Volunteer engagement', 'Active volunteers (90d)', formatNumber(overview.volunteerEngagement.activeLast90Days)],
-    ['Volunteer engagement', 'Retention change vs prev 90d', `${(overview.volunteerEngagement.retentionDelta * 100).toFixed(2)}%`],
-    ['Event participation', 'Total signups', formatNumber(overview.eventParticipation.totalSignups)],
-    ['Event participation', 'Unique volunteers', formatNumber(overview.eventParticipation.uniqueVolunteers)],
-    ['Event participation', 'Events supported', formatNumber(overview.eventParticipation.eventsSupported)],
-    ['Gallery engagement', 'Gallery views recorded', formatNumber(overview.galleryEngagement.totalViews)],
-    ['Gallery engagement', 'Events with gallery analytics', formatNumber(overview.galleryEngagement.trackedEvents)],
-    ['Gallery engagement', 'Approved media assets', formatNumber(overview.galleryEngagement.approvedMedia)],
-    ['Sponsor impact', 'Approved sponsorships', formatNumber(overview.sponsorImpact.approvedSponsorships)],
-    ['Sponsor impact', 'Approved sponsorship amount', formatNumber(overview.sponsorImpact.approvedAmount)],
-    ['Sponsor impact', 'Sponsor mentions in galleries', formatNumber(overview.sponsorImpact.sponsorMentions)],
-    ['Analytics usage', 'Dashboard views (30d)', formatNumber(overview.analyticsUsage.viewsLast30Days)],
-    ['Analytics usage', 'Dashboard views recorded', formatNumber(overview.analyticsUsage.totalRecordedViews)],
+    [
+      'Volunteer engagement',
+      'Total hours logged',
+      formatNumber(overview.volunteerEngagement.totalHours),
+    ],
+    [
+      'Volunteer engagement',
+      'Active volunteers (90d)',
+      formatNumber(overview.volunteerEngagement.activeLast90Days),
+    ],
+    [
+      'Volunteer engagement',
+      'Retention change vs prev 90d',
+      `${(overview.volunteerEngagement.retentionDelta * 100).toFixed(2)}%`,
+    ],
+    [
+      'Event participation',
+      'Total signups',
+      formatNumber(overview.eventParticipation.totalSignups),
+    ],
+    [
+      'Event participation',
+      'Unique volunteers',
+      formatNumber(overview.eventParticipation.uniqueVolunteers),
+    ],
+    [
+      'Event participation',
+      'Events supported',
+      formatNumber(overview.eventParticipation.eventsSupported),
+    ],
+    [
+      'Gallery engagement',
+      'Gallery views recorded',
+      formatNumber(overview.galleryEngagement.totalViews),
+    ],
+    [
+      'Gallery engagement',
+      'Events with gallery analytics',
+      formatNumber(overview.galleryEngagement.trackedEvents),
+    ],
+    [
+      'Gallery engagement',
+      'Approved media assets',
+      formatNumber(overview.galleryEngagement.approvedMedia),
+    ],
+    [
+      'Sponsor impact',
+      'Approved sponsorships',
+      formatNumber(overview.sponsorImpact.approvedSponsorships),
+    ],
+    [
+      'Sponsor impact',
+      'Approved sponsorship amount',
+      formatNumber(overview.sponsorImpact.approvedAmount),
+    ],
+    [
+      'Sponsor impact',
+      'Sponsor mentions in galleries',
+      formatNumber(overview.sponsorImpact.sponsorMentions),
+    ],
+    [
+      'Analytics usage',
+      'Dashboard views (30d)',
+      formatNumber(overview.analyticsUsage.viewsLast30Days),
+    ],
+    [
+      'Analytics usage',
+      'Dashboard views recorded',
+      formatNumber(overview.analyticsUsage.totalRecordedViews),
+    ],
   ];
   const csv = rows
     .map((row) =>
@@ -351,7 +421,7 @@ function buildAnalyticsReportCsv(overview) {
           }
           return cell;
         })
-        .join(','),
+        .join(',')
     )
     .join('\n');
   return csv;

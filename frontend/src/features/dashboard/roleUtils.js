@@ -16,13 +16,7 @@ export function normalizeRoles(roles, fallbackRole) {
   if (fallbackRole) {
     candidates.push(fallbackRole);
   }
-  const unique = Array.from(
-    new Set(
-      candidates
-        .map(normalizeRoleValue)
-        .filter(Boolean)
-    )
-  );
+  const unique = Array.from(new Set(candidates.map(normalizeRoleValue).filter(Boolean)));
   return unique.sort((a, b) => ROLE_PRIORITY.indexOf(a) - ROLE_PRIORITY.indexOf(b));
 }
 

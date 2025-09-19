@@ -10,7 +10,12 @@ const DEFAULT_VALUES = {
   brandGuidelines: '',
 };
 
-export default function SponsorOnboardingForm({ initialValues, onSubmit, isSubmitting, ctaLabel = 'Submit application' }) {
+export default function SponsorOnboardingForm({
+  initialValues,
+  onSubmit,
+  isSubmitting,
+  ctaLabel = 'Submit application',
+}) {
   const [form, setForm] = useState(DEFAULT_VALUES);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -150,8 +155,16 @@ export default function SponsorOnboardingForm({ initialValues, onSubmit, isSubmi
           placeholder="Recognition preferences, tone, hero statements"
         />
       </label>
-      {error ? <p className="m-0 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
-      {success ? <p className="m-0 rounded-xl border border-brand-green/20 bg-brand-sand/70 p-3 text-sm text-brand-forest">{success}</p> : null}
+      {error ? (
+        <p className="m-0 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
+      {success ? (
+        <p className="m-0 rounded-xl border border-brand-green/20 bg-brand-sand/70 p-3 text-sm text-brand-forest">
+          {success}
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" className="btn-primary" disabled={isSubmitting}>
           {isSubmitting ? 'Saving…' : ctaLabel}

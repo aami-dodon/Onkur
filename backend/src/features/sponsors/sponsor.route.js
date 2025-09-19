@@ -137,7 +137,10 @@ router.patch('/sponsorships/:sponsorshipId/status', authOnly, adminOnly, async (
     if (!uuidPattern.test(sponsorshipId)) {
       return res.status(400).json({ error: 'Invalid sponsorship identifier' });
     }
-    const sponsorship = await updateSponsorshipApproval({ sponsorshipId, status: req.body?.status });
+    const sponsorship = await updateSponsorshipApproval({
+      sponsorshipId,
+      status: req.body?.status,
+    });
     res.json({ sponsorship });
   } catch (error) {
     const status = error.statusCode || 500;

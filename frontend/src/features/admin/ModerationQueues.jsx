@@ -65,7 +65,10 @@ export default function ModerationQueues({
         {items.map((item) => {
           const noteValue = notes[item.id] || '';
           return (
-            <li key={item.id} className="rounded-xl border border-brand-green/30 bg-white/90 p-4 shadow-sm">
+            <li
+              key={item.id}
+              className="rounded-xl border border-brand-green/30 bg-white/90 p-4 shadow-sm"
+            >
               <header className="flex flex-col gap-1 border-b border-brand-green/20 pb-3">
                 <h3 className="m-0 font-display text-lg font-semibold text-brand-forest">
                   {activeType === 'events' && item.title}
@@ -82,8 +85,13 @@ export default function ModerationQueues({
               <div className="mt-3 space-y-2 text-sm text-brand-muted">
                 {activeType === 'events' ? (
                   <>
-                    <p className="m-0">Submitted by: {item.createdByName || 'Unknown'} · {item.createdByEmail || 'N/A'}</p>
-                    <p className="m-0">Schedule: {formatDate(item.dateStart)} → {formatDate(item.dateEnd)}</p>
+                    <p className="m-0">
+                      Submitted by: {item.createdByName || 'Unknown'} ·{' '}
+                      {item.createdByEmail || 'N/A'}
+                    </p>
+                    <p className="m-0">
+                      Schedule: {formatDate(item.dateStart)} → {formatDate(item.dateEnd)}
+                    </p>
                     <p className="m-0">Location: {item.location || 'TBD'}</p>
                     {item.approvalNote ? (
                       <p className="m-0 text-amber-700">Previous note: {item.approvalNote}</p>
@@ -93,7 +101,9 @@ export default function ModerationQueues({
 
                 {activeType === 'sponsors' ? (
                   <>
-                    <p className="m-0">Contact: {item.contactName || 'Team lead'} · {item.contactEmail || 'N/A'}</p>
+                    <p className="m-0">
+                      Contact: {item.contactName || 'Team lead'} · {item.contactEmail || 'N/A'}
+                    </p>
                     <p className="m-0">Applied on: {formatDate(item.appliedAt)}</p>
                   </>
                 ) : null}
@@ -114,7 +124,9 @@ export default function ModerationQueues({
                     type="text"
                     value={noteValue}
                     onChange={(event) => onNoteChange(item.id, event.target.value)}
-                    placeholder={activeType === 'events' ? 'Optional feedback for managers' : 'Optional note'}
+                    placeholder={
+                      activeType === 'events' ? 'Optional feedback for managers' : 'Optional note'
+                    }
                     className="mt-1 w-full rounded-md border border-brand-green/40 bg-white px-3 py-2 text-sm text-brand-forest focus:border-brand-green focus:outline-none focus:ring-2 focus:ring-brand-green/40"
                   />
                 </label>

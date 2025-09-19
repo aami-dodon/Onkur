@@ -84,7 +84,10 @@ router.get('/api/admin/export', authOnly, adminOnly, async (req, res) => {
   try {
     const { entity, format } = req.query;
     const { content, contentType, extension } = await exportData({ entity, format });
-    const baseName = typeof entity === 'string' && entity.trim() ? entity.trim().replace(/[^a-z0-9_-]/gi, '') : 'export';
+    const baseName =
+      typeof entity === 'string' && entity.trim()
+        ? entity.trim().replace(/[^a-z0-9_-]/gi, '')
+        : 'export';
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `${baseName || 'export'}-${timestamp}.${extension}`;
     res.setHeader('Content-Type', contentType);

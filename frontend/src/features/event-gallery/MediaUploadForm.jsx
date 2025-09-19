@@ -20,7 +20,9 @@ function TagCheckboxList({ options, selected, onChange }) {
           <label
             key={id}
             className={`cursor-pointer rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
-              isChecked ? 'border-brand-forest bg-brand-sand text-brand-forest' : 'border-brand-forest/20 text-brand-muted'
+              isChecked
+                ? 'border-brand-forest bg-brand-sand text-brand-forest'
+                : 'border-brand-forest/20 text-brand-muted'
             }`}
           >
             <input
@@ -30,7 +32,9 @@ function TagCheckboxList({ options, selected, onChange }) {
                 if (event.target.checked) {
                   onChange([...selected, option]);
                 } else {
-                  onChange(selected.filter((tag) => !(tag.id === option.id && tag.type === option.type)));
+                  onChange(
+                    selected.filter((tag) => !(tag.id === option.id && tag.type === option.type))
+                  );
                 }
               }}
               className="sr-only"
@@ -139,7 +143,10 @@ export default function MediaUploadForm({ token, events = [], onUploaded }) {
     };
   }, [selectedEvent, token]);
 
-  const canSubmit = useMemo(() => selectedEvent && file && status !== 'loading', [file, selectedEvent, status]);
+  const canSubmit = useMemo(
+    () => selectedEvent && file && status !== 'loading',
+    [file, selectedEvent, status]
+  );
 
   const handleFileChange = useCallback((event) => {
     const selected = event.target.files?.[0];
@@ -158,15 +165,12 @@ export default function MediaUploadForm({ token, events = [], onUploaded }) {
       }
       setCommunityTags([...communityTags, { type: 'COMMUNITY', id, label }]);
     },
-    [communityTags],
+    [communityTags]
   );
 
-  const handleRemoveCommunity = useCallback(
-    (id) => {
-      setCommunityTags((prev) => prev.filter((tag) => tag.id !== id));
-    },
-    [],
-  );
+  const handleRemoveCommunity = useCallback((id) => {
+    setCommunityTags((prev) => prev.filter((tag) => tag.id !== id));
+  }, []);
 
   const handleSubmit = useCallback(
     async (event) => {
@@ -185,7 +189,7 @@ export default function MediaUploadForm({ token, events = [], onUploaded }) {
             caption,
             tags,
           },
-          token,
+          token
         );
         setStatus('success');
         setMessage('Photo submitted for moderation. You will get an email when it is reviewed.');
@@ -202,14 +206,29 @@ export default function MediaUploadForm({ token, events = [], onUploaded }) {
         setMessage(error.message || 'Upload failed. Please try again.');
       }
     },
-    [canSubmit, caption, communityTags, file, onUploaded, selectedEvent, sponsorTags, token, volunteerTags],
+    [
+      canSubmit,
+      caption,
+      communityTags,
+      file,
+      onUploaded,
+      selectedEvent,
+      sponsorTags,
+      token,
+      volunteerTags,
+    ]
   );
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5 rounded-3xl border border-brand-forest/10 bg-white/90 p-5">
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col gap-5 rounded-3xl border border-brand-forest/10 bg-white/90 p-5"
+    >
       <header className="flex flex-col gap-1">
         <h3 className="m-0 text-lg font-semibold text-brand-forest">Share your impact story</h3>
-        <p className="m-0 text-sm text-brand-muted">Upload photos from events you attended so moderators can spotlight them.</p>
+        <p className="m-0 text-sm text-brand-muted">
+          Upload photos from events you attended so moderators can spotlight them.
+        </p>
       </header>
       <SelectField label="Event">
         <select
@@ -276,7 +295,9 @@ export default function MediaUploadForm({ token, events = [], onUploaded }) {
         {status === 'loading' ? 'Uploading…' : 'Submit for review'}
       </button>
       {message ? (
-        <p className={`m-0 text-sm ${status === 'error' ? 'text-red-600' : 'text-brand-forest'}`}>{message}</p>
+        <p className={`m-0 text-sm ${status === 'error' ? 'text-red-600' : 'text-brand-forest'}`}>
+          {message}
+        </p>
       ) : null}
     </form>
   );
