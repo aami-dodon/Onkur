@@ -34,6 +34,7 @@ export default function EventDiscovery({
 }) {
   const [form, setForm] = useState({ category: '', location: '', theme: '', date: '' });
   const [actionStates, setActionStates] = useState({});
+  const isSponsorMode = mode === 'sponsor';
 
   useEffect(() => {
     setForm({
@@ -181,6 +182,9 @@ export default function EventDiscovery({
           const alreadyJoined = event.isRegistered;
           const isFull = event.availableSlots <= 0;
           const canJoin = !alreadyJoined && !isFull && !isJoining && !isLeaving;
+          const sponsors = Array.isArray(event.sponsors) ? event.sponsors : [];
+          const mySponsorship = event.mySponsorship || null;
+          const canSupport = isSponsorMode && typeof sponsorOptions?.onSupport === 'function';
           return (
             <article
               key={event.id}
@@ -223,7 +227,12 @@ export default function EventDiscovery({
               ) : null}
               <div className="flex flex-wrap items-center gap-2">
                 {isSponsorMode ? (
-                  <button type="button" className="btn-primary" onClick={() => sponsorOptions?.onSupport?.(event)}>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={!canSupport}
+                    onClick={() => sponsorOptions?.onSupport?.(event)}
+                  >
                     {mySponsorship ? 'Update pledge' : 'Support this event'}
                   </button>
                 ) : !alreadyJoined ? (

@@ -156,3 +156,10 @@
 - **Impact:** Sponsors gain a dedicated workspace to support events, see their logos across event and gallery experiences, and receive automated summaries of volunteer hours, attendance, and gallery visibility tied to their contributions.
 
 
+## Sponsor event discovery guardrails
+- **Date:** 2025-10-02
+- **Change:** Hardened the shared event discovery component to treat sponsor metadata as optional, guarding array access and action handlers so the volunteer and sponsor dashboards no longer crash when the API omits sponsorship details.
+- **Impact:** Event lists now render reliably for every role, giving sponsors and volunteers uninterrupted access to filters, signups, and pledge actions even while data loads or profiles await approval.
+
+
+
