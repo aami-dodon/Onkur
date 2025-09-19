@@ -1,8 +1,3 @@
-# Repository structure realignment & automation
-- **Date:** 2024-11-24
-- **Change:** Consolidated the monorepo under `src/` and `tests/`, introduced shared ESLint configurations, provisioned GitHub Actions CI for linting/build/tests, and added contributor documentation with MIT licensing.
-- **Impact:** Developers have a predictable layout, automated quality gates, and clear contribution guidelines without hunting for scripts or policies.
-
 # Dynamic gallery URL resolution
 - **Date:** 2025-10-13
 - **Change:** Introduced a shared gallery storage URL helper that always rebuilds public media links from the live MinIO/S3 configuration and wired repository mappers to consume it while keeping inline fallbacks intact.

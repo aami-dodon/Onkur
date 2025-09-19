@@ -1,12 +1,6 @@
 const { randomUUID } = require('crypto');
 const { newDb } = require('pg-mem');
 
-jest.mock('utils/logger', () => ({
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-}));
-
 describe('impact.service', () => {
   let pool;
   let impactService;
@@ -21,23 +15,28 @@ describe('impact.service', () => {
     pool = new pg.Pool();
     eventsStore = new Map();
 
-    jest.doMock('features/common/db', () => pool);
-    jest.doMock('config', () => ({
+    jest.doMock('../src/features/common/db', () => pool);
+    jest.doMock('../src/utils/logger', () => ({
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    }));
+    jest.doMock('../src/config', () => ({
       app: {
         baseUrl: 'https://onkur.test',
       },
     }));
 
     sendTemplatedEmailMock = jest.fn().mockResolvedValue(undefined);
-    jest.doMock('features/email/email.service', () => ({
+    jest.doMock('../src/features/email/email.service', () => ({
       sendTemplatedEmail: sendTemplatedEmailMock,
     }));
 
-    jest.doMock('features/event-management/eventManagement.repository', () => ({
+    jest.doMock('../src/features/event-management/eventManagement.repository', () => ({
       findEventById: jest.fn(async (eventId) => eventsStore.get(eventId) || null),
     }));
 
-    jest.doMock('features/volunteer-journey/volunteerJourney.repository', () => ({
+    jest.doMock('../src/features/volunteer-journey/volunteerJourney.repository', () => ({
       ensureSchema: jest.fn(async () => {
         await pool.query(`
           CREATE TABLE IF NOT EXISTS users (
@@ -94,7 +93,7 @@ describe('impact.service', () => {
       }),
     }));
 
-    jest.doMock('features/sponsors/sponsor.repository', () => ({
+    jest.doMock('../src/features/sponsors/sponsor.repository', () => ({
       ensureSchema: jest.fn(async () => {
         await pool.query(`
           CREATE TABLE IF NOT EXISTS sponsor_profiles (
@@ -117,8 +116,8 @@ describe('impact.service', () => {
       }),
     }));
 
-    impactService = require('features/impact/impact.service');
-    require('features/impact/impact.repository');
+    impactService = require('../src/features/impact/impact.service');
+    require('../src/features/impact/impact.repository');
   });
 
   afterEach(async () => {
