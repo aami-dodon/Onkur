@@ -9,3 +9,4 @@ These notes apply to files under `frontend/src/features/volunteer/`.
 - The profile editor relies on lookup APIs for skills, interests, availability, and location; extend those selectors instead of reverting to free-form inputs so members benefit from the curated choices.
 - Use `btn-primary` for forward actions that add or save volunteer profile data so the calls-to-action stand out.
 - Hours logging UI should hide mutation forms when there are no eligible events and instead guide volunteers to join an event first.
+- When surfacing guidance CTAs (like the events hub link), apply `self-start` alongside `btn-primary` so the button keeps its standard width instead of stretching edge-to-edge.

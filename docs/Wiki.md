@@ -87,3 +87,8 @@
 - **Date:** 2025-09-25
 - **Change:** Updated the volunteer hours tracker to hide the logging form when a volunteer has not joined any events, replacing it with guidance to explore the events hub. Documented the pattern in the volunteer frontend guidelines.
 - **Impact:** Volunteers understand they must RSVP to an event before logging time and are directed to the appropriate place to do so, preventing empty submissions.
+
+## Volunteer events CTA width refinement
+- **Date:** 2025-09-25
+- **Change:** Adjusted the volunteer hours tracker events hub link to use a self-starting primary button so the CTA renders at its standard width instead of stretching across the card. Added the expectation to the volunteer frontend guidelines.
+- **Impact:** Volunteers see a tidy guidance card that matches other dashboard buttons while still drawing attention to the events hub when they need to join an opportunity before logging hours.

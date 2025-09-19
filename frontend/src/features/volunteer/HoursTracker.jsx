@@ -150,7 +150,7 @@ export default function HoursTracker({ summary, signups, onLogHours }) {
             <p className="m-0">
               Join an event to log your time. Head to the events hub to browse opportunities and RSVP.
             </p>
-            <a className="btn-primary w-full text-center sm:w-auto" href="/app/events">
+            <a className="btn-primary self-start" href="/app/events">
               Explore events
             </a>
           </div>
