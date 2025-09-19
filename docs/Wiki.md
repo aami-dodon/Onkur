@@ -143,4 +143,10 @@
 - **Impact:** Mobile users regain vertical space for content while still accessing logout from the persistent footer, and desktop retains the prominent logout control.
 
 
+## Earthy brown branding refresh
+- **Date:** 2025-09-30
+- **Change:** Recolored the shared Tailwind palette and home page theme styles to center on earthy browns and ambers, updating gradients, shadows, and button treatments to match the new direction.
+- **Impact:** The web experience now carries a cohesive warm visual identity that aligns with the refreshed Onkur brand guidelines without disrupting existing layout structure.
+
+
 
