@@ -124,8 +124,10 @@ async function createEvent({
         $13,
         $14,
         $15,
+        $16,
+        $17,
         'DRAFT',
-        $16
+        $18
       )
       RETURNING *
     `,
