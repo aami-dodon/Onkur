@@ -4,13 +4,14 @@ import ProtectedRoute from './features/auth/ProtectedRoute';
 import PublicOnlyRoute from './features/auth/PublicOnlyRoute';
 import LoadingScreen from './features/layout/LoadingScreen';
 
+import HomePage from './features/landing/HomePage';
+
 const AppLayout = lazy(() => import('./features/layout/AppLayout'));
 const LoginPage = lazy(() => import('./features/auth/LoginPage'));
 const SignupPage = lazy(() => import('./features/auth/SignupPage'));
 const CheckEmailPage = lazy(() => import('./features/auth/CheckEmailPage'));
 const VerifyEmailPage = lazy(() => import('./features/auth/VerifyEmailPage'));
 const DashboardRouter = lazy(() => import('./features/dashboard/DashboardRouter'));
-const HomePage = lazy(() => import('./features/landing/HomePage'));
 const PublicGalleryPage = lazy(() => import('./features/event-gallery/PublicGalleryPage'));
 
 function App() {
