@@ -32,6 +32,7 @@ A live demo is available here: [Demo App](https://onkur.dodon.in)
 - [Quality gates](#quality-gates)
 - [Testing](#testing)
 - [Environment & configuration](#environment--configuration)
+- [Publishing with a Cloudflare tunnel](#publishing-with-a-cloudflare-tunnel)
 - [Project documentation](#project-documentation)
 - [Contributing](#contributing)
 - [License](#license)
@@ -49,8 +50,9 @@ A live demo is available here: [Demo App](https://onkur.dodon.in)
 │   ├── src/lib/        # API clients, context providers, shared hooks
 │   └── src/styles/     # Theme primitives and responsive layout helpers
 ├── docs/               # Living wiki entries and product imagery
+├── nginx/              # Gateway config: /api to the backend, everything else to the frontend
 ├── .github/workflows/  # Continuous integration pipelines
-├── docker-compose.yml  # Optional orchestration for API + web app
+├── docker-compose.yml  # API, web app, nginx gateway, optional Cloudflare tunnel
 └── README.md
 ```
 
@@ -146,7 +148,27 @@ Integration tests can extend the backend suite with Supertest; wire them into th
 
 - `backend/.env.example` lists required server variables, including PostgreSQL, JWT, SMTP, MinIO, and bootstrap admin credentials.
 - `frontend/.env.example` exposes the API base URL and verification support contact shown after signup.
-- Docker users can run `docker compose up --build` to orchestrate both services; provision PostgreSQL and MinIO separately or connect to existing instances via the environment variables.
+- `.env.example` at the repo root configures Docker Compose itself: the Cloudflare tunnel token and the gateway port.
+- Docker users can run `docker compose up --build` to orchestrate both services behind the nginx gateway (`http://localhost:1012`); provision PostgreSQL and MinIO separately or connect to existing instances via the environment variables.
+
+## Publishing with a Cloudflare tunnel
+
+The demo at `https://onkur.dodon.in` is served by a `cloudflared` container defined in `docker-compose.yml`. The tunnel forwards every request to the `gateway` service (nginx), which sends `/api/*` to the backend and everything else, including Vite's HMR websocket, to the frontend.
+
+1. In Cloudflare Zero Trust (**Networks > Tunnels**), create a tunnel or reuse the existing one, then set its public hostname `onkur.dodon.in` to the service `http://gateway:80`.
+2. Copy the root env template and set `CLOUDFLARE_TUNNEL_TOKEN`:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+3. Start the stack:
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+With an empty `CLOUDFLARE_TUNNEL_TOKEN` the tunnel container exits and the stack runs locally only. `backend/.env` (`CORS_ORIGIN`, `APP_BASE_URL`) and `frontend/.env` (`VITE_API_BASE_URL`) should use `https://onkur.dodon.in` when publishing, and the hostname must stay in `server.allowedHosts` in `frontend/vite.config.js`.
 
 ## Project documentation
 

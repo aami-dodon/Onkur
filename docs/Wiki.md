@@ -294,3 +294,9 @@
 - **Date:** 2025-10-03
 - **Change:** Inlined the public `HomePage` in `App.jsx` instead of lazy loading it so first impressions avoid the Suspense spinner and the hero content can render with the initial bundle.
 - **Impact:** Largest Contentful Paint on the marketing home now depends on the first script payload alone, eliminating the extra network hop that pushed GTmetrix LCP near 5.5 seconds.
+
+## In-repo Cloudflare tunnel
+
+- **Date:** 2026-10-20
+- **Change:** Added an nginx `gateway` service (`nginx/default.conf`) that routes `/api` to the backend and everything else to the Vite frontend, plus a `cloudflared` `tunnel` service. `CLOUDFLARE_TUNNEL_TOKEN` lives in a root `.env` (see `.env.example`); when it is empty the tunnel exits and the rest of the stack still runs.
+- **Impact:** `onkur.dodon.in` is published by the repo's own `docker compose up` instead of a separately managed tunnel. The Cloudflare public hostname must target `http://gateway:80`.
